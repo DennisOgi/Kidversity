@@ -332,10 +332,14 @@ class DashboardAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final width = MediaQuery.sizeOf(context).width;
+    final narrow = width < 400;
+    final sideSlot = narrow ? 42.0 : 118.0;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      padding: EdgeInsets.fromLTRB(narrow ? 12 : 16, 10, narrow ? 12 : 16, 6),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: narrow ? 10 : 14, vertical: narrow ? 10 : 12),
         decoration: BoxDecoration(
           color: AppColors.surface.withValues(alpha: 0.94),
           borderRadius: BorderRadius.circular(AppTheme.radiusXl),
@@ -344,31 +348,60 @@ class DashboardAppBar extends StatelessWidget {
         ),
         child: Row(
           children: [
-            KidversityBrandMark(onTap: onBrandTap, compact: true),
-            const SizedBox(width: 14),
+            SizedBox(
+              width: sideSlot,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: KidversityBrandMark(
+                  onTap: onBrandTap,
+                  compact: true,
+                  showLabel: !narrow,
+                ),
+              ),
+            ),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(title, style: text.titleLarge?.copyWith(fontSize: 20)),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.titleLarge?.copyWith(fontSize: narrow ? 18 : 20),
+                  ),
                   if (subtitle != null)
                     Text(
                       subtitle!,
-                      style: text.bodyMedium?.copyWith(fontSize: 12.5, color: AppColors.muted),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodyMedium?.copyWith(
+                        fontSize: narrow ? 11.5 : 12.5,
+                        color: AppColors.muted,
+                      ),
                     ),
                 ],
               ),
             ),
-            if (icon != null)
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                ),
-                child: Icon(icon, color: accent, size: 22),
+            SizedBox(
+              width: sideSlot,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: icon != null
+                    ? Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                        ),
+                        child: Icon(icon, color: accent, size: 22),
+                      )
+                    : const SizedBox(width: 42, height: 42),
               ),
+            ),
           ],
         ),
       ),

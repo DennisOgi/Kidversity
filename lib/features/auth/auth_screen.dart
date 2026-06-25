@@ -99,8 +99,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: EdgeInsets.fromLTRB(wide ? 56 : 22, 8, wide ? 56 : 22, 0),
-                child: KidversityBrandMark(onTap: () => context.go(AppRoutes.home)),
+                padding: EdgeInsets.fromLTRB(wide ? 56 : 16, 8, wide ? 56 : 16, 0),
+                child: KidversityBrandMark(
+                  onTap: () => context.go(AppRoutes.home),
+                  showLabel: wide || MediaQuery.sizeOf(context).width > 360,
+                ),
               ),
               Expanded(
                 child: LayoutBuilder(

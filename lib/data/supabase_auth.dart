@@ -167,9 +167,11 @@ class SupabaseAuthController extends ChangeNotifier {
       }
 
       if (_client?.auth.currentSession == null) {
-        lastError = 'Demo account created but email confirmation is required. '
-            'Disable “Confirm email” in Supabase Auth settings, then try again.';
-        return false;
+        final retry = await service.signIn(account.email, account.password);
+        if (retry.isFailure) {
+          lastError = retry.error ?? 'Demo account created but sign-in failed.';
+          return false;
+        }
       }
     }
 
@@ -285,9 +287,16 @@ class SupabaseAuthController extends ChangeNotifier {
       throw Exception(lastError);
     }
 
-    // Email confirmation may be enabled — session can be null until confirmed.
+    // Email confirmation disabled — sign in immediately when signup returns no session.
     if (_client?.auth.currentSession == null) {
-      lastError = 'Account created! Check your email to confirm, then sign in.';
+      final signInResult = await SupabaseService.instance.signIn(emailInput, password);
+      if (signInResult.isSuccess && signInResult.data != null) {
+        await _applyUser(signInResult.data!);
+        notifyListeners();
+        return;
+      }
+
+      lastError = 'Account created but sign-in failed. Please sign in manually.';
       isAuthenticated = false;
       notifyListeners();
       throw Exception(lastError);

@@ -32,7 +32,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final cross = MediaQuery.sizeOf(context).width > 720 ? 2 : 1;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        8,
+        20,
+        MediaQuery.paddingOf(context).bottom + 100,
+      ),
       children: [
         Text('Explore lessons', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 4),

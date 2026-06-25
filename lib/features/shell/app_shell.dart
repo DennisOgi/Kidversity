@@ -39,6 +39,7 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final selected = _selectedIndex();
     final current = items[selected];
+    final narrow = MediaQuery.sizeOf(context).width < 380;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -81,13 +82,13 @@ class AppShell extends StatelessWidget {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+          padding: EdgeInsets.fromLTRB(narrow ? 10 : 16, 0, narrow ? 10 : 16, narrow ? 10 : 14),
           child: Align(
             alignment: Alignment.bottomCenter,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 560),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                padding: EdgeInsets.symmetric(horizontal: narrow ? 4 : 8, vertical: narrow ? 6 : 8),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(AppTheme.radiusXl),
@@ -106,6 +107,7 @@ class AppShell extends StatelessWidget {
                         item: items[i],
                         selected: selected == i,
                         accent: accent,
+                        compact: narrow,
                         onTap: () {
                           if (selected != i) context.go(items[i].path);
                         },
@@ -125,12 +127,14 @@ class _NavButton extends StatelessWidget {
   final NavItem item;
   final bool selected;
   final Color accent;
+  final bool compact;
   final VoidCallback onTap;
 
   const _NavButton({
     required this.item,
     required this.selected,
     required this.accent,
+    this.compact = false,
     required this.onTap,
   });
 
@@ -143,7 +147,7 @@ class _NavButton extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 240),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: EdgeInsets.symmetric(vertical: compact ? 8 : 10),
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
             color: selected ? accent.withValues(alpha: 0.12) : Colors.transparent,
@@ -153,16 +157,19 @@ class _NavButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(selected ? item.activeIcon : item.icon,
-                  color: selected ? accent : AppColors.muted, size: 24),
-              const SizedBox(height: 4),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 240),
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  color: selected ? accent : AppColors.muted,
+                  color: selected ? accent : AppColors.muted, size: compact ? 22 : 24),
+              SizedBox(height: compact ? 2 : 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 240),
+                  style: TextStyle(
+                    fontSize: compact ? 10 : 11,
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    color: selected ? accent : AppColors.muted,
+                  ),
+                  child: Text(item.label),
                 ),
-                child: Text(item.label),
               ),
             ],
           ),

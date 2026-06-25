@@ -16,9 +16,15 @@ class RewardsScreen extends ConsumerWidget {
     final board = ref.watch(leaderboardProvider);
     final text = Theme.of(context).textTheme;
     final unlocked = badges.where((b) => b.unlocked).length;
+    final badgeColumns = MediaQuery.sizeOf(context).width > 520 ? 3 : 2;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        8,
+        20,
+        MediaQuery.paddingOf(context).bottom + 100,
+      ),
       children: [
             Text('Rewards', style: text.headlineSmall),
             Text('Celebrate your effort and streaks', style: text.bodyMedium),
@@ -60,12 +66,12 @@ class RewardsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             const SectionHeader(title: 'Your badges'),
             GridView.count(
-              crossAxisCount: 3,
+              crossAxisCount: badgeColumns,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: 0.82,
+              childAspectRatio: badgeColumns == 3 ? 0.82 : 0.88,
               children: [for (final b in badges) _BadgeTile(badge: b)],
             ),
           ],

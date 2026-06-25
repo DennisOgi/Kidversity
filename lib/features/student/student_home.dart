@@ -20,9 +20,15 @@ class StudentHome extends ConsumerWidget {
     final learner = ref.watch(learnerProvider);
     final assigned = ref.watch(assignedLessonsProvider);
     final activeLive = ref.watch(activeLiveTestProvider).value;
+    final cardWidth = (MediaQuery.sizeOf(context).width - 54).clamp(260.0, 300.0);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        8,
+        20,
+        MediaQuery.paddingOf(context).bottom + 100,
+      ),
       children: [
         _TopBar(learner: learner),
         if (activeLive != null && activeLive.isActive) ...[
@@ -55,7 +61,7 @@ class StudentHome extends ConsumerWidget {
             itemBuilder: (context, i) {
               final lesson = assigned[i];
               return SizedBox(
-                width: 300,
+                width: cardWidth,
                 child: LessonCard(
                   lesson: lesson,
                   onTap: () => openStudentLesson(context, ref, lesson.id),
@@ -80,12 +86,62 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final narrow = MediaQuery.sizeOf(context).width < 420;
+
+    if (narrow) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hi, ${learner.name}! 👋',
+            style: text.headlineSmall?.copyWith(fontSize: 22),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text('Ready for today’s adventure?', style: text.bodyMedium),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: AppColors.sunsetGradient,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Row(
+                  children: [
+                    EmojiText('🔥', size: 16),
+                    const SizedBox(width: 5),
+                    Text('${learner.streakDays}',
+                        style: text.titleMedium?.copyWith(color: Colors.white, fontSize: 15)),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(14)),
+                alignment: Alignment.center,
+                child: Text(learner.avatarEmoji, style: emojiTextStyle(size: 24)),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
     return Row(
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Hi, ${learner.name}! 👋', style: text.headlineSmall),
+            Text(
+              'Hi, ${learner.name}! 👋',
+              style: text.headlineSmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             Text('Ready for today’s adventure?', style: text.bodyMedium),
           ],
         ),
@@ -98,7 +154,7 @@ class _TopBar extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Text('🔥', style: TextStyle(fontSize: 16)),
+              EmojiText('🔥', size: 16),
               const SizedBox(width: 5),
               Text('${learner.streakDays}',
                   style: text.titleMedium?.copyWith(color: Colors.white, fontSize: 15)),
