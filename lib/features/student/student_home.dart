@@ -19,7 +19,7 @@ class StudentHome extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final learner = ref.watch(learnerProvider);
     final assigned = ref.watch(assignedLessonsProvider);
-    final activeLive = ref.watch(activeLiveTestProvider).value;
+    final activeLive = ref.watch(activeLiveTestProvider).whenOrNull(data: (v) => v);
     final cardWidth = (MediaQuery.sizeOf(context).width - 54).clamp(260.0, 300.0);
 
     return ShellScrollView(
@@ -267,7 +267,8 @@ class _DailyGoal extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final goal = ref.watch(dailyGoalProvider).value ?? const DailyGoalProgress(completed: 0, target: 5);
+    final goal = ref.watch(dailyGoalProvider).whenOrNull(data: (g) => g) ??
+        const DailyGoalProgress(completed: 0, target: 5);
     final text = Theme.of(context).textTheme;
     return GlassCard(
       child: Row(

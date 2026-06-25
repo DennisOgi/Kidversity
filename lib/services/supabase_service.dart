@@ -52,7 +52,13 @@ class SupabaseService {
   // ================================================================== Auth
 
   /// Sign up with email and password.
-  Future<app_errors.Result<User>> signUp(String email, String password, String displayName) async {
+  Future<app_errors.Result<User>> signUp(
+    String email,
+    String password,
+    String displayName, {
+    String? gender,
+    int? age,
+  }) async {
     if (!isInitialized) {
       return app_errors.Result.failure(
         'Supabase is not configured. Add SUPABASE_URL and SUPABASE_ANON_KEY to .env.',
@@ -62,7 +68,11 @@ class SupabaseService {
       final response = await client.auth.signUp(
         email: email.trim(),
         password: password,
-        data: {'display_name': displayName.trim()},
+        data: {
+          'display_name': displayName.trim(),
+          if (gender != null) 'gender': gender,
+          if (age != null) 'age': age,
+        },
       );
 
       if (response.user == null) {

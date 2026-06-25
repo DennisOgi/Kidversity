@@ -3,11 +3,15 @@ class UserPreferences {
   final bool dyslexiaFriendly;
   final bool showCaptions;
   final bool joinLeaderboard;
+  final String? gender;
+  final int? age;
 
   const UserPreferences({
     this.dyslexiaFriendly = false,
     this.showCaptions = true,
     this.joinLeaderboard = true,
+    this.gender,
+    this.age,
   });
 
   factory UserPreferences.fromJson(Map<String, dynamic>? json) {
@@ -16,6 +20,8 @@ class UserPreferences {
       dyslexiaFriendly: json['dyslexia_friendly'] as bool? ?? false,
       showCaptions: json['show_captions'] as bool? ?? true,
       joinLeaderboard: json['join_leaderboard'] as bool? ?? true,
+      gender: json['gender'] as String?,
+      age: (json['age'] as num?)?.toInt(),
     );
   }
 
@@ -23,17 +29,23 @@ class UserPreferences {
         'dyslexia_friendly': dyslexiaFriendly,
         'show_captions': showCaptions,
         'join_leaderboard': joinLeaderboard,
+        if (gender != null) 'gender': gender,
+        if (age != null) 'age': age,
       };
 
   UserPreferences copyWith({
     bool? dyslexiaFriendly,
     bool? showCaptions,
     bool? joinLeaderboard,
+    String? gender,
+    int? age,
   }) =>
       UserPreferences(
         dyslexiaFriendly: dyslexiaFriendly ?? this.dyslexiaFriendly,
         showCaptions: showCaptions ?? this.showCaptions,
         joinLeaderboard: joinLeaderboard ?? this.joinLeaderboard,
+        gender: gender ?? this.gender,
+        age: age ?? this.age,
       );
 }
 

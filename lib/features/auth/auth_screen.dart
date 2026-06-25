@@ -34,15 +34,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
   }
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
   final _name = TextEditingController();
+  final _age = TextEditingController();
   bool _obscure = true;
+  bool _obscureConfirm = true;
+  String? _gender;
 
   @override
   void dispose() {
     _tabs.dispose();
     _email.dispose();
     _password.dispose();
+    _confirmPassword.dispose();
     _name.dispose();
+    _age.dispose();
     super.dispose();
   }
 
@@ -78,9 +84,48 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
   }
 
   Future<void> _submitSignUp() async {
+    final name = _name.text.trim();
+    final email = _email.text.trim();
+    final password = _password.text;
+    final confirm = _confirmPassword.text;
+    final ageText = _age.text.trim();
+
+    if (name.isEmpty) {
+      context.showErrorSnackbar('Enter your name.');
+      return;
+    }
+    if (email.isEmpty) {
+      context.showErrorSnackbar('Enter your email.');
+      return;
+    }
+    if (password.length < 8) {
+      context.showErrorSnackbar('Password must be at least 8 characters.');
+      return;
+    }
+    if (password != confirm) {
+      context.showErrorSnackbar('Passwords do not match.');
+      return;
+    }
+    if (_gender == null) {
+      context.showErrorSnackbar('Select your gender.');
+      return;
+    }
+    final age = int.tryParse(ageText);
+    if (age == null || age < 5 || age > 18) {
+      context.showErrorSnackbar('Enter a valid age between 5 and 18.');
+      return;
+    }
+
     try {
-      await ref.read(authControllerProvider).signUpWithEmail(_email.text, _password.text, _name.text);
-      if (mounted) continueAfterAuth(context, ref, redirect: _redirect);
+      await ref.read(authControllerProvider).signUpWithEmail(
+            email,
+            password,
+            name,
+            gender: _gender,
+            age: age,
+          );
+      if (!mounted) return;
+      context.go(AppRoutes.onboarding);
     } catch (e) {
       if (mounted) context.showErrorSnackbar(e.toString().replaceFirst('Exception: ', ''));
     }
@@ -125,9 +170,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                                       auth: auth,
                                       email: _email,
                                       password: _password,
+                                      confirmPassword: _confirmPassword,
                                       name: _name,
+                                      age: _age,
+                                      gender: _gender,
+                                      onGenderChanged: (g) => setState(() => _gender = g),
                                       obscure: _obscure,
+                                      obscureConfirm: _obscureConfirm,
                                       onToggleObscure: () => setState(() => _obscure = !_obscure),
+                                      onToggleObscureConfirm: () => setState(() => _obscureConfirm = !_obscureConfirm),
                                       onSignIn: _submitSignIn,
                                       onSignUp: _submitSignUp,
                                       onResetPassword: _resetPassword,
@@ -145,9 +196,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                                     auth: auth,
                                     email: _email,
                                     password: _password,
+                                    confirmPassword: _confirmPassword,
                                     name: _name,
+                                    age: _age,
+                                    gender: _gender,
+                                    onGenderChanged: (g) => setState(() => _gender = g),
                                     obscure: _obscure,
+                                    obscureConfirm: _obscureConfirm,
                                     onToggleObscure: () => setState(() => _obscure = !_obscure),
+                                    onToggleObscureConfirm: () => setState(() => _obscureConfirm = !_obscureConfirm),
                                     onSignIn: _submitSignIn,
                                     onSignUp: _submitSignUp,
                                     onResetPassword: _resetPassword,
@@ -242,9 +299,11 @@ class _FormCard extends StatelessWidget {
   final TabController tabs;
   final TextTheme text;
   final dynamic auth;
-  final TextEditingController email, password, name;
-  final bool obscure;
-  final VoidCallback onToggleObscure, onSignIn, onSignUp, onResetPassword;
+  final TextEditingController email, password, confirmPassword, name, age;
+  final String? gender;
+  final ValueChanged<String?> onGenderChanged;
+  final bool obscure, obscureConfirm;
+  final VoidCallback onToggleObscure, onToggleObscureConfirm, onSignIn, onSignUp, onResetPassword;
 
   const _FormCard({
     required this.tabs,
@@ -252,9 +311,15 @@ class _FormCard extends StatelessWidget {
     required this.auth,
     required this.email,
     required this.password,
+    required this.confirmPassword,
     required this.name,
+    required this.age,
+    required this.gender,
+    required this.onGenderChanged,
     required this.obscure,
+    required this.obscureConfirm,
     required this.onToggleObscure,
+    required this.onToggleObscureConfirm,
     required this.onSignIn,
     required this.onSignUp,
     required this.onResetPassword,
@@ -303,9 +368,15 @@ class _FormCard extends StatelessWidget {
                       key: const ValueKey('signup'),
                       email: email,
                       password: password,
+                      confirmPassword: confirmPassword,
                       name: name,
+                      age: age,
+                      gender: gender,
+                      onGenderChanged: onGenderChanged,
                       obscure: obscure,
+                      obscureConfirm: obscureConfirm,
                       onToggleObscure: onToggleObscure,
+                      onToggleObscureConfirm: onToggleObscureConfirm,
                       showName: true,
                     ),
             ),
@@ -340,17 +411,33 @@ class _FormCard extends StatelessWidget {
 
 class _Fields extends StatelessWidget {
   final TextEditingController email, password;
-  final TextEditingController? name;
-  final bool obscure, showName;
+  final TextEditingController? confirmPassword, name, age;
+  final String? gender;
+  final ValueChanged<String?>? onGenderChanged;
+  final bool obscure, obscureConfirm, showName;
   final VoidCallback onToggleObscure;
+  final VoidCallback? onToggleObscureConfirm;
+
+  static const _genderOptions = [
+    ('female', 'Female'),
+    ('male', 'Male'),
+    ('non_binary', 'Non-binary'),
+    ('prefer_not_to_say', 'Prefer not to say'),
+  ];
 
   const _Fields({
     super.key,
     required this.email,
     required this.password,
+    this.confirmPassword,
     this.name,
+    this.age,
+    this.gender,
+    this.onGenderChanged,
     required this.obscure,
+    this.obscureConfirm = true,
     required this.onToggleObscure,
+    this.onToggleObscureConfirm,
     required this.showName,
   });
 
@@ -376,6 +463,7 @@ class _Fields extends StatelessWidget {
         TextField(
           controller: password,
           obscureText: obscure,
+          textInputAction: showName ? TextInputAction.next : TextInputAction.done,
           decoration: InputDecoration(
             hintText: 'Password',
             prefixIcon: const Icon(Icons.lock_outline_rounded),
@@ -385,6 +473,49 @@ class _Fields extends StatelessWidget {
             ),
           ),
         ),
+        if (showName && confirmPassword != null) ...[
+          const SizedBox(height: 12),
+          TextField(
+            controller: confirmPassword,
+            obscureText: obscureConfirm,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              hintText: 'Confirm password',
+              prefixIcon: const Icon(Icons.lock_outline_rounded),
+              suffixIcon: IconButton(
+                onPressed: onToggleObscureConfirm,
+                icon: Icon(obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+              ),
+            ),
+          ),
+        ],
+        if (showName && onGenderChanged != null) ...[
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: gender,
+            decoration: const InputDecoration(
+              hintText: 'Gender',
+              prefixIcon: Icon(Icons.wc_outlined),
+            ),
+            items: [
+              for (final option in _genderOptions)
+                DropdownMenuItem(value: option.$1, child: Text(option.$2)),
+            ],
+            onChanged: onGenderChanged,
+          ),
+        ],
+        if (showName && age != null) ...[
+          const SizedBox(height: 12),
+          TextField(
+            controller: age,
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(
+              hintText: 'Age',
+              prefixIcon: Icon(Icons.cake_outlined),
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -55,7 +55,7 @@ final badgesProvider = Provider<List<RewardBadge>>((ref) {
 
 final leaderboardProvider = Provider<List<LeaderboardEntry>>((ref) {
   ref.watch(catalogProvider);
-  final prefs = ref.watch(userPreferencesProvider).value;
+  final prefs = ref.watch(userPreferencesProvider).whenOrNull(data: (p) => p);
   if (prefs != null && !prefs.joinLeaderboard) return const [];
   return ref.read(catalogProvider).leaderboard;
 });

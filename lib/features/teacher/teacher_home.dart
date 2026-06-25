@@ -25,9 +25,9 @@ class TeacherHome extends ConsumerWidget {
         auth.displayName.isNotEmpty ? auth.displayName : MockData.teacherName;
     final text = Theme.of(context).textTheme;
 
-    final lessonList = teacherLessons.value ?? [];
-    final m = metrics.value;
-    final students = roster.value ?? [];
+    final lessonList = teacherLessons.whenOrNull(data: (d) => d) ?? [];
+    final m = metrics.whenOrNull(data: (d) => d);
+    final students = roster.whenOrNull(data: (d) => d) ?? [];
     final insight = students.isNotEmpty
         ? '${students.first.name} is at ${(students.first.overallMastery * 100).round()}% mastery — keep the momentum going!'
         : 'Add students to your class to see insights here.';

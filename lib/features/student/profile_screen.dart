@@ -89,7 +89,7 @@ class ProfileScreen extends ConsumerWidget {
 class _SkillsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final skills = ref.watch(subjectSkillsProvider).value ?? const [];
+    final skills = ref.watch(subjectSkillsProvider).whenOrNull(data: (d) => d) ?? const [];
     if (skills.isEmpty) {
       return GlassCard(child: Text('Complete lessons to build your skills map.', style: Theme.of(context).textTheme.bodyLarge));
     }
@@ -112,7 +112,7 @@ class _SettingsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final prefs = ref.watch(userPreferencesProvider).value ?? const UserPreferences();
+    final prefs = ref.watch(userPreferencesProvider).whenOrNull(data: (d) => d) ?? const UserPreferences();
 
     Future<void> update(UserPreferences next) async {
       await SupabaseService.instance.saveUserPreferences(next);

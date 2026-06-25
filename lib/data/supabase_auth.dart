@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/models.dart';
+import '../models/user_preferences.dart';
 import '../services/supabase_service.dart';
 import 'demo_accounts.dart';
 
@@ -288,12 +289,24 @@ class SupabaseAuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> signUpWithEmail(String emailInput, String password, String name) async {
+  Future<void> signUpWithEmail(
+    String emailInput,
+    String password,
+    String name, {
+    String? gender,
+    int? age,
+  }) async {
     lastError = null;
     isLoading = true;
     notifyListeners();
 
-    final result = await SupabaseService.instance.signUp(emailInput, password, name);
+    final result = await SupabaseService.instance.signUp(
+      emailInput,
+      password,
+      name,
+      gender: gender,
+      age: age,
+    );
     isLoading = false;
 
     if (result.isFailure) {
@@ -309,11 +322,14 @@ class SupabaseAuthController extends ChangeNotifier {
       throw Exception(lastError);
     }
 
+    onboardingComplete = false;
+
     // Email confirmation disabled — sign in immediately when signup returns no session.
     if (_client?.auth.currentSession == null) {
       final signInResult = await SupabaseService.instance.signIn(emailInput, password);
       if (signInResult.isSuccess && signInResult.data != null) {
         await _applyUser(signInResult.data!);
+        await _saveRegistrationDetails(gender: gender, age: age);
         notifyListeners();
         return;
       }
@@ -325,7 +341,35 @@ class SupabaseAuthController extends ChangeNotifier {
     }
 
     await _applyUser(user);
+    await _saveRegistrationDetails(gender: gender, age: age);
     notifyListeners();
+  }
+
+  Future<void> _saveRegistrationDetails({String? gender, int? age}) async {
+    if (gender == null && age == null) return;
+    final client = _client;
+    final userId = client?.auth.currentUser?.id;
+    if (client == null || userId == null) return;
+
+    Map<String, dynamic>? existingPrefs;
+    try {
+      final row = await client
+          .from('user_profiles')
+          .select('preferences')
+          .eq('user_id', userId)
+          .maybeSingle();
+      existingPrefs = row?['preferences'] as Map<String, dynamic>?;
+    } catch (_) {}
+
+    final merged = UserPreferences.fromJson(existingPrefs).copyWith(
+      gender: gender,
+      age: age,
+    );
+
+    await SupabaseService.instance.upsertUserProfile({
+      'user_id': userId,
+      'preferences': merged.toJson(),
+    });
   }
 
   Future<void> completeOnboarding({

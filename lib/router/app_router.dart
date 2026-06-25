@@ -94,8 +94,10 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (!session.onboardingComplete) {
         if (isOnboarding || isAuth || isHome) return null;
-        if (isProtected) return onboardingWithRedirect(path);
-        return null;
+        if (isProtected || path.startsWith('/student') || path.startsWith('/teacher')) {
+          return onboardingWithRedirect(path);
+        }
+        return AppRoutes.onboarding;
       }
 
       if (isAuth || isOnboarding) {

@@ -14,7 +14,7 @@ class StudentsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rosterAsync = ref.watch(rosterProvider);
-    final roster = rosterAsync.value ?? const <StudentPerformance>[];
+    final roster = rosterAsync.whenOrNull(data: (d) => d) ?? const <StudentPerformance>[];
     final text = Theme.of(context).textTheme;
     final avg = roster.isEmpty
         ? 0.0
