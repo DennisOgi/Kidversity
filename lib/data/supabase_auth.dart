@@ -123,13 +123,35 @@ class SupabaseAuthController extends ChangeNotifier {
     final name = user?.userMetadata?['display_name'] as String? ??
         (email.isNotEmpty ? email.split('@').first : 'Explorer');
 
-    await client.from('user_profiles').upsert({
+    await SupabaseService.instance.upsertUserProfile({
       'user_id': userId,
       'display_name': name,
       'avatar_emoji': avatarEmoji,
       'onboarding_complete': false,
     });
     onboardingComplete = false;
+
+    // Trigger may have created the row first — reload to pick up DB values.
+    final row = await client
+        .from('user_profiles')
+        .select(
+          'display_name, avatar_emoji, onboarding_complete, role, '
+          'level, xp, streak_days, lessons_completed, minutes_learned',
+        )
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (row != null) {
+      displayName = row['display_name'] as String? ?? displayName;
+      avatarEmoji = row['avatar_emoji'] as String? ?? avatarEmoji;
+      onboardingComplete = row['onboarding_complete'] as bool? ?? false;
+      role = _roleFromDb(row['role'] as String?);
+      level = (row['level'] as num?)?.toInt() ?? level;
+      xp = (row['xp'] as num?)?.toInt() ?? xp;
+      streakDays = (row['streak_days'] as num?)?.toInt() ?? streakDays;
+      lessonsCompleted = (row['lessons_completed'] as num?)?.toInt() ?? lessonsCompleted;
+      minutesLearned = (row['minutes_learned'] as num?)?.toInt() ?? minutesLearned;
+    }
   }
 
   Future<void> signInDemoAccount(DemoAccount account) async {
@@ -209,7 +231,7 @@ class SupabaseAuthController extends ChangeNotifier {
     if (client == null || userId == null) return;
 
     try {
-      await client.from('user_profiles').upsert({
+      await SupabaseService.instance.upsertUserProfile({
         'user_id': userId,
         'display_name': account.displayName,
         'avatar_emoji': account.avatarEmoji,
@@ -324,7 +346,7 @@ class SupabaseAuthController extends ChangeNotifier {
       return;
     }
 
-    await client.from('user_profiles').upsert({
+    await SupabaseService.instance.upsertUserProfile({
       'user_id': userId,
       'display_name': name,
       'avatar_emoji': emoji,

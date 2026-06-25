@@ -23,6 +23,11 @@ class SupabaseService {
 
   bool get isInitialized => _client != null;
 
+  /// Upsert by [user_id] — required because the table PK is `id`, not `user_id`.
+  Future<void> upsertUserProfile(Map<String, dynamic> data) async {
+    await client.from('user_profiles').upsert(data, onConflict: 'user_id');
+  }
+
   /// Initialize Supabase client.
   Future<void> initialize() async {
     try {
@@ -491,7 +496,7 @@ class SupabaseService {
       if (displayName != null) updates['display_name'] = displayName;
       if (avatarEmoji != null) updates['avatar_emoji'] = avatarEmoji;
 
-      await client.from('user_profiles').upsert(updates);
+      await SupabaseService.instance.upsertUserProfile(updates);
 
       return app_errors.Result.success(null);
     } on PostgrestException catch (e) {
