@@ -1,0 +1,5 @@
+package com.kidversity.kidversity
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()
