@@ -95,55 +95,68 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
     return Scaffold(
       body: AuroraBackground(
         child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, c) {
-              return SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: wide ? 56 : 22, vertical: 24),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: c.maxHeight - 48),
-                  child: wide
-                      ? Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(child: _HeroPanel(text: text)),
-                            const SizedBox(width: 48),
-                            Expanded(child: _FormCard(
-                              tabs: _tabs,
-                              text: text,
-                              auth: auth,
-                              email: _email,
-                              password: _password,
-                              name: _name,
-                              obscure: _obscure,
-                              onToggleObscure: () => setState(() => _obscure = !_obscure),
-                              onSignIn: _submitSignIn,
-                              onSignUp: _submitSignUp,
-                              onResetPassword: _resetPassword,
-                            )),
-                          ],
-                        )
-                      : Column(
-                          children: [
-                            _HeroPanel(text: text, compact: true),
-                            const SizedBox(height: 24),
-                            _FormCard(
-                              tabs: _tabs,
-                              text: text,
-                              auth: auth,
-                              email: _email,
-                              password: _password,
-                              name: _name,
-                              obscure: _obscure,
-                              onToggleObscure: () => setState(() => _obscure = !_obscure),
-                              onSignIn: _submitSignIn,
-                              onSignUp: _submitSignUp,
-                              onResetPassword: _resetPassword,
-                            ),
-                          ],
-                        ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(wide ? 56 : 22, 8, wide ? 56 : 22, 0),
+                child: KidversityBrandMark(onTap: () => context.go(AppRoutes.home)),
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, c) {
+                    return SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(horizontal: wide ? 56 : 22, vertical: 20),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: c.maxHeight - 80),
+                        child: wide
+                            ? Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(child: _HeroPanel(text: text)),
+                                  const SizedBox(width: 48),
+                                  Expanded(
+                                    child: _FormCard(
+                                      tabs: _tabs,
+                                      text: text,
+                                      auth: auth,
+                                      email: _email,
+                                      password: _password,
+                                      name: _name,
+                                      obscure: _obscure,
+                                      onToggleObscure: () => setState(() => _obscure = !_obscure),
+                                      onSignIn: _submitSignIn,
+                                      onSignUp: _submitSignUp,
+                                      onResetPassword: _resetPassword,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                children: [
+                                  _HeroPanel(text: text, compact: true),
+                                  const SizedBox(height: 20),
+                                  _FormCard(
+                                    tabs: _tabs,
+                                    text: text,
+                                    auth: auth,
+                                    email: _email,
+                                    password: _password,
+                                    name: _name,
+                                    obscure: _obscure,
+                                    onToggleObscure: () => setState(() => _obscure = !_obscure),
+                                    onSignIn: _submitSignIn,
+                                    onSignUp: _submitSignUp,
+                                    onResetPassword: _resetPassword,
+                                  ),
+                                ],
+                              ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+            ],
           ),
         ),
       ),
@@ -271,51 +284,37 @@ class _FormCard extends StatelessWidget {
                 Tab(text: 'Create account'),
               ],
             ),
-            const SizedBox(height: 22),
-            SizedBox(
-              height: 248,
-              child: TabBarView(
-                controller: tabs,
-                children: [
-                  _Fields(
-                    email: email,
-                    password: password,
-                    obscure: obscure,
-                    onToggleObscure: onToggleObscure,
-                    showName: false,
-                  ),
-                  _Fields(
-                    email: email,
-                    password: password,
-                    name: name,
-                    obscure: obscure,
-                    onToggleObscure: onToggleObscure,
-                    showName: true,
-                  ),
-                ],
-              ),
+            const SizedBox(height: 18),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: tabs.index == 0
+                  ? _Fields(
+                      key: const ValueKey('signin'),
+                      email: email,
+                      password: password,
+                      obscure: obscure,
+                      onToggleObscure: onToggleObscure,
+                      showName: false,
+                    )
+                  : _Fields(
+                      key: const ValueKey('signup'),
+                      email: email,
+                      password: password,
+                      name: name,
+                      obscure: obscure,
+                      onToggleObscure: onToggleObscure,
+                      showName: true,
+                    ),
             ),
+            const SizedBox(height: 16),
             GradientButton(
               label: auth.isLoading ? 'Please wait…' : (tabs.index == 0 ? 'Sign in' : 'Create account'),
               icon: Icons.arrow_forward_rounded,
               expand: true,
               onTap: auth.isLoading ? null : (tabs.index == 0 ? onSignIn : onSignUp),
             ),
-            if (tabs.index == 1) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: auth.isLoading ? null : () => context.go(AppRoutes.home),
-                icon: const Icon(Icons.home_outlined, size: 18),
-                label: const Text('Back to homepage'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: const BorderSide(color: AppColors.line),
-                  foregroundColor: AppColors.inkSoft,
-                ),
-              ),
-            ],
             if (tabs.index == 0) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(onPressed: onResetPassword, child: const Text('Forgot password?')),
@@ -343,6 +342,7 @@ class _Fields extends StatelessWidget {
   final VoidCallback onToggleObscure;
 
   const _Fields({
+    super.key,
     required this.email,
     required this.password,
     this.name,

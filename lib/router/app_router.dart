@@ -27,17 +27,17 @@ import 'navigation.dart';
 final _rootKey = GlobalKey<NavigatorState>();
 
 const _studentNav = [
-  NavItem(Icons.home_outlined, Icons.home_rounded, 'Home', '/student/home'),
-  NavItem(Icons.explore_outlined, Icons.explore_rounded, 'Explore', '/student/explore'),
-  NavItem(Icons.emoji_events_outlined, Icons.emoji_events_rounded, 'Rewards', '/student/rewards'),
-  NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profile', '/student/profile'),
+  NavItem(Icons.home_outlined, Icons.home_rounded, 'Home', '/student/home', 'Your learning hub'),
+  NavItem(Icons.explore_outlined, Icons.explore_rounded, 'Explore', '/student/explore', 'Discover new lessons'),
+  NavItem(Icons.emoji_events_outlined, Icons.emoji_events_rounded, 'Rewards', '/student/rewards', 'Badges & leaderboard'),
+  NavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profile', '/student/profile', 'Your progress & settings'),
 ];
 
 const _teacherNav = [
-  NavItem(Icons.dashboard_outlined, Icons.dashboard_rounded, 'Home', '/teacher/home'),
-  NavItem(Icons.add_circle_outline_rounded, Icons.add_circle_rounded, 'Create', '/teacher/create'),
-  NavItem(Icons.bolt_outlined, Icons.bolt_rounded, 'Live', '/teacher/live'),
-  NavItem(Icons.groups_outlined, Icons.groups_rounded, 'Class', '/teacher/students'),
+  NavItem(Icons.dashboard_outlined, Icons.dashboard_rounded, 'Home', '/teacher/home', 'Class overview'),
+  NavItem(Icons.add_circle_outline_rounded, Icons.add_circle_rounded, 'Create', '/teacher/create', 'Build or upload lessons'),
+  NavItem(Icons.bolt_outlined, Icons.bolt_rounded, 'Live', '/teacher/live', 'Timed quizzes'),
+  NavItem(Icons.groups_outlined, Icons.groups_rounded, 'Class', '/teacher/students', 'Students & roster'),
 ];
 
 Widget _studentShell(String path, Widget page) => AppShell(

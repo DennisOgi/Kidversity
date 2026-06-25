@@ -246,6 +246,136 @@ class GradientButton extends StatelessWidget {
   }
 }
 
+/// Tappable Kidversity logo — use on auth and dashboard shells.
+class KidversityBrandMark extends StatelessWidget {
+  final VoidCallback? onTap;
+  final bool compact;
+  final bool showLabel;
+
+  const KidversityBrandMark({
+    super.key,
+    this.onTap,
+    this.compact = false,
+    this.showLabel = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final size = compact ? 38.0 : 44.0;
+    final emojiSize = compact ? 20.0 : 24.0;
+    final labelStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontSize: compact ? 16 : 18,
+          fontWeight: FontWeight.w800,
+        );
+
+    final mark = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            gradient: AppColors.brandGradient,
+            borderRadius: BorderRadius.circular(compact ? 12 : 14),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.28),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: EmojiText('🎓', size: emojiSize),
+        ),
+        if (showLabel) ...[
+          const SizedBox(width: 10),
+          Text('Kidversity', style: labelStyle),
+        ],
+      ],
+    );
+
+    if (onTap == null) return mark;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        splashColor: AppColors.primary.withValues(alpha: 0.08),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: mark,
+        ),
+      ),
+    );
+  }
+}
+
+/// Top app bar for student/teacher dashboard shells.
+class DashboardAppBar extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final Color accent;
+  final IconData? icon;
+  final VoidCallback? onBrandTap;
+
+  const DashboardAppBar({
+    super.key,
+    required this.title,
+    this.subtitle,
+    required this.accent,
+    this.icon,
+    this.onBrandTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.2),
+          boxShadow: AppTheme.cardShadow,
+        ),
+        child: Row(
+          children: [
+            KidversityBrandMark(onTap: onBrandTap, compact: true),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: text.titleLarge?.copyWith(fontSize: 20)),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      style: text.bodyMedium?.copyWith(fontSize: 12.5, color: AppColors.muted),
+                    ),
+                ],
+              ),
+            ),
+            if (icon != null)
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                ),
+                child: Icon(icon, color: accent, size: 22),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Section header with a title and optional trailing action.
 class SectionHeader extends StatelessWidget {
   final String title;

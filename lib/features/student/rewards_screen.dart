@@ -18,7 +18,7 @@ class RewardsScreen extends ConsumerWidget {
     final unlocked = badges.where((b) => b.unlocked).length;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
       children: [
             Text('Rewards', style: text.headlineSmall),
             Text('Celebrate your effort and streaks', style: text.bodyMedium),
@@ -27,7 +27,7 @@ class RewardsScreen extends ConsumerWidget {
               gradient: AppColors.goldGradient,
               child: Row(
                 children: [
-                  const Text('🏅', style: TextStyle(fontSize: 40)),
+                  EmojiText('🏅', size: 40),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -45,17 +45,6 @@ class RewardsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 22),
-            const SectionHeader(title: 'Your badges'),
-            GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.82,
-              children: [for (final b in badges) _BadgeTile(badge: b)],
-            ),
-            const SizedBox(height: 24),
             const SectionHeader(title: 'Class leaderboard', subtitle: 'Opt-in & privacy protected'),
             GlassCard(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -67,6 +56,17 @@ class RewardsScreen extends ConsumerWidget {
                   ]
                 ],
               ),
+            ),
+            const SizedBox(height: 24),
+            const SectionHeader(title: 'Your badges'),
+            GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.82,
+              children: [for (final b in badges) _BadgeTile(badge: b)],
             ),
           ],
     );

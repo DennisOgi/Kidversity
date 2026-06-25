@@ -3,14 +3,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/common.dart';
 
 class NavItem {
   final IconData icon;
   final IconData activeIcon;
   final String label;
   final String path;
+  final String? subtitle;
 
-  const NavItem(this.icon, this.activeIcon, this.label, this.path);
+  const NavItem(this.icon, this.activeIcon, this.label, this.path, [this.subtitle]);
 }
 
 /// Tab shell — static gradient backdrop + page content + bottom nav.
@@ -36,6 +38,7 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selected = _selectedIndex();
+    final current = items[selected];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -57,7 +60,19 @@ class AppShell extends StatelessWidget {
               ),
               child: SafeArea(
                 bottom: false,
-                child: child,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    DashboardAppBar(
+                      title: current.label,
+                      subtitle: current.subtitle,
+                      accent: accent,
+                      icon: current.activeIcon,
+                      onBrandTap: () => context.go(items.first.path),
+                    ),
+                    Expanded(child: child),
+                  ],
+                ),
               ),
             ),
           ),
