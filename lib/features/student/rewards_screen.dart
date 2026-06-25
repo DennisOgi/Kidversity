@@ -18,13 +18,7 @@ class RewardsScreen extends ConsumerWidget {
     final unlocked = badges.where((b) => b.unlocked).length;
     final badgeColumns = MediaQuery.sizeOf(context).width > 520 ? 3 : 2;
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        8,
-        20,
-        MediaQuery.paddingOf(context).bottom + 100,
-      ),
+    return ShellScrollView(
       children: [
             Text('Rewards', style: text.headlineSmall),
             Text('Celebrate your effort and streaks', style: text.bodyMedium),

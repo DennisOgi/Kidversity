@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/app_state.dart';
 import '../../router/navigation.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/common.dart';
 import '../../widgets/lesson_card.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
@@ -31,13 +32,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
     final cross = MediaQuery.sizeOf(context).width > 720 ? 2 : 1;
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        8,
-        20,
-        MediaQuery.paddingOf(context).bottom + 100,
-      ),
+    return ShellScrollView(
       children: [
         Text('Explore lessons', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 4),

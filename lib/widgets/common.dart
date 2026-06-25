@@ -409,6 +409,30 @@ class DashboardAppBar extends StatelessWidget {
   }
 }
 
+/// Bottom inset for scrollable pages inside [AppShell] (nav bar sits below content).
+double shellScrollBottomPadding(BuildContext context) =>
+    MediaQuery.paddingOf(context).bottom + 20;
+
+/// Top-aligned scroll content for tab shell pages — avoids ListView viewport gaps.
+class ShellScrollView extends StatelessWidget {
+  final List<Widget> children;
+  final EdgeInsetsGeometry? padding;
+
+  const ShellScrollView({super.key, required this.children, this.padding});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: padding ??
+          EdgeInsets.fromLTRB(20, 8, 20, shellScrollBottomPadding(context)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+}
+
 /// Section header with a title and optional trailing action.
 class SectionHeader extends StatelessWidget {
   final String title;

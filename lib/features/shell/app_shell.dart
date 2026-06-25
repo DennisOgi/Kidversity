@@ -43,7 +43,7 @@ class AppShell extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      extendBody: true,
+      extendBody: false,
       body: Column(
         children: [
           Expanded(
@@ -82,7 +82,7 @@ class AppShell extends StatelessWidget {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(narrow ? 10 : 16, 0, narrow ? 10 : 16, narrow ? 10 : 14),
+          padding: EdgeInsets.fromLTRB(narrow ? 10 : 16, 6, narrow ? 10 : 16, narrow ? 8 : 10),
           child: Align(
             alignment: Alignment.bottomCenter,
             child: ConstrainedBox(

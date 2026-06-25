@@ -22,13 +22,7 @@ class StudentHome extends ConsumerWidget {
     final activeLive = ref.watch(activeLiveTestProvider).value;
     final cardWidth = (MediaQuery.sizeOf(context).width - 54).clamp(260.0, 300.0);
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        8,
-        20,
-        MediaQuery.paddingOf(context).bottom + 100,
-      ),
+    return ShellScrollView(
       children: [
         _TopBar(learner: learner),
         if (activeLive != null && activeLive.isActive) ...[

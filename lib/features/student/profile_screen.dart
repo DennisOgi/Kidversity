@@ -22,8 +22,7 @@ class ProfileScreen extends ConsumerWidget {
     final displayName = auth.displayName.isNotEmpty ? auth.displayName : learner.name;
     final avatar = auth.avatarEmoji.isNotEmpty ? auth.avatarEmoji : learner.avatarEmoji;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+    return ShellScrollView(
       children: [
             Row(
               children: [
