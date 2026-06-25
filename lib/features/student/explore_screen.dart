@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../data/app_state.dart';
+import '../../router/navigation.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/lesson_card.dart';
 
@@ -96,7 +96,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             itemCount: filtered.length,
             itemBuilder: (context, i) => LessonCard(
               lesson: filtered[i],
-              onTap: () => context.go('/student/lesson/${filtered[i].id}'),
+              onTap: () => openStudentLesson(context, ref, filtered[i].id),
             ),
           ),
       ],

@@ -45,7 +45,7 @@ class LessonCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 alignment: Alignment.center,
-                child: Text(lesson.emoji, style: const TextStyle(fontSize: 26)),
+                child: EmojiText(lesson.emoji, size: 26),
               ),
               const SizedBox(width: 12),
               Expanded(

@@ -301,6 +301,19 @@ class _FormCard extends StatelessWidget {
               expand: true,
               onTap: auth.isLoading ? null : (tabs.index == 0 ? onSignIn : onSignUp),
             ),
+            if (tabs.index == 1) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: auth.isLoading ? null : () => context.go(AppRoutes.home),
+                icon: const Icon(Icons.home_outlined, size: 18),
+                label: const Text('Back to homepage'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: AppColors.line),
+                  foregroundColor: AppColors.inkSoft,
+                ),
+              ),
+            ],
             if (tabs.index == 0) ...[
               const SizedBox(height: 8),
               Align(

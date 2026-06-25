@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../data/app_state.dart';
 import '../data/auth_state.dart';
+import '../models/models.dart';
 import '../features/auth/auth_screen.dart';
 import '../features/landing/landing_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
@@ -78,6 +80,12 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (isSplash) return AppRoutes.home;
 
+      if (session.isAuthenticated && session.onboardingComplete && isHome) {
+        final role = session.role ?? ref.read(roleProvider);
+        if (role == UserRole.teacher) return AppRoutes.teacherHome;
+        if (role == UserRole.student) return AppRoutes.studentHome;
+      }
+
       if (!session.isAuthenticated) {
         if (isHome || isAuth) return null;
         if (isProtected) return authWithRedirect(path);
@@ -92,6 +100,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (isAuth || isOnboarding) {
         if (redirect != null && redirect.isNotEmpty) return redirect;
+        final role = session.role ?? ref.read(roleProvider);
+        if (role == UserRole.teacher) return AppRoutes.teacherHome;
+        if (role == UserRole.student) return AppRoutes.studentHome;
         return AppRoutes.home;
       }
 

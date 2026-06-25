@@ -1,8 +1,45 @@
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+
+/// Font stack for emoji — avoids Google Fonts (Nunito/Fredoka) rendering tofu boxes on web.
+const kEmojiFontFallbacks = [
+  'Noto Color Emoji',
+  'Apple Color Emoji',
+  'Segoe UI Emoji',
+  'Segoe UI Symbol',
+  'sans-serif',
+];
+
+TextStyle emojiTextStyle({double size = 24, Color? color, double? height}) => TextStyle(
+      fontSize: size,
+      height: height ?? 1.1,
+      color: color,
+      fontFamily: 'Noto Color Emoji',
+      fontFamilyFallback: kEmojiFontFallbacks,
+    );
+
+/// Renders emoji with a system/color emoji font (required on Flutter web).
+class EmojiText extends StatelessWidget {
+  final String text;
+  final double size;
+  final TextAlign? textAlign;
+  final Color? color;
+
+  const EmojiText(this.text, {super.key, this.size = 24, this.textAlign, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      textAlign: textAlign,
+      style: emojiTextStyle(size: size, color: color),
+    );
+  }
+}
 
 /// A frosted, rounded surface used as the base for most cards.
 ///
@@ -50,7 +87,7 @@ class GlassCard extends StatelessWidget {
       child: child,
     );
 
-    if (frosted) {
+    if (frosted && !kIsWeb) {
       content = ClipRRect(
         borderRadius: BorderRadius.circular(radius),
         child: BackdropFilter(
@@ -87,30 +124,34 @@ class _PressableState extends State<_Pressable> {
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapUp: (_) => setState(() => _pressed = false),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTap: widget.onTap,
-        child: AnimatedScale(
-          scale: scale,
-          duration: const Duration(milliseconds: 160),
-          curve: Curves.easeOut,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(widget.radius),
-              boxShadow: _hovered
-                  ? [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.16),
-                        blurRadius: 28,
-                        offset: const Offset(0, 14),
-                      ),
-                    ]
-                  : null,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onTap,
+          onHighlightChanged: (v) => setState(() => _pressed = v),
+          borderRadius: BorderRadius.circular(widget.radius),
+          splashColor: AppColors.primary.withValues(alpha: 0.08),
+          highlightColor: AppColors.primary.withValues(alpha: 0.04),
+          child: AnimatedScale(
+            scale: scale,
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(widget.radius),
+                boxShadow: _hovered
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.16),
+                          blurRadius: 28,
+                          offset: const Offset(0, 14),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: widget.child,
             ),
-            child: widget.child,
           ),
         ),
       ),

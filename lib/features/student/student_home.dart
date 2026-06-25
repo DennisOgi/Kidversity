@@ -58,7 +58,7 @@ class StudentHome extends ConsumerWidget {
                 width: 300,
                 child: LessonCard(
                   lesson: lesson,
-                  onTap: () => context.go('/student/lesson/${lesson.id}'),
+                  onTap: () => openStudentLesson(context, ref, lesson.id),
                 ),
               );
             },
@@ -111,7 +111,7 @@ class _TopBar extends StatelessWidget {
           height: 46,
           decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(14)),
           alignment: Alignment.center,
-          child: Text(learner.avatarEmoji, style: const TextStyle(fontSize: 24)),
+          child: Text(learner.avatarEmoji, style: emojiTextStyle(size: 24)),
         ),
       ],
     );

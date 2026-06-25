@@ -71,7 +71,6 @@ Future<void> _initializeApp() async {
   } catch (e, stack) {
     debugPrint('❌ App initialization failed: $e');
     await ErrorHandler.reportError(e, stack, context: 'App initialization error');
-    if (!kDebugMode) rethrow;
   }
 }
 

@@ -3,6 +3,17 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
+const _emojiFontFallbacks = [
+  'Noto Color Emoji',
+  'Apple Color Emoji',
+  'Segoe UI Emoji',
+  'Segoe UI Symbol',
+  'sans-serif',
+];
+
+TextStyle _withEmojiFallback(TextStyle style) =>
+    style.copyWith(fontFamilyFallback: _emojiFontFallbacks);
+
 /// App-wide theme. Display/headers use Fredoka (rounded, friendly),
 /// body uses Nunito (highly readable). Both fall back gracefully.
 class AppTheme {
@@ -33,24 +44,24 @@ class AppTheme {
     final base = ThemeData(useMaterial3: true, brightness: Brightness.light);
 
     final textTheme = GoogleFonts.nunitoTextTheme(base.textTheme).copyWith(
-      displayLarge: GoogleFonts.fredoka(
-        fontSize: 44, fontWeight: FontWeight.w600, color: AppColors.ink, height: 1.05),
-      displayMedium: GoogleFonts.fredoka(
-        fontSize: 34, fontWeight: FontWeight.w600, color: AppColors.ink, height: 1.1),
-      headlineMedium: GoogleFonts.fredoka(
-        fontSize: 26, fontWeight: FontWeight.w600, color: AppColors.ink),
-      headlineSmall: GoogleFonts.fredoka(
-        fontSize: 21, fontWeight: FontWeight.w500, color: AppColors.ink),
-      titleLarge: GoogleFonts.fredoka(
-        fontSize: 18, fontWeight: FontWeight.w500, color: AppColors.ink),
-      titleMedium: GoogleFonts.nunito(
-        fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.ink),
-      bodyLarge: GoogleFonts.nunito(
-        fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.inkSoft, height: 1.45),
-      bodyMedium: GoogleFonts.nunito(
-        fontSize: 14.5, fontWeight: FontWeight.w500, color: AppColors.inkSoft, height: 1.45),
-      labelLarge: GoogleFonts.nunito(
-        fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.ink),
+      displayLarge: _withEmojiFallback(GoogleFonts.fredoka(
+        fontSize: 44, fontWeight: FontWeight.w600, color: AppColors.ink, height: 1.05)),
+      displayMedium: _withEmojiFallback(GoogleFonts.fredoka(
+        fontSize: 34, fontWeight: FontWeight.w600, color: AppColors.ink, height: 1.1)),
+      headlineMedium: _withEmojiFallback(GoogleFonts.fredoka(
+        fontSize: 26, fontWeight: FontWeight.w600, color: AppColors.ink)),
+      headlineSmall: _withEmojiFallback(GoogleFonts.fredoka(
+        fontSize: 21, fontWeight: FontWeight.w500, color: AppColors.ink)),
+      titleLarge: _withEmojiFallback(GoogleFonts.fredoka(
+        fontSize: 18, fontWeight: FontWeight.w500, color: AppColors.ink)),
+      titleMedium: _withEmojiFallback(GoogleFonts.nunito(
+        fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.ink)),
+      bodyLarge: _withEmojiFallback(GoogleFonts.nunito(
+        fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.inkSoft, height: 1.45)),
+      bodyMedium: _withEmojiFallback(GoogleFonts.nunito(
+        fontSize: 14.5, fontWeight: FontWeight.w500, color: AppColors.inkSoft, height: 1.45)),
+      labelLarge: _withEmojiFallback(GoogleFonts.nunito(
+        fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.ink)),
     );
 
     final scheme = ColorScheme.fromSeed(

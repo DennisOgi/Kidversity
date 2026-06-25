@@ -280,7 +280,7 @@ class _FloatingChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 17)),
+          Text(emoji, style: emojiTextStyle(size: 17)),
           const SizedBox(width: 7),
           Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 13, color: AppColors.ink)),
         ],
@@ -315,7 +315,7 @@ class _FeatureGrid extends ConsumerWidget {
               delay: Duration(milliseconds: 400 + i * 80),
               child: GlassCard(
                 frosted: true,
-                onTap: () => context.go(AppRoutes.auth),
+                onTap: () => openLandingFeature(context, ref, i),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
