@@ -656,10 +656,50 @@ class SupabaseService {
     }
   }
 
+  /// Ensures the signed-in teacher has at least one class row.
+  Future<app_errors.Result<String>> ensureTeacherClass({String? className}) async {
+    try {
+      if (currentUser == null) {
+        return app_errors.Result.failure('Not authenticated');
+      }
+      final teacherId = currentUser!.id;
+
+      final existing = await client
+          .from('classes')
+          .select('id')
+          .eq('teacher_id', teacherId)
+          .limit(1)
+          .maybeSingle();
+      if (existing != null) {
+        return app_errors.Result.success(existing['id'] as String);
+      }
+
+      final row = await client
+          .from('classes')
+          .insert({
+            'name': className ?? 'My Class',
+            'teacher_id': teacherId,
+            'description': 'Your Kidversity class',
+          })
+          .select('id')
+          .single();
+
+      return app_errors.Result.success(row['id'] as String);
+    } on PostgrestException catch (e) {
+      await app_errors.ErrorHandler.reportError(e, null, context: 'Ensure teacher class failed');
+      return app_errors.Result.failure('Could not create your class. Please try again.');
+    } catch (e, stack) {
+      await app_errors.ErrorHandler.reportError(e, stack, context: 'Ensure teacher class error');
+      return app_errors.Result.failure('An unexpected error occurred.');
+    }
+  }
+
   Future<app_errors.Result<TeacherMetrics>> fetchTeacherMetrics() async {
     try {
       if (currentUser == null) return app_errors.Result.failure('Not authenticated');
       final teacherId = currentUser!.id;
+
+      await ensureTeacherClass();
 
       final classRows = await client.from('classes').select('id').eq('teacher_id', teacherId);
       final classIds = (classRows as List).map((r) => r['id'] as String).toList();
@@ -704,6 +744,8 @@ class SupabaseService {
     try {
       if (currentUser == null) return app_errors.Result.failure('Not authenticated');
       final teacherId = currentUser!.id;
+
+      await ensureTeacherClass();
 
       final classRow = await client.from('classes').select('id').eq('teacher_id', teacherId).limit(1).maybeSingle();
       if (classRow == null) return app_errors.Result.success(const []);
@@ -788,9 +830,11 @@ class SupabaseService {
       if (currentUser == null) return app_errors.Result.failure('Not authenticated');
       final teacherId = currentUser!.id;
 
-      final classRow = await client.from('classes').select('id').eq('teacher_id', teacherId).limit(1).maybeSingle();
+      var classRow = await client.from('classes').select('id').eq('teacher_id', teacherId).limit(1).maybeSingle();
       if (classRow == null) {
-        return app_errors.Result.failure('Create a class first by adding students in Supabase or use demo accounts.');
+        final ensured = await ensureTeacherClass();
+        if (ensured.isFailure) return app_errors.Result.failure(ensured.error!);
+        classRow = {'id': ensured.data!};
       }
 
       final classId = classRow['id'] as String;

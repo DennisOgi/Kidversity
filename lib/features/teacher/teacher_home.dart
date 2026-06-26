@@ -33,8 +33,7 @@ class TeacherHome extends ConsumerWidget {
         : 'Add students to your class to see insights here.';
     final weekly = students.isNotEmpty ? students.first.weeklyActivity : const [0.5, 0.7, 0.6, 0.9, 0.8, 0.4, 0.85];
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+    return ShellScrollView(
       children: [
             Row(
               children: [

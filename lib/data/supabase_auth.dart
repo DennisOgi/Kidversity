@@ -399,6 +399,10 @@ class SupabaseAuthController extends ChangeNotifier {
       'updated_at': DateTime.now().toIso8601String(),
     });
 
+    if (selectedRole == UserRole.teacher) {
+      await SupabaseService.instance.ensureTeacherClass(className: '$name\'s Class');
+    }
+
     await client.auth.updateUser(
       UserAttributes(
         data: {
