@@ -319,43 +319,6 @@ class KidversityBrandMark extends StatelessWidget {
   }
 }
 
-/// Frosted pill chrome for shell app bar and bottom nav (not full-width bars).
-class ShellChromePill extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-
-  const ShellChromePill({
-    super.key,
-    required this.child,
-    this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Explicit BoxDecoration paints reliably on Flutter web (Material elevation often does not).
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-        border: Border.all(color: const Color(0xFFD4D0E4), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.ink.withValues(alpha: 0.14),
-            blurRadius: 28,
-            offset: const Offset(0, 12),
-          ),
-          BoxShadow(
-            color: AppColors.ink.withValues(alpha: 0.06),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(padding: padding, child: child),
-    );
-  }
-}
-
 /// Top app bar for student/teacher dashboard shells.
 class DashboardAppBar extends StatelessWidget {
   final String title;
@@ -382,74 +345,71 @@ class DashboardAppBar extends StatelessWidget {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(narrow ? 12 : 16, 10, narrow ? 12 : 16, 6),
-      child: ShellChromePill(
-        padding: EdgeInsets.symmetric(horizontal: narrow ? 10 : 14, vertical: narrow ? 10 : 12),
-        child: Row(
-          children: [
-            SizedBox(
-              width: sideSlot,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: KidversityBrandMark(
-                  onTap: onBrandTap,
-                  compact: true,
-                  showLabel: false,
+      child: Row(
+        children: [
+          SizedBox(
+            width: sideSlot,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: KidversityBrandMark(
+                onTap: onBrandTap,
+                compact: true,
+                showLabel: false,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.titleLarge?.copyWith(fontSize: narrow ? 18 : 20),
                 ),
-              ),
-            ),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
+                if (subtitle != null)
                   Text(
-                    title,
+                    subtitle!,
                     textAlign: TextAlign.center,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: text.titleLarge?.copyWith(fontSize: narrow ? 18 : 20),
-                  ),
-                  if (subtitle != null)
-                    Text(
-                      subtitle!,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.bodyMedium?.copyWith(
-                        fontSize: narrow ? 11.5 : 12.5,
-                        color: AppColors.muted,
-                      ),
+                    style: text.bodyMedium?.copyWith(
+                      fontSize: narrow ? 11.5 : 12.5,
+                      color: AppColors.muted,
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
-            SizedBox(
-              width: sideSlot,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: icon != null
-                    ? Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                        ),
-                        child: Icon(icon, color: accent, size: 22),
-                      )
-                    : const SizedBox(width: 42, height: 42),
-              ),
+          ),
+          SizedBox(
+            width: sideSlot,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: icon != null
+                  ? Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                      ),
+                      child: Icon(icon, color: accent, size: 22),
+                    )
+                  : const SizedBox(width: 42, height: 42),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Bottom inset for scrollable pages inside [AppShell] (floating nav sits above content).
+/// Bottom inset for scrollable pages inside [AppShell].
 double shellScrollBottomPadding(BuildContext context) =>
-    MediaQuery.paddingOf(context).bottom + 92;
+    MediaQuery.paddingOf(context).bottom + 20;
 
 /// Scrollable tab page content for [AppShell] body.
 class ShellScrollView extends StatelessWidget {

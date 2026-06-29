@@ -15,7 +15,7 @@ class NavItem {
   const NavItem(this.icon, this.activeIcon, this.label, this.path, [this.subtitle]);
 }
 
-/// Tab shell — floating header/footer pills over scrollable page content.
+/// Tab shell — plain header + scrollable page + floating bottom nav pill.
 class AppShell extends StatelessWidget {
   final String currentPath;
   final List<NavItem> items;
@@ -57,60 +57,94 @@ class AppShell extends StatelessWidget {
       decoration: gradient,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: Stack(
-          fit: StackFit.expand,
+        body: Column(
           children: [
-            Column(
-              children: [
-                SafeArea(
-                  bottom: false,
-                  child: DashboardAppBar(
-                    title: current.label,
-                    subtitle: current.subtitle,
-                    accent: accent,
-                    icon: current.activeIcon,
-                    onBrandTap: () => context.go(items.first.path),
-                  ),
-                ),
-                Expanded(child: child),
-              ],
+            SafeArea(
+              bottom: false,
+              child: DashboardAppBar(
+                title: current.label,
+                subtitle: current.subtitle,
+                accent: accent,
+                icon: current.activeIcon,
+                onBrandTap: () => context.go(items.first.path),
+              ),
             ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(narrow ? 10 : 16, 0, narrow ? 10 : 16, narrow ? 8 : 10),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 560),
-                      child: ShellChromePill(
-                        padding: EdgeInsets.symmetric(horizontal: narrow ? 4 : 8, vertical: narrow ? 6 : 8),
-                        child: Row(
-                          children: [
-                            for (int i = 0; i < items.length; i++)
-                              _NavButton(
-                                item: items[i],
-                                selected: selected == i,
-                                accent: accent,
-                                compact: narrow,
-                                onTap: () {
-                                  if (selected != i) context.go(items[i].path);
-                                },
-                              ),
-                          ],
-                        ),
-                      ),
+            Expanded(child: child),
+          ],
+        ),
+        bottomNavigationBar: _BottomNavPill(
+          narrow: narrow,
+          accent: accent,
+          selected: selected,
+          items: items,
+          onSelect: (i) {
+            if (selected != i) context.go(items[i].path);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Rounded white pill wrapping bottom tab buttons — no full-width bar behind it.
+class _BottomNavPill extends StatelessWidget {
+  final bool narrow;
+  final Color accent;
+  final int selected;
+  final List<NavItem> items;
+  final ValueChanged<int> onSelect;
+
+  const _BottomNavPill({
+    required this.narrow,
+    required this.accent,
+    required this.selected,
+    required this.items,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(narrow ? 10 : 16, 6, narrow ? 10 : 16, narrow ? 8 : 10),
+            child: Center(
+              child: Container(
+                key: const Key('bottomNavPill'),
+                constraints: const BoxConstraints(maxWidth: 560),
+                padding: EdgeInsets.symmetric(horizontal: narrow ? 4 : 8, vertical: narrow ? 6 : 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFFFF),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+                  border: Border.all(color: const Color(0xFFB8B4C8), width: 1.5),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x331B1830),
+                      blurRadius: 24,
+                      offset: Offset(0, 10),
                     ),
-                  ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    for (int i = 0; i < items.length; i++)
+                      _NavButton(
+                        item: items[i],
+                        selected: selected == i,
+                        accent: accent,
+                        compact: narrow,
+                        onTap: () => onSelect(i),
+                      ),
+                  ],
                 ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

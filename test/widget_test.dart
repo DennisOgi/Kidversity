@@ -112,4 +112,42 @@ void main() {
 
     addTearDown(() => tester.binding.setSurfaceSize(null));
   });
+
+  testWidgets('AppShell bottom nav renders rounded pill container', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith((ref) {
+            final c = SupabaseAuthController();
+            c.isLoading = false;
+            c.isAuthenticated = true;
+            c.onboardingComplete = true;
+            c.displayName = 'Chioma';
+            return c;
+          }),
+          catalogProvider.overrideWith((ref) => ContentCatalog()),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const AppShell(
+            currentPath: '/student/home',
+            items: [
+              NavItem(Icons.home_outlined, Icons.home_rounded, 'Home', '/student/home'),
+              NavItem(Icons.explore_outlined, Icons.explore_rounded, 'Explore', '/student/explore'),
+            ],
+            child: SizedBox.shrink(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final pill = tester.renderObject<RenderBox>(find.byKey(const Key('bottomNavPill')));
+    expect(pill.size.width, greaterThan(200));
+    expect(pill.size.height, greaterThan(40));
+
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  });
 }
