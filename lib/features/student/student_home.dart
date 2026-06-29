@@ -19,19 +19,12 @@ class StudentHome extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final learner = ref.watch(learnerProvider);
     final assigned = ref.watch(assignedLessonsProvider);
-    final activeLive = ref.watch(activeLiveTestProvider).whenOrNull(data: (v) => v);
     final cardWidth = (MediaQuery.sizeOf(context).width - 54).clamp(260.0, 300.0);
 
     return ShellScrollView(
       children: [
         _TopBar(learner: learner),
-        if (activeLive != null && activeLive.isActive) ...[
-          const SizedBox(height: 16),
-          LiveTestAlertBanner(
-            test: activeLive,
-            onJoin: () => context.go(AppRoutes.studentLiveTest(activeLive.id)),
-          ),
-        ],
+        const _ActiveLiveSection(),
         const SizedBox(height: 20),
         _HeroCard(learner: learner),
         const SizedBox(height: 24),
@@ -47,7 +40,7 @@ class StudentHome extends ConsumerWidget {
         ),
         const SizedBox(height: 14),
         SizedBox(
-          height: 270,
+          height: 340,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: assigned.length,
@@ -70,6 +63,30 @@ class StudentHome extends ConsumerWidget {
         const _RecommendedBanner(),
       ],
     );
+  }
+}
+
+class _ActiveLiveSection extends ConsumerWidget {
+  const _ActiveLiveSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(activeLiveTestProvider).when(
+          data: (test) {
+            if (test == null || !test.isActive) return const SizedBox.shrink();
+            return Column(
+              children: [
+                const SizedBox(height: 16),
+                LiveTestAlertBanner(
+                  test: test,
+                  onJoin: () => context.go(AppRoutes.studentLiveTest(test.id)),
+                ),
+              ],
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        );
   }
 }
 

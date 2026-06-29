@@ -28,7 +28,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
     super.initState();
     _tabs.addListener(() => setState(() {}));
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final tab = GoRouterState.of(context).uri.queryParameters['tab'];
+      if (!mounted) return;
+      final tab = GoRouter.maybeOf(context)?.state.uri.queryParameters['tab'];
       if (tab == 'signup') _tabs.animateTo(1);
     });
   }

@@ -39,7 +39,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+      final redirect = GoRouter.maybeOf(context)?.state.uri.queryParameters['redirect'];
       final preset = roleFromPath(redirect);
       if (preset != null) setState(() => _role = preset);
     });
@@ -51,7 +51,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  String? get _redirect => GoRouterState.of(context).uri.queryParameters['redirect'];
+  String? get _redirect => GoRouter.maybeOf(context)?.state.uri.queryParameters['redirect'];
 
   bool get _canContinue {
     switch (_step) {

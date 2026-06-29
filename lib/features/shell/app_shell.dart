@@ -15,7 +15,7 @@ class NavItem {
   const NavItem(this.icon, this.activeIcon, this.label, this.path, [this.subtitle]);
 }
 
-/// Tab shell — static gradient backdrop + page content + bottom nav.
+/// Tab shell — floating header/footer pills over scrollable page content.
 class AppShell extends StatelessWidget {
   final String currentPath;
   final List<NavItem> items;
@@ -41,82 +41,74 @@ class AppShell extends StatelessWidget {
     final current = items[selected];
     final narrow = MediaQuery.sizeOf(context).width < 380;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      extendBody: false,
-      body: Column(
-        children: [
-          Expanded(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    accent.withValues(alpha: 0.10),
-                    AppColors.background,
-                    AppColors.accentBlue.withValues(alpha: 0.08),
-                  ],
-                ),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    DashboardAppBar(
-                      title: current.label,
-                      subtitle: current.subtitle,
-                      accent: accent,
-                      icon: current.activeIcon,
-                      onBrandTap: () => context.go(items.first.path),
-                    ),
-                    Expanded(child: child),
-                  ],
-                ),
-              ),
-            ),
-          ),
+    final gradient = BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          accent.withValues(alpha: 0.10),
+          AppColors.background,
+          AppColors.accentBlue.withValues(alpha: 0.08),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(narrow ? 10 : 16, 6, narrow ? 10 : 16, narrow ? 8 : 10),
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: narrow ? 4 : 8, vertical: narrow ? 6 : 8),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.ink.withValues(alpha: 0.10),
-                      blurRadius: 24,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
+    );
+
+    return DecoratedBox(
+      decoration: gradient,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Column(
+              children: [
+                SafeArea(
+                  bottom: false,
+                  child: DashboardAppBar(
+                    title: current.label,
+                    subtitle: current.subtitle,
+                    accent: accent,
+                    icon: current.activeIcon,
+                    onBrandTap: () => context.go(items.first.path),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    for (int i = 0; i < items.length; i++)
-                      _NavButton(
-                        item: items[i],
-                        selected: selected == i,
-                        accent: accent,
-                        compact: narrow,
-                        onTap: () {
-                          if (selected != i) context.go(items[i].path);
-                        },
+                Expanded(child: child),
+              ],
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(narrow ? 10 : 16, 0, narrow ? 10 : 16, narrow ? 8 : 10),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: ShellChromePill(
+                        padding: EdgeInsets.symmetric(horizontal: narrow ? 4 : 8, vertical: narrow ? 6 : 8),
+                        child: Row(
+                          children: [
+                            for (int i = 0; i < items.length; i++)
+                              _NavButton(
+                                item: items[i],
+                                selected: selected == i,
+                                accent: accent,
+                                compact: narrow,
+                                onTap: () {
+                                  if (selected != i) context.go(items[i].path);
+                                },
+                              ),
+                          ],
+                        ),
                       ),
-                  ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

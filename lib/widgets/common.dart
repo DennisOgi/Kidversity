@@ -290,7 +290,14 @@ class KidversityBrandMark extends StatelessWidget {
         ),
         if (showLabel) ...[
           const SizedBox(width: 10),
-          Text('Kidversity', style: labelStyle),
+          Flexible(
+            child: Text(
+              'Kidversity',
+              style: labelStyle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ],
     );
@@ -308,6 +315,43 @@ class KidversityBrandMark extends StatelessWidget {
           child: mark,
         ),
       ),
+    );
+  }
+}
+
+/// Frosted pill chrome for shell app bar and bottom nav (not full-width bars).
+class ShellChromePill extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  const ShellChromePill({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Explicit BoxDecoration paints reliably on Flutter web (Material elevation often does not).
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+        border: Border.all(color: const Color(0xFFD4D0E4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.ink.withValues(alpha: 0.14),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+          ),
+          BoxShadow(
+            color: AppColors.ink.withValues(alpha: 0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(padding: padding, child: child),
     );
   }
 }
@@ -338,14 +382,8 @@ class DashboardAppBar extends StatelessWidget {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(narrow ? 12 : 16, 10, narrow ? 12 : 16, 6),
-      child: Container(
+      child: ShellChromePill(
         padding: EdgeInsets.symmetric(horizontal: narrow ? 10 : 14, vertical: narrow ? 10 : 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.94),
-          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.2),
-          boxShadow: AppTheme.cardShadow,
-        ),
         child: Row(
           children: [
             SizedBox(
@@ -355,7 +393,7 @@ class DashboardAppBar extends StatelessWidget {
                 child: KidversityBrandMark(
                   onTap: onBrandTap,
                   compact: true,
-                  showLabel: !narrow,
+                  showLabel: false,
                 ),
               ),
             ),
@@ -409,11 +447,11 @@ class DashboardAppBar extends StatelessWidget {
   }
 }
 
-/// Bottom inset for scrollable pages inside [AppShell] (nav bar sits below content).
+/// Bottom inset for scrollable pages inside [AppShell] (floating nav sits above content).
 double shellScrollBottomPadding(BuildContext context) =>
-    MediaQuery.paddingOf(context).bottom + 20;
+    MediaQuery.paddingOf(context).bottom + 92;
 
-/// Top-aligned scroll content for tab shell pages — avoids ListView viewport gaps.
+/// Scrollable tab page content for [AppShell] body.
 class ShellScrollView extends StatelessWidget {
   final List<Widget> children;
   final EdgeInsetsGeometry? padding;
@@ -422,13 +460,11 @@ class ShellScrollView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return ListView(
       padding: padding ??
           EdgeInsets.fromLTRB(20, 8, 20, shellScrollBottomPadding(context)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
-      ),
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: children,
     );
   }
 }

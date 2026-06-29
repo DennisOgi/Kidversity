@@ -73,10 +73,11 @@ class LessonCard extends StatelessWidget {
                 style: text.bodyMedium?.copyWith(fontSize: 13.5)),
           ],
           const SizedBox(height: 14),
-          Row(
+          Wrap(
+            spacing: 14,
+            runSpacing: 8,
             children: [
               _meta(context, Icons.collections_bookmark_rounded, '${lesson.slideCount} slides'),
-              const SizedBox(width: 14),
               _meta(context, Icons.schedule_rounded, '${lesson.estimatedTime.inMinutes} min'),
             ],
           ),
@@ -85,7 +86,10 @@ class LessonCard extends StatelessWidget {
             _ProgressBar(value: lesson.progress, color: lesson.color),
             const SizedBox(height: 10),
           ],
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Pill(
                 label: sourceLabel(lesson.source),
@@ -96,7 +100,6 @@ class LessonCard extends StatelessWidget {
                         ? AppColors.accentTeal
                         : AppColors.secondary,
               ),
-              const Spacer(),
               Pill(label: '+${lesson.xpReward} XP', icon: Icons.bolt_rounded, color: AppColors.accentYellow),
             ],
           ),

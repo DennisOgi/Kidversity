@@ -36,9 +36,23 @@ class ContentCatalog extends ChangeNotifier {
     try {
       final service = SupabaseService.instance;
       final lessonsResult = await service.fetchLessons();
-      if (lessonsResult.isSuccess && lessonsResult.data!.isNotEmpty) {
-        lessons = lessonsResult.data!;
-        useRemote = true;
+      
+      // If Supabase returns successfully but with empty data, use MockData as fallback
+      if (lessonsResult.isSuccess) {
+        if (lessonsResult.data!.isNotEmpty) {
+          lessons = lessonsResult.data!;
+          useRemote = true;
+        } else {
+          // Supabase is empty - use MockData
+          debugPrint('📦 Supabase database is empty. Using MockData as fallback.');
+          lessons = MockData.lessons;
+          assigned = MockData.assigned;
+          badges = MockData.badges;
+          leaderboard = MockData.leaderboard;
+          isLoading = false;
+          notifyListeners();
+          return;
+        }
       }
 
       final assignedResult = await service.fetchAssignedLessons();
@@ -49,19 +63,31 @@ class ContentCatalog extends ChangeNotifier {
         if (assigned.isEmpty && lessons.isNotEmpty) {
           assigned = [lessons.first];
         }
+      } else {
+        // Use MockData assigned lessons
+        assigned = MockData.assigned;
       }
 
       final badgesResult = await service.fetchBadges();
       if (badgesResult.isSuccess && badgesResult.data!.isNotEmpty) {
         badges = badgesResult.data!;
+      } else {
+        badges = MockData.badges;
       }
 
       final boardResult = await service.fetchLeaderboard();
       if (boardResult.isSuccess && boardResult.data!.isNotEmpty) {
         leaderboard = boardResult.data!;
+      } else {
+        leaderboard = MockData.leaderboard;
       }
     } catch (e) {
-      debugPrint('ContentCatalog load failed: $e');
+      debugPrint('ContentCatalog load failed: $e. Falling back to MockData.');
+      // On error, fallback to MockData
+      lessons = MockData.lessons;
+      assigned = MockData.assigned;
+      badges = MockData.badges;
+      leaderboard = MockData.leaderboard;
     } finally {
       isLoading = false;
       notifyListeners();

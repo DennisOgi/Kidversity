@@ -8,6 +8,7 @@ import 'config/env.dart';
 import 'core/error_handler.dart';
 import 'router/app_router.dart';
 import 'services/supabase_service.dart';
+import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -43,6 +44,22 @@ void main() {
       PlatformDispatcher.instance.onError = (error, stack) {
         ErrorHandler.reportError(error, stack, context: 'Platform error');
         return true;
+      };
+
+      ErrorWidget.builder = (details) {
+        return Material(
+          color: AppColors.background,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                details.exceptionAsString(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.danger, fontSize: 14),
+              ),
+            ),
+          ),
+        );
       };
 
       runApp(const ProviderScope(child: KidversityApp()));
