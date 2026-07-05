@@ -294,6 +294,9 @@ class _TeacherLessonRow extends ConsumerWidget {
                       SnackBar(content: Text(result.isSuccess ? 'Assigned to class!' : (result.error ?? 'Assign failed'))),
                     );
                   }
+                  if (result.isSuccess) {
+                    await ref.read(catalogProvider).load(force: true);
+                  }
                   ref.invalidate(teacherLessonsProvider);
                 case 'edit':
                   if (context.mounted) context.go('/teacher/create?lessonId=$lessonId');

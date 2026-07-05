@@ -35,6 +35,8 @@ class _LessonPlayerState extends ConsumerState<LessonPlayer> {
   double _position = 0; // seconds into current slide audio
   bool _playing = false;
   bool _showCaption = true;
+  bool _dyslexiaFriendly = false;
+  bool _prefsLoaded = false;
   double _rate = 0.9; // narration speed
 
   // Checkpoint state.
@@ -43,6 +45,27 @@ class _LessonPlayerState extends ConsumerState<LessonPlayer> {
   bool _answered = false;
   int _correctCount = 0;
   bool _completionSaved = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_prefsLoaded) return;
+    final prefs = ref.read(userPreferencesProvider).whenOrNull(data: (p) => p);
+    if (prefs != null) {
+      _showCaption = prefs.showCaptions;
+      _dyslexiaFriendly = prefs.dyslexiaFriendly;
+      _prefsLoaded = true;
+    }
+  }
+
+  TextStyle? _readable(TextStyle? base) {
+    if (!_dyslexiaFriendly || base == null) return base;
+    return base.copyWith(
+      letterSpacing: 0.5,
+      height: 1.65,
+      fontSize: (base.fontSize ?? 16) + 2,
+    );
+  }
 
   @override
   void initState() {
@@ -206,13 +229,20 @@ class _LessonPlayerState extends ConsumerState<LessonPlayer> {
     }
 
     final service = SupabaseService.instance;
-    await service.completeLesson(
+    final result = await service.completeLesson(
       lessonId: _lesson.id,
       xpReward: _lesson.xpReward,
       checkpointsCorrect: _correctCount,
       checkpointsTotal: _lesson.checkpoints.isEmpty ? 0 : _lesson.checkpoints.length,
       estimatedMinutes: _lesson.estimatedTime.inMinutes.clamp(1, 60),
     );
+
+    if (!mounted) return;
+    if (result.isFailure) {
+      context.showErrorSnackbar(result.error ?? 'Could not save your progress.');
+      _completionSaved = false;
+      return;
+    }
 
     await ref.read(authControllerProvider).reloadProfile();
     await ref.read(catalogProvider).refreshAfterLessonComplete();
@@ -367,7 +397,7 @@ class _LessonPlayerState extends ConsumerState<LessonPlayer> {
               children: [
                 Pill(label: _cpTypeLabel(cp.type), icon: _cpTypeIcon(cp.type), color: AppColors.accentTeal),
                 const SizedBox(height: 16),
-                Text(cp.prompt, style: text.headlineSmall),
+                Text(cp.prompt, style: _readable(text.headlineSmall)),
                 if (cp.audioPrompt != null) ...[
                   const SizedBox(height: 16),
                   _AudioPromptChip(text: cp.audioPrompt!, lang: cp.audioLang),
@@ -605,7 +635,7 @@ class _SlideView extends StatelessWidget {
         const SizedBox(height: 22),
         Text(slide.title, style: text.displayMedium?.copyWith(fontSize: 30)),
         const SizedBox(height: 12),
-        Text(slide.body, style: text.bodyLarge?.copyWith(fontSize: 17)),
+        Text(slide.body, style: _readable(text.bodyLarge?.copyWith(fontSize: 17))),
         if (showCaption && slide.caption != null) ...[
           const SizedBox(height: 18),
           Container(

@@ -842,7 +842,9 @@ class SupabaseService {
       final memberList = members as List;
 
       if (memberList.isEmpty) {
-        return app_errors.Result.failure('No students in your class yet. Open the Class tab to invite students.');
+        return app_errors.Result.failure(
+          'No students in your class yet. For demo, sign in as student@kidversity.demo in another browser.',
+        );
       }
 
       var assignedCount = 0;
@@ -864,7 +866,8 @@ class SupabaseService {
         }
       }
 
-      await client.from('lessons').update({'status': 'assigned'}).eq('id', lessonId);
+      // Stay published so students can read lesson rows under RLS.
+      await client.from('lessons').update({'status': 'published'}).eq('id', lessonId);
 
       if (assignedCount == 0) {
         return app_errors.Result.failure('Could not assign lesson to any students.');

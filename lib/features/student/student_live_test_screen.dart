@@ -24,6 +24,7 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
   int _currentIndex = 0;
   final Map<String, String> _answers = {};
   bool _joined = false;
+  String? _joinError;
   bool _submitting = false;
   bool _finished = false;
 
@@ -35,7 +36,15 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
 
   Future<void> _join() async {
     final r = await LiveTestService.instance.joinTest(widget.testId);
-    if (mounted && r.isSuccess) setState(() => _joined = true);
+    if (!mounted) return;
+    if (r.isSuccess) {
+      setState(() {
+        _joined = true;
+        _joinError = null;
+      });
+    } else {
+      setState(() => _joinError = r.error ?? 'Could not join this quiz.');
+    }
   }
 
   Future<void> _selectAnswer(LiveTest test, LiveTestQuestion q, String optionId) async {
@@ -93,6 +102,24 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (test) {
           if (test == null) return const Center(child: Text('Quiz not found'));
+          if (_joinError != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_joinError!, textAlign: TextAlign.center, style: text.bodyLarge),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => context.go('/student/home'),
+                      child: const Text('Back to Home'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
           if (!_joined) return const Center(child: CircularProgressIndicator());
 
           if (_finished || test.status == LiveTestStatus.ended) {

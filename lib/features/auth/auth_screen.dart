@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/demo_accounts.dart';
 import '../../data/app_state.dart';
 import '../../data/auth_state.dart';
 import '../../router/navigation.dart';
@@ -82,6 +83,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
     } catch (e) {
       if (mounted) context.showErrorSnackbar(e.toString().replaceFirst('Exception: ', ''));
     }
+  }
+
+  Future<void> _demoSignIn(DemoAccount account) async {
+    await ref.read(authControllerProvider).signInDemoAccount(account);
+    if (!mounted) return;
+    final auth = ref.read(authControllerProvider);
+    if (auth.lastError != null) {
+      context.showErrorSnackbar(auth.lastError!);
+      return;
+    }
+    if (auth.role != null) {
+      ref.read(roleProvider.notifier).state = auth.role;
+    }
+    continueAfterAuth(context, ref, redirect: _redirect);
   }
 
   Future<void> _submitSignUp() async {
@@ -183,6 +198,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                                       onSignIn: _submitSignIn,
                                       onSignUp: _submitSignUp,
                                       onResetPassword: _resetPassword,
+                                      onDemoSignIn: _demoSignIn,
                                     ),
                                   ),
                                 ],
@@ -209,6 +225,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                                     onSignIn: _submitSignIn,
                                     onSignUp: _submitSignUp,
                                     onResetPassword: _resetPassword,
+                                    onDemoSignIn: _demoSignIn,
                                   ),
                                 ],
                               ),
@@ -305,6 +322,7 @@ class _FormCard extends StatelessWidget {
   final ValueChanged<String?> onGenderChanged;
   final bool obscure, obscureConfirm;
   final VoidCallback onToggleObscure, onToggleObscureConfirm, onSignIn, onSignUp, onResetPassword;
+  final ValueChanged<DemoAccount> onDemoSignIn;
 
   const _FormCard({
     required this.tabs,
@@ -324,6 +342,7 @@ class _FormCard extends StatelessWidget {
     required this.onSignIn,
     required this.onSignUp,
     required this.onResetPassword,
+    required this.onDemoSignIn,
   });
 
   @override
@@ -393,6 +412,28 @@ class _FormCard extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(onPressed: onResetPassword, child: const Text('Forgot password?')),
+              ),
+              const SizedBox(height: 8),
+              Text('Try the demo', textAlign: TextAlign.center, style: text.labelLarge?.copyWith(color: AppColors.muted)),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: auth.isLoading ? null : () => onDemoSignIn(DemoAccounts.student),
+                      icon: EmojiText(DemoAccounts.student.buttonEmoji, size: 16),
+                      label: const Text('Student'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: auth.isLoading ? null : () => onDemoSignIn(DemoAccounts.teacher),
+                      icon: EmojiText(DemoAccounts.teacher.buttonEmoji, size: 16),
+                      label: const Text('Teacher'),
+                    ),
+                  ),
+                ],
               ),
             ],
             if (auth.lastError != null) ...[

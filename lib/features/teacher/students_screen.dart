@@ -48,7 +48,20 @@ class StudentsScreen extends ConsumerWidget {
         if (rosterAsync.isLoading)
           const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
         else if (roster.isEmpty)
-          GlassCard(child: Text('No students in your class yet.', style: text.bodyLarge))
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('No students in your class yet.', style: text.titleMedium),
+                const SizedBox(height: 8),
+                Text(
+                  'For the demo video: open an incognito window and tap Demo as student on the sign-in page. '
+                  'The demo student is auto-enrolled in your class.',
+                  style: text.bodyMedium?.copyWith(fontSize: 13, color: AppColors.muted),
+                ),
+              ],
+            ),
+          )
         else
           for (final s in roster) ...[
             _StudentCard(student: s),
