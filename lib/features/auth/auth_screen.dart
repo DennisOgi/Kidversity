@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/demo_accounts.dart';
 import '../../data/app_state.dart';
+import '../../data/auth_remember_me.dart';
 import '../../data/auth_state.dart';
 import '../../router/navigation.dart';
 import '../../theme/app_colors.dart';
@@ -28,10 +29,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
   void initState() {
     super.initState();
     _tabs.addListener(() => setState(() {}));
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final tab = GoRouter.maybeOf(context)?.state.uri.queryParameters['tab'];
       if (tab == 'signup') _tabs.animateTo(1);
+
+      final saved = await AuthRememberMe.load();
+      if (!mounted) return;
+      setState(() {
+        _rememberMe = saved.enabled;
+        if (saved.email != null) _email.text = saved.email!;
+      });
     });
   }
   final _email = TextEditingController();
@@ -41,6 +49,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
   final _age = TextEditingController();
   bool _obscure = true;
   bool _obscureConfirm = true;
+  bool _rememberMe = true;
   String? _gender;
 
   @override
@@ -74,6 +83,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
   Future<void> _submitSignIn() async {
     try {
       await ref.read(authControllerProvider).signInWithEmail(_email.text, _password.text);
+      await AuthRememberMe.save(enabled: _rememberMe, email: _email.text);
       if (!mounted) return;
       final auth = ref.read(authControllerProvider);
       if (auth.role != null) {
@@ -93,6 +103,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
       context.showErrorSnackbar(auth.lastError!);
       return;
     }
+    if (_rememberMe) {
+      await AuthRememberMe.save(enabled: true, email: account.email);
+    } else {
+      await AuthRememberMe.clear();
+    }
+    if (!mounted) return;
     if (auth.role != null) {
       ref.read(roleProvider.notifier).state = auth.role;
     }
@@ -199,6 +215,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                                       onSignUp: _submitSignUp,
                                       onResetPassword: _resetPassword,
                                       onDemoSignIn: _demoSignIn,
+                                      rememberMe: _rememberMe,
+                                      onRememberMeChanged: (v) => setState(() => _rememberMe = v),
                                     ),
                                   ),
                                 ],
@@ -226,6 +244,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                                     onSignUp: _submitSignUp,
                                     onResetPassword: _resetPassword,
                                     onDemoSignIn: _demoSignIn,
+                                    rememberMe: _rememberMe,
+                                    onRememberMeChanged: (v) => setState(() => _rememberMe = v),
                                   ),
                                 ],
                               ),
@@ -323,6 +343,8 @@ class _FormCard extends StatelessWidget {
   final bool obscure, obscureConfirm;
   final VoidCallback onToggleObscure, onToggleObscureConfirm, onSignIn, onSignUp, onResetPassword;
   final ValueChanged<DemoAccount> onDemoSignIn;
+  final bool rememberMe;
+  final ValueChanged<bool> onRememberMeChanged;
 
   const _FormCard({
     required this.tabs,
@@ -343,6 +365,8 @@ class _FormCard extends StatelessWidget {
     required this.onSignUp,
     required this.onResetPassword,
     required this.onDemoSignIn,
+    required this.rememberMe,
+    required this.onRememberMeChanged,
   });
 
   @override
@@ -400,7 +424,32 @@ class _FormCard extends StatelessWidget {
                       showName: true,
                     ),
             ),
-            const SizedBox(height: 16),
+            if (tabs.index == 0) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  SizedBox(
+                    height: 40,
+                    child: Checkbox(
+                      value: rememberMe,
+                      activeColor: AppColors.primary,
+                      onChanged: auth.isLoading ? null : (v) => onRememberMeChanged(v ?? false),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: auth.isLoading ? null : () => onRememberMeChanged(!rememberMe),
+                      child: Text(
+                        'Remember me',
+                        style: text.bodyMedium?.copyWith(fontSize: 13.5),
+                      ),
+                    ),
+                  ),
+                  TextButton(onPressed: onResetPassword, child: const Text('Forgot password?')),
+                ],
+              ),
+            ],
+            const SizedBox(height: 12),
             GradientButton(
               label: auth.isLoading ? 'Please wait…' : (tabs.index == 0 ? 'Sign in' : 'Create account'),
               icon: Icons.arrow_forward_rounded,
@@ -408,11 +457,6 @@ class _FormCard extends StatelessWidget {
               onTap: auth.isLoading ? null : (tabs.index == 0 ? onSignIn : onSignUp),
             ),
             if (tabs.index == 0) ...[
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(onPressed: onResetPassword, child: const Text('Forgot password?')),
-              ),
               const SizedBox(height: 8),
               Text('Try the demo', textAlign: TextAlign.center, style: text.labelLarge?.copyWith(color: AppColors.muted)),
               const SizedBox(height: 10),
