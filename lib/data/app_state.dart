@@ -82,7 +82,7 @@ final rosterProvider = FutureProvider<List<StudentPerformance>>((ref) async {
   ref.watch(authControllerProvider);
   if (!SupabaseService.instance.isInitialized) return MockData.classRoster;
   final result = await SupabaseService.instance.fetchClassRoster();
-  if (result.isSuccess && result.data!.isNotEmpty) return result.data!;
+  if (result.isSuccess) return result.data!;
   return MockData.classRoster;
 });
 
