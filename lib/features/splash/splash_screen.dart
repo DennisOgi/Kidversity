@@ -4,13 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../theme/app_colors.dart';
-import '../../theme/app_theme.dart';
-import '../../widgets/aurora_background.dart';
-import '../../widgets/common.dart';
-import '../../widgets/motion.dart';
 
-/// Brand splash while auth bootstraps. Navigation is handled by [app_router]
-/// redirects (splash → home when auth is ready) — do not navigate from here.
+/// Mandarin Foundation launch experience while authentication bootstraps.
+/// Routing remains owned by GoRouter so this screen never races auth state.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -18,277 +14,350 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProviderStateMixin {
-  late final AnimationController _pulse =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 2200))..repeat(reverse: true);
-  late final AnimationController _orbit =
-      AnimationController(vsync: this, duration: const Duration(seconds: 12))..repeat();
-  late final AnimationController _load =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
+class _SplashScreenState extends ConsumerState<SplashScreen>
+    with TickerProviderStateMixin {
+  late final AnimationController _entrance = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..forward();
+  late final AnimationController _ambient = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 8),
+  )..repeat();
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  )..repeat(reverse: true);
 
   @override
   void dispose() {
+    _entrance.dispose();
+    _ambient.dispose();
     _pulse.dispose();
-    _orbit.dispose();
-    _load.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
     final size = MediaQuery.sizeOf(context);
-
+    final compact = size.width < 560;
     return Scaffold(
-      body: AuroraBackground(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Soft vignette for depth
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0, -0.2),
-                  radius: 1.1,
-                  colors: [
-                    Colors.white.withValues(alpha: 0.08),
-                    Colors.transparent,
-                    AppColors.primary.withValues(alpha: 0.06),
-                  ],
+      backgroundColor: AppColors.paper,
+      body: AnimatedBuilder(
+        animation: Listenable.merge([_entrance, _ambient, _pulse]),
+        builder: (context, _) {
+          final entrance = Curves.easeOutCubic.transform(_entrance.value);
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              CustomPaint(
+                painter: _InkWashPainter(
+                  progress: _ambient.value,
+                  pulse: _pulse.value,
                 ),
               ),
-            ),
-            Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: size.width > 600 ? 48 : 28),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    FadeInUp(
-                      child: SizedBox(
-                        width: 200,
-                        height: 200,
-                        child: AnimatedBuilder(
-                          animation: Listenable.merge([_pulse, _orbit]),
-                          builder: (context, child) {
-                            final glow = 0.35 + _pulse.value * 0.25;
-                            return Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Container(
-                                  width: 168 + _pulse.value * 18,
-                                  height: 168 + _pulse.value * 18,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: RadialGradient(
-                                      colors: [
-                                        AppColors.primary.withValues(alpha: glow * 0.35),
-                                        AppColors.secondary.withValues(alpha: glow * 0.12),
-                                        Colors.transparent,
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                for (var i = 0; i < 3; i++)
-                                  Transform.rotate(
-                                    angle: _orbit.value * math.pi * 2 + (i * math.pi * 2 / 3),
-                                    child: Transform.translate(
-                                      offset: const Offset(0, -88),
-                                      child: _OrbitChip(
-                                        emoji: const ['📚', '✨', '🏅'][i],
-                                        opacity: 0.75 + _pulse.value * 0.25,
-                                      ),
-                                    ),
-                                  ),
-                                Transform.scale(
-                                  scale: 1 + _pulse.value * 0.04,
-                                  child: Container(
-                                    width: 112,
-                                    height: 112,
-                                    decoration: BoxDecoration(
-                                      gradient: AppColors.brandGradient,
-                                      borderRadius: BorderRadius.circular(34),
-                                      border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 2),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.primary.withValues(alpha: 0.5),
-                                          blurRadius: 36,
-                                          offset: const Offset(0, 18),
-                                        ),
-                                        BoxShadow(
-                                          color: AppColors.secondary.withValues(alpha: 0.25),
-                                          blurRadius: 24,
-                                          offset: const Offset(0, 8),
-                                        ),
-                                      ],
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: const Text('🎓', style: TextStyle(fontSize: 52)),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    FadeInUp(
-                      delay: const Duration(milliseconds: 100),
-                      child: ShaderMask(
-                        shaderCallback: (r) => const LinearGradient(
-                          colors: [AppColors.primary, AppColors.accentPink, AppColors.secondary],
-                        ).createShader(r),
-                        child: Text(
-                          'Kidversity',
-                          style: text.displayMedium?.copyWith(
-                            color: Colors.white,
-                            fontSize: size.width > 600 ? 46 : 40,
-                            letterSpacing: -0.5,
+              SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 24 : 52,
+                    vertical: 28,
+                  ),
+                  child: Column(
+                    children: [
+                      _TopMark(opacity: entrance),
+                      const Spacer(),
+                      Transform.translate(
+                        offset: Offset(0, 28 * (1 - entrance)),
+                        child: Opacity(
+                          opacity: entrance,
+                          child: _FoundationSeal(
+                            pulse: _pulse.value,
+                            compact: compact,
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    FadeInUp(
-                      delay: const Duration(milliseconds: 180),
-                      child: Text(
-                        'Learn your way',
-                        style: text.titleLarge?.copyWith(
-                          color: AppColors.ink,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    FadeInUp(
-                      delay: const Duration(milliseconds: 240),
-                      child: Text(
-                        'Slides, audio & rewards for every learner',
-                        textAlign: TextAlign.center,
-                        style: text.bodyLarge?.copyWith(
-                          color: AppColors.muted,
-                          fontSize: 15,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    FadeInUp(
-                      delay: const Duration(milliseconds: 320),
-                      child: Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: const [
-                          Pill(label: 'Slides + audio', icon: Icons.headphones_rounded, color: AppColors.primary),
-                          Pill(label: 'Live quizzes', icon: Icons.bolt_rounded, color: AppColors.secondary),
-                          Pill(label: 'Badges & XP', icon: Icons.emoji_events_rounded, color: AppColors.accentTeal),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    FadeInUp(
-                      delay: const Duration(milliseconds: 420),
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            width: 220,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: AnimatedBuilder(
-                                animation: _load,
-                                builder: (context, _) {
-                                  return LinearProgressIndicator(
-                                    value: null,
-                                    minHeight: 5,
-                                    backgroundColor: AppColors.line,
-                                    color: Color.lerp(
-                                      AppColors.primary,
-                                      AppColors.secondary,
-                                      (math.sin(_load.value * math.pi * 2) + 1) / 2,
-                                    ),
-                                  );
-                                },
+                      SizedBox(height: compact ? 24 : 34),
+                      Opacity(
+                        opacity: entrance,
+                        child: Column(
+                          children: [
+                            Text(
+                              'MANDARIN FOUNDATION',
+                              style: TextStyle(
+                                color: AppColors.cinnabar,
+                                fontSize: compact ? 12 : 13,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 3.1,
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            'Getting things ready…',
-                            style: text.bodyMedium?.copyWith(
-                              color: AppColors.muted,
-                              fontSize: 13,
-                              letterSpacing: 0.2,
+                            const SizedBox(height: 10),
+                            Text(
+                              'A clear first path into Mandarin',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.headlineMedium
+                                  ?.copyWith(
+                                    color: AppColors.ink,
+                                    fontSize: compact ? 28 : 38,
+                                    height: 1.08,
+                                  ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Bottom brand strip
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 28,
-              child: FadeInUp(
-                delay: const Duration(milliseconds: 500),
-                child: Center(
-                  child: GlassCard(
-                    frosted: true,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shadow: AppTheme.softShadow,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.auto_awesome_rounded, size: 16, color: AppColors.primary.withValues(alpha: 0.85)),
-                        const SizedBox(width: 8),
-                        Text(
-                          'A friendly digital classroom',
-                          style: text.labelLarge?.copyWith(fontSize: 12, color: AppColors.inkSoft),
+                            const SizedBox(height: 10),
+                            Text(
+                              '30 sequenced lessons · clear audio · carefully reviewed',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(color: AppColors.inkSoft),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const Spacer(),
+                      _PipelineLoader(progress: _ambient.value),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-class _OrbitChip extends StatelessWidget {
-  final String emoji;
+class _TopMark extends StatelessWidget {
   final double opacity;
 
-  const _OrbitChip({required this.emoji, required this.opacity});
+  const _TopMark({required this.opacity});
+
+  @override
+  Widget build(BuildContext context) => Opacity(
+    opacity: opacity,
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 9,
+          height: 9,
+          decoration: const BoxDecoration(
+            color: AppColors.cinnabar,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 9),
+        const Text(
+          'KIDVERSITY',
+          style: TextStyle(
+            color: AppColors.ink,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 2,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _FoundationSeal extends StatelessWidget {
+  final double pulse;
+  final bool compact;
+
+  const _FoundationSeal({required this.pulse, required this.compact});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: opacity),
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.line),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.12),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    final dimension = compact ? 210.0 : 270.0;
+    return SizedBox(
+      width: dimension,
+      height: dimension,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Transform.rotate(
+            angle: pulse * 0.025,
+            child: Container(
+              width: dimension * 0.91,
+              height: dimension * 0.91,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.gold.withValues(alpha: 0.55),
+                  width: 1.4,
+                ),
+              ),
+            ),
+          ),
+          Container(
+            width: dimension * (0.78 + pulse * 0.025),
+            height: dimension * (0.78 + pulse * 0.025),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.surface,
+              border: Border.all(
+                color: AppColors.cinnabar.withValues(alpha: 0.22),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.cinnabar.withValues(
+                    alpha: 0.12 + pulse * 0.06,
+                  ),
+                  blurRadius: 45,
+                  spreadRadius: 6,
+                ),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Image.asset(
+              'assets/mandarin/fox_mascot.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+          Positioned(
+            right: compact ? 4 : 8,
+            bottom: compact ? 18 : 28,
+            child: Transform.rotate(
+              angle: -0.08,
+              child: Container(
+                width: compact ? 60 : 72,
+                height: compact ? 60 : 72,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.cinnabar,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.paper.withValues(alpha: 0.8),
+                    width: 3,
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x33231610),
+                      blurRadius: 16,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '学',
+                  style: TextStyle(
+                    color: AppColors.paper,
+                    fontSize: compact ? 30 : 37,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
-      alignment: Alignment.center,
-      child: Text(emoji, style: const TextStyle(fontSize: 18)),
     );
   }
+}
+
+class _PipelineLoader extends StatelessWidget {
+  final double progress;
+
+  const _PipelineLoader({required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    const stepCount = 4;
+    final current = (progress * stepCount).floor() % stepCount;
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var index = 0; index < stepCount; index++) ...[
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: index == current ? 28 : 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: index == current
+                      ? AppColors.cinnabar
+                      : AppColors.ink.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              if (index != stepCount - 1) const SizedBox(width: 7),
+            ],
+          ],
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Getting your Mandarin journey ready…',
+          style: TextStyle(
+            color: AppColors.muted,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.25,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InkWashPainter extends CustomPainter {
+  final double progress;
+  final double pulse;
+
+  const _InkWashPainter({required this.progress, required this.pulse});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final background = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFAF3), AppColors.paper, Color(0xFFEAF2ED)],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, background);
+
+    final wave = math.sin(progress * math.pi * 2);
+    final redWash = Paint()
+      ..color = AppColors.cinnabar.withValues(alpha: 0.055 + pulse * 0.02)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 70);
+    canvas.drawCircle(
+      Offset(size.width * (0.12 + wave * 0.025), size.height * 0.2),
+      size.shortestSide * 0.23,
+      redWash,
+    );
+
+    final jadeWash = Paint()
+      ..color = AppColors.jade.withValues(alpha: 0.06)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 85);
+    canvas.drawCircle(
+      Offset(size.width * (0.88 - wave * 0.025), size.height * 0.77),
+      size.shortestSide * 0.28,
+      jadeWash,
+    );
+
+    final brush = Paint()
+      ..color = AppColors.ink.withValues(alpha: 0.035)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    final path = Path()
+      ..moveTo(-20, size.height * 0.72)
+      ..quadraticBezierTo(
+        size.width * 0.35,
+        size.height * (0.63 + wave * 0.015),
+        size.width * 0.72,
+        size.height * 0.74,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.9,
+        size.height * 0.8,
+        size.width + 20,
+        size.height * 0.71,
+      );
+    for (var offset = 0; offset < 4; offset++) {
+      canvas.drawPath(path.shift(Offset(0, offset * 5)), brush);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _InkWashPainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.pulse != pulse;
 }

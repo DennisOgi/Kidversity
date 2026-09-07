@@ -6,12 +6,26 @@ class Env {
 
   // Compile-time fallbacks (--dart-define). Must be const.
   static const _defineSupabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  static const _defineSupabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
-  static const _defineOpenAiApiKey = String.fromEnvironment('OPENAI_API_KEY');
+  static const _defineSupabasePublishableKey = String.fromEnvironment(
+    'SUPABASE_PUBLISHABLE_KEY',
+  );
   static const _defineSentryDsn = String.fromEnvironment('SENTRY_DSN');
-  static const _defineEnvironment = String.fromEnvironment('ENVIRONMENT', defaultValue: 'development');
-  static const _defineApiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:3000');
-  static const _defineApiTimeoutSeconds = String.fromEnvironment('API_TIMEOUT_SECONDS', defaultValue: '30');
+  static const _defineEnvironment = String.fromEnvironment(
+    'ENVIRONMENT',
+    defaultValue: 'development',
+  );
+  static const _defineRelease = String.fromEnvironment(
+    'APP_RELEASE',
+    defaultValue: 'local',
+  );
+  static const _defineApiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:3000',
+  );
+  static const _defineApiTimeoutSeconds = String.fromEnvironment(
+    'API_TIMEOUT_SECONDS',
+    defaultValue: '30',
+  );
 
   /// Load `.env` from assets. Safe to call multiple times.
   static Future<void> load() async {
@@ -32,13 +46,22 @@ class Env {
   }
 
   static String get supabaseUrl => _read('SUPABASE_URL', _defineSupabaseUrl);
-  static String get supabaseAnonKey => _read('SUPABASE_ANON_KEY', _defineSupabaseAnonKey);
-  static String get openAiApiKey => _read('OPENAI_API_KEY', _defineOpenAiApiKey);
+  static String get supabasePublishableKey {
+    final modern = _read(
+      'SUPABASE_PUBLISHABLE_KEY',
+      _defineSupabasePublishableKey,
+    );
+    if (modern.isNotEmpty) return modern;
+    return dotenv.maybeGet('SUPABASE_ANON_KEY') ?? '';
+  }
+
   static String get sentryDsn => _read('SENTRY_DSN', _defineSentryDsn);
   static String get environment => _read('ENVIRONMENT', _defineEnvironment);
+  static String get release => _read('APP_RELEASE', _defineRelease);
   static String get apiBaseUrl => _read('API_BASE_URL', _defineApiBaseUrl);
   static int get apiTimeoutSeconds =>
-      int.tryParse(_read('API_TIMEOUT_SECONDS', _defineApiTimeoutSeconds)) ?? 30;
+      int.tryParse(_read('API_TIMEOUT_SECONDS', _defineApiTimeoutSeconds)) ??
+      30;
 
   static bool get isDevelopment => environment == 'development';
   static bool get isProduction => environment == 'production';
@@ -46,33 +69,39 @@ class Env {
 
   static bool get hasSupabase {
     final url = supabaseUrl.trim();
-    final key = supabaseAnonKey.trim();
-    if (url.isEmpty || key.isEmpty) return false;
-    if (url.contains('YOUR_PROJECT') || url.contains('your_supabase')) return false;
-    if (key.contains('your_anon') || key.contains('your_supabase')) return false;
+    final key = supabasePublishableKey.trim();
+    if (url.isEmpty || key.isEmpty) {
+      return false;
+    }
+    if (url.contains('YOUR_PROJECT') || url.contains('your_supabase')) {
+      return false;
+    }
+    if (key.contains('your_publishable') || key.contains('your_supabase')) {
+      return false;
+    }
     return true;
   }
 
   static void validate() {
     final missing = <String>[];
-    if (supabaseUrl.isEmpty) missing.add('SUPABASE_URL');
-    if (supabaseAnonKey.isEmpty) missing.add('SUPABASE_ANON_KEY');
+    if (supabaseUrl.isEmpty) {
+      missing.add('SUPABASE_URL');
+    }
+    if (supabasePublishableKey.isEmpty) {
+      missing.add('SUPABASE_PUBLISHABLE_KEY');
+    }
 
     if (missing.isNotEmpty) {
       throw Exception(
         'Missing required environment variables: ${missing.join(', ')}\n'
-        'Copy .env.example to .env and fill in your Supabase project URL and anon key,\n'
-        'or pass --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...',
+        'Copy .env.example to .env and fill in your Supabase project URL and publishable key,\n'
+        'or pass --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_PUBLISHABLE_KEY=...',
       );
     }
 
     if (sentryDsn.isEmpty && isProduction) {
       // ignore: avoid_print
       print('WARNING: SENTRY_DSN not set. Error tracking disabled.');
-    }
-    if (openAiApiKey.isEmpty) {
-      // ignore: avoid_print
-      print('WARNING: OPENAI_API_KEY not set. AI lesson generation disabled.');
     }
   }
 }

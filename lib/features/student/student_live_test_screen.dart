@@ -17,7 +17,8 @@ class StudentLiveTestScreen extends ConsumerStatefulWidget {
   const StudentLiveTestScreen({super.key, required this.testId});
 
   @override
-  ConsumerState<StudentLiveTestScreen> createState() => _StudentLiveTestScreenState();
+  ConsumerState<StudentLiveTestScreen> createState() =>
+      _StudentLiveTestScreenState();
 }
 
 class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
@@ -47,7 +48,11 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
     }
   }
 
-  Future<void> _selectAnswer(LiveTest test, LiveTestQuestion q, String optionId) async {
+  Future<void> _selectAnswer(
+    LiveTest test,
+    LiveTestQuestion q,
+    String optionId,
+  ) async {
     setState(() => _answers[q.id] = optionId);
     await LiveTestService.instance.submitAnswer(
       testId: test.id,
@@ -81,25 +86,28 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
         title: const Text('Live Quiz'),
         actions: [
           testAsync.whenOrNull(
-            data: (test) => test != null
-                ? Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: Center(child: LiveCountdownTimer(
-                      endsAt: test.endsAt,
-                      compact: true,
-                      onExpired: () {
-                        if (!_finished && test.isActive) _submitAll(test);
-                      },
-                    )),
-                  )
-                : null,
-          ) ??
+                data: (test) => test != null
+                    ? Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: Center(
+                          child: LiveCountdownTimer(
+                            endsAt: test.endsAt,
+                            compact: true,
+                            onExpired: () {
+                              if (!_finished && test.isActive) _submitAll(test);
+                            },
+                          ),
+                        ),
+                      )
+                    : null,
+              ) ??
               const SizedBox.shrink(),
         ],
       ),
       body: testAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (_, _) =>
+            const Center(child: Text('The quiz could not be loaded.')),
         data: (test) {
           if (test == null) return const Center(child: Text('Quiz not found'));
           if (_joinError != null) {
@@ -109,11 +117,15 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_joinError!, textAlign: TextAlign.center, style: text.bodyLarge),
+                    Text(
+                      _joinError!,
+                      textAlign: TextAlign.center,
+                      style: text.bodyLarge,
+                    ),
                     const SizedBox(height: 16),
                     FilledButton(
                       onPressed: () => context.go('/student/home'),
-                      child: const Text('Back to Home'),
+                      child: const Text('Back to path'),
                     ),
                   ],
                 ),
@@ -130,7 +142,8 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
             return const Center(child: Text('No questions in this quiz'));
           }
 
-          final q = test.questions[_currentIndex.clamp(0, test.questions.length - 1)];
+          final q =
+              test.questions[_currentIndex.clamp(0, test.questions.length - 1)];
           final selected = _answers[q.id];
           final isLast = _currentIndex >= test.questions.length - 1;
 
@@ -141,7 +154,10 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
                 children: [
                   const LivePulseBadge(),
                   const Spacer(),
-                  Text('Question ${_currentIndex + 1} of ${test.questions.length}', style: text.bodyMedium),
+                  Text(
+                    'Question ${_currentIndex + 1} of ${test.questions.length}',
+                    style: text.bodyMedium,
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -166,7 +182,10 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(q.prompt, style: text.headlineSmall?.copyWith(fontSize: 22)),
+                    Text(
+                      q.prompt,
+                      style: text.headlineSmall?.copyWith(fontSize: 22),
+                    ),
                     const SizedBox(height: 20),
                     for (final opt in q.options)
                       Padding(
@@ -200,8 +219,13 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
                             }
                           },
                     style: FilledButton.styleFrom(
-                      backgroundColor: isLast ? AppColors.success : AppColors.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                      backgroundColor: isLast
+                          ? AppColors.success
+                          : AppColors.primary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 14,
+                      ),
                     ),
                     child: Text(isLast ? 'Submit quiz' : 'Next'),
                   ),
@@ -220,7 +244,11 @@ class _AnswerTile extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _AnswerTile({required this.label, required this.selected, required this.onTap});
+  const _AnswerTile({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -235,14 +263,26 @@ class _AnswerTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            border: Border.all(color: selected ? AppColors.primary : AppColors.line, width: selected ? 2 : 1),
+            border: Border.all(
+              color: selected ? AppColors.primary : AppColors.line,
+              width: selected ? 2 : 1,
+            ),
           ),
           child: Row(
             children: [
-              Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-                  color: selected ? AppColors.primary : AppColors.muted),
+              Icon(
+                selected
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_off_rounded,
+                color: selected ? AppColors.primary : AppColors.muted,
+              ),
               const SizedBox(width: 12),
-              Expanded(child: Text(label, style: text.titleMedium?.copyWith(fontSize: 16))),
+              Expanded(
+                child: Text(
+                  label,
+                  style: text.titleMedium?.copyWith(fontSize: 16),
+                ),
+              ),
             ],
           ),
         ),
@@ -263,7 +303,10 @@ class _ResultsView extends StatelessWidget {
     var score = 0;
     for (final q in test.questions) {
       final picked = answers[q.id];
-      if (picked != null && q.options.any((o) => o.id == picked && o.isCorrect)) score++;
+      if (picked != null &&
+          q.options.any((o) => o.id == picked && o.isCorrect)) {
+        score++;
+      }
     }
 
     return ListView(
@@ -275,10 +318,17 @@ class _ResultsView extends StatelessWidget {
             children: [
               const Text('🎉', style: TextStyle(fontSize: 48)),
               const SizedBox(height: 12),
-              Text('Quiz submitted!', style: text.headlineSmall?.copyWith(color: Colors.white)),
+              Text(
+                'Quiz submitted!',
+                style: text.headlineSmall?.copyWith(color: Colors.white),
+              ),
               const SizedBox(height: 8),
-              Text('You scored $score / ${test.questions.length}',
-                  style: text.titleLarge?.copyWith(color: Colors.white.withValues(alpha: 0.95))),
+              Text(
+                'You scored $score / ${test.questions.length}',
+                style: text.titleLarge?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.95),
+                ),
+              ),
             ],
           ),
         ),
@@ -293,22 +343,43 @@ class _ResultsView extends StatelessWidget {
               children: [
                 Text(q.prompt, style: text.titleMedium?.copyWith(fontSize: 15)),
                 const SizedBox(height: 8),
-                Builder(builder: (context) {
-                  final picked = answers[q.id];
-                  final opt = q.options.where((o) => o.id == picked).firstOrNull;
-                  final correct = q.options.where((o) => o.isCorrect).firstOrNull;
-                  final ok = opt?.isCorrect ?? false;
-                  return Row(
-                    children: [
-                      Icon(ok ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                          color: ok ? AppColors.success : AppColors.danger, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(opt?.label ?? 'Skipped', style: text.bodyMedium)),
-                      if (!ok && correct != null)
-                        Text('→ ${correct.label}', style: text.bodySmall?.copyWith(color: AppColors.success)),
-                    ],
-                  );
-                }),
+                Builder(
+                  builder: (context) {
+                    final picked = answers[q.id];
+                    final opt = q.options
+                        .where((o) => o.id == picked)
+                        .firstOrNull;
+                    final correct = q.options
+                        .where((o) => o.isCorrect)
+                        .firstOrNull;
+                    final ok = opt?.isCorrect ?? false;
+                    return Row(
+                      children: [
+                        Icon(
+                          ok
+                              ? Icons.check_circle_rounded
+                              : Icons.cancel_rounded,
+                          color: ok ? AppColors.success : AppColors.danger,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            opt?.label ?? 'Skipped',
+                            style: text.bodyMedium,
+                          ),
+                        ),
+                        if (!ok && correct != null)
+                          Text(
+                            '→ ${correct.label}',
+                            style: text.bodySmall?.copyWith(
+                              color: AppColors.success,
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -316,7 +387,7 @@ class _ResultsView extends StatelessWidget {
         ],
         FilledButton(
           onPressed: () => context.go('/student/home'),
-          child: const Text('Back to home'),
+          child: const Text('Back to path'),
         ),
       ],
     );

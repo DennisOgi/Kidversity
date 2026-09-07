@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/auth_state.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
@@ -12,11 +14,17 @@ class NavItem {
   final String path;
   final String? subtitle;
 
-  const NavItem(this.icon, this.activeIcon, this.label, this.path, [this.subtitle]);
+  const NavItem(
+    this.icon,
+    this.activeIcon,
+    this.label,
+    this.path, [
+    this.subtitle,
+  ]);
 }
 
 /// Tab shell — plain header + scrollable page + floating bottom nav pill.
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   final String currentPath;
   final List<NavItem> items;
   final Widget child;
@@ -36,7 +44,7 @@ class AppShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final selected = _selectedIndex();
     final current = items[selected];
     final narrow = MediaQuery.sizeOf(context).width < 380;
@@ -67,6 +75,10 @@ class AppShell extends StatelessWidget {
                 accent: accent,
                 icon: current.activeIcon,
                 onBrandTap: () => context.go(items.first.path),
+                onSignOut: () async {
+                  await ref.read(authControllerProvider).signOut();
+                  if (context.mounted) context.go('/');
+                },
               ),
             ),
             Expanded(child: child),
@@ -110,16 +122,27 @@ class _BottomNavPill extends StatelessWidget {
         SafeArea(
           top: false,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(narrow ? 10 : 16, 6, narrow ? 10 : 16, narrow ? 8 : 10),
+            padding: EdgeInsets.fromLTRB(
+              narrow ? 10 : 16,
+              6,
+              narrow ? 10 : 16,
+              narrow ? 8 : 10,
+            ),
             child: Center(
               child: Container(
                 key: const Key('bottomNavPill'),
                 constraints: const BoxConstraints(maxWidth: 560),
-                padding: EdgeInsets.symmetric(horizontal: narrow ? 4 : 8, vertical: narrow ? 6 : 8),
+                padding: EdgeInsets.symmetric(
+                  horizontal: narrow ? 4 : 8,
+                  vertical: narrow ? 6 : 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFFFFF),
                   borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-                  border: Border.all(color: const Color(0xFFB8B4C8), width: 1.5),
+                  border: Border.all(
+                    color: const Color(0xFFB8B4C8),
+                    width: 1.5,
+                  ),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x331B1830),
@@ -176,14 +199,19 @@ class _NavButton extends StatelessWidget {
           padding: EdgeInsets.symmetric(vertical: compact ? 8 : 10),
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
-            color: selected ? accent.withValues(alpha: 0.12) : Colors.transparent,
+            color: selected
+                ? accent.withValues(alpha: 0.12)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(selected ? item.activeIcon : item.icon,
-                  color: selected ? accent : AppColors.muted, size: compact ? 22 : 24),
+              Icon(
+                selected ? item.activeIcon : item.icon,
+                color: selected ? accent : AppColors.muted,
+                size: compact ? 22 : 24,
+              ),
               SizedBox(height: compact ? 2 : 4),
               FittedBox(
                 fit: BoxFit.scaleDown,

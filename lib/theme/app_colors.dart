@@ -7,10 +7,17 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Brand
-  static const Color primary = Color(0xFF6C5CE7); // violet
-  static const Color primaryDark = Color(0xFF4B3FC4);
-  static const Color primarySoft = Color(0xFFEDEBFF);
+  // Mandarin Foundation brand
+  static const Color cinnabar = Color(0xFFC44536);
+  static const Color cinnabarDark = Color(0xFF943126);
+  static const Color cinnabarSoft = Color(0xFFF5DED8);
+  static const Color paper = Color(0xFFF7F1E8);
+  static const Color gold = Color(0xFFE8B84A);
+  static const Color jade = Color(0xFF2F6B5A);
+
+  static const Color primary = cinnabar;
+  static const Color primaryDark = cinnabarDark;
+  static const Color primarySoft = cinnabarSoft;
 
   static const Color secondary = Color(0xFFFF7A59); // coral
   static const Color secondarySoft = Color(0xFFFFE6DE);
@@ -28,19 +35,25 @@ class AppColors {
   static const Color dangerSoft = Color(0xFFFEE2E2);
 
   // Neutrals
-  static const Color ink = Color(0xFF1B1830);
-  static const Color inkSoft = Color(0xFF514E6A);
-  static const Color muted = Color(0xFF8E8BA7);
-  static const Color line = Color(0xFFE9E7F3);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color background = Color(0xFFF6F5FC);
-  static const Color backgroundAlt = Color(0xFFF0EEFB);
+  static const Color ink = Color(0xFF1A1410);
+  static const Color inkSoft = Color(0xFF5B5048);
+  static const Color muted = Color(0xFF887A70);
+  static const Color line = Color(0xFFE5D9CA);
+  static const Color surface = Color(0xFFFFFCF7);
+  static const Color background = paper;
+  static const Color backgroundAlt = Color(0xFFEFE5D8);
 
   // Gradients
   static const LinearGradient brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF7C6CFF), Color(0xFF6C5CE7), Color(0xFF5A4FD6)],
+    colors: [Color(0xFFD35B49), cinnabar, cinnabarDark],
+  );
+
+  static const LinearGradient mandarinGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF38271E), ink, Color(0xFF562A22)],
   );
 
   static const LinearGradient sunsetGradient = LinearGradient(
@@ -62,11 +75,11 @@ class AppColors {
   );
 
   static const List<Color> subjectColors = [
-    Color(0xFF6C5CE7),
-    Color(0xFFFF7A59),
-    Color(0xFF00CEC9),
-    Color(0xFF4DA3FF),
-    Color(0xFFFF5DA2),
-    Color(0xFFFFC233),
+    cinnabar,
+    jade,
+    gold,
+    Color(0xFF527A8E),
+    Color(0xFF9B5A6D),
+    Color(0xFFB9793B),
   ];
 }

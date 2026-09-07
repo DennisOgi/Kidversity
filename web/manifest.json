@@ -1,11 +1,11 @@
 {
-    "name": "kidversity",
-    "short_name": "kidversity",
+    "name": "Kidversity Mandarin Foundation",
+    "short_name": "Kidversity",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFAF3",
+    "theme_color": "#C94132",
+    "description": "A 30-lesson, human-reviewed Mandarin foundation course for children.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

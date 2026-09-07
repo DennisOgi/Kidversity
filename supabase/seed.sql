@@ -1,0 +1,3 @@
+-- Production intentionally has no demo users or global leaderboard seed.
+-- Versioned Mandarin draft content is loaded by migrations generated from
+-- content/mandarin source packs.

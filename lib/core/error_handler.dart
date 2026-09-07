@@ -14,24 +14,24 @@ class ErrorHandler {
       return;
     }
 
-    await SentryFlutter.init(
-      (options) {
-        options
-          ..dsn = Env.sentryDsn
-          ..environment = Env.environment
-          ..tracesSampleRate = Env.isProduction ? 0.2 : 1.0
-          ..enableAutoSessionTracking = true
-          ..attachStacktrace = true
-          ..sendDefaultPii = false // Don't send personally identifiable info
-          ..beforeSend = (event, hint) {
-            // Filter out noisy errors in development
-            if (Env.isDevelopment) {
-              return null;
-            }
-            return event;
-          };
-      },
-    );
+    await SentryFlutter.init((options) {
+      options
+        ..dsn = Env.sentryDsn
+        ..environment = Env.environment
+        ..release = Env.release
+        ..tracesSampleRate = Env.isProduction ? 0.2 : 1.0
+        ..enableAutoSessionTracking = true
+        ..attachStacktrace = true
+        ..sendDefaultPii =
+            false // Don't send personally identifiable info
+        ..beforeSend = (event, hint) {
+          // Filter out noisy errors in development
+          if (Env.isDevelopment) {
+            return null;
+          }
+          return event;
+        };
+    });
   }
 
   /// Report an error to monitoring service.
@@ -62,9 +62,7 @@ class ErrorHandler {
             scope.setTag('error_context', context);
           }
           if (extras != null) {
-            for (final entry in extras.entries) {
-              scope.setExtra(entry.key, entry.value);
-            }
+            scope.setContexts('diagnostics', extras);
           }
         },
       );
@@ -87,9 +85,7 @@ class ErrorHandler {
         level: level,
         withScope: (scope) {
           if (extras != null) {
-            for (final entry in extras.entries) {
-              scope.setExtra(entry.key, entry.value);
-            }
+            scope.setContexts('diagnostics', extras);
           }
         },
       );
@@ -97,14 +93,14 @@ class ErrorHandler {
   }
 
   /// Record a breadcrumb for debugging.
-  static void addBreadcrumb(String message, {String? category, Map<String, dynamic>? data}) {
+  static void addBreadcrumb(
+    String message, {
+    String? category,
+    Map<String, dynamic>? data,
+  }) {
     if (Env.sentryDsn.isNotEmpty) {
       Sentry.addBreadcrumb(
-        Breadcrumb(
-          message: message,
-          category: category,
-          data: data,
-        ),
+        Breadcrumb(message: message, category: category, data: data),
       );
     }
   }
@@ -115,15 +111,19 @@ class Result<T> {
   final T? data;
   final String? error;
   final StackTrace? stackTrace;
+  final bool _succeeded;
 
   Result.success(this.data)
-      : error = null,
-        stackTrace = null;
+    : error = null,
+      stackTrace = null,
+      _succeeded = true;
 
-  Result.failure(this.error, [this.stackTrace]) : data = null;
+  Result.failure(this.error, [this.stackTrace])
+    : data = null,
+      _succeeded = false;
 
-  bool get isSuccess => data != null;
-  bool get isFailure => error != null;
+  bool get isSuccess => _succeeded;
+  bool get isFailure => !_succeeded;
 
   /// Transform the data if successful, otherwise pass through the error.
   Result<R> map<R>(R Function(T data) transform) {

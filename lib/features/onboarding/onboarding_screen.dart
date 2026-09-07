@@ -8,7 +8,6 @@ import '../../models/models.dart';
 import '../../router/navigation.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/aurora_background.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
 import '../../widgets/motion.dart';
@@ -39,9 +38,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final redirect = GoRouter.maybeOf(context)?.state.uri.queryParameters['redirect'];
+      final redirect = GoRouter.maybeOf(
+        context,
+      )?.state.uri.queryParameters['redirect'];
       final preset = roleFromPath(redirect);
-      if (preset != null) setState(() => _role = preset);
+      final provisionedRole = ref.read(authControllerProvider).role;
+      if (preset != null &&
+          (preset != UserRole.reviewer ||
+              provisionedRole == UserRole.reviewer)) {
+        setState(() => _role = preset);
+      }
     });
   }
 
@@ -51,7 +57,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  String? get _redirect => GoRouter.maybeOf(context)?.state.uri.queryParameters['redirect'];
+  String? get _redirect =>
+      GoRouter.maybeOf(context)?.state.uri.queryParameters['redirect'];
 
   bool get _canContinue {
     switch (_step) {
@@ -82,6 +89,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _finish() async {
     if (_role == null || _busy) return;
+    if (_role == UserRole.reviewer &&
+        ref.read(authControllerProvider).role != UserRole.reviewer) {
+      context.showErrorSnackbar('Reviewer access is available by invitation.');
+      setState(() => _role = null);
+      return;
+    }
 
     setState(() => _busy = true);
 
@@ -90,11 +103,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       final redirect = _redirect;
       final role = _role ?? roleFromPath(redirect);
 
-      await ref.read(authControllerProvider).completeOnboarding(
-            name: name,
-            emoji: _emoji,
-            selectedRole: role,
-          );
+      await ref
+          .read(authControllerProvider)
+          .completeOnboarding(name: name, emoji: _emoji, selectedRole: role);
 
       if (role != null) {
         ref.read(roleProvider.notifier).state = role;
@@ -102,20 +113,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
       if (!mounted) return;
 
-      final destination = redirect ??
+      final destination =
+          redirect ??
           (role == UserRole.teacher
               ? AppRoutes.teacherHome
+              : role == UserRole.reviewer
+              ? AppRoutes.reviewerHome
               : role == UserRole.student
-                  ? AppRoutes.studentHome
-                  : AppRoutes.home);
+              ? AppRoutes.studentPath
+              : AppRoutes.home);
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         context.go(destination);
       });
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
-        context.showErrorSnackbar(e.toString().replaceFirst('Exception: ', ''));
+        context.showErrorSnackbar(
+          'We could not save your choices. Please try again.',
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -125,99 +141,373 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final wide = MediaQuery.sizeOf(context).width > 720;
+    final wide = MediaQuery.sizeOf(context).width > 900;
+    final stepTitles = [
+      ('Welcome to the path', 'What should your Mandarin guide call you?'),
+      (
+        'Choose your companion',
+        'Pick the character that will travel with you.',
+      ),
+      ('Choose your space', 'Your role shapes the experience you see next.'),
+    ];
 
-    return Scaffold(
-      body: AuroraBackground(
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, c) {
-              return SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: wide ? 56 : 22, vertical: 24),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: c.maxHeight - 48),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 560),
-                      child: FadeInUp(
-                        child: GlassCard(
-                          frosted: true,
-                          padding: const EdgeInsets.fromLTRB(24, 22, 24, 26),
-                          shadow: AppTheme.softShadow,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Pill(
-                                label: 'Almost there',
-                                icon: Icons.auto_awesome_rounded,
-                                color: AppColors.accentTeal,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Set up your profile',
-                                style: text.headlineSmall?.copyWith(fontSize: 28),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Pick a name, avatar, and how you\'ll use Kidversity.',
-                                style: text.bodyMedium,
-                              ),
-                              const SizedBox(height: 22),
-                              _StepDots(step: _step),
-                              const SizedBox(height: 24),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 220),
-                                child: switch (_step) {
-                                  0 => _NameStep(
-                                      key: const ValueKey('name'),
-                                      controller: _name,
-                                      onChanged: (_) => setState(() {}),
-                                    ),
-                                  1 => _AvatarStep(
-                                      key: const ValueKey('avatar'),
-                                      selected: _emoji,
-                                      options: _avatars,
-                                      onSelect: (e) => setState(() => _emoji = e),
-                                    ),
-                                  _ => _RoleStep(
-                                      key: const ValueKey('role'),
-                                      selected: _role,
-                                      onSelect: (r) => setState(() => _role = r),
-                                    ),
-                                },
-                              ),
-                              const SizedBox(height: 28),
-                              Row(
-                                children: [
-                                  if (_step > 0)
-                                    TextButton.icon(
-                                      onPressed: _busy ? null : _back,
-                                      icon: const Icon(Icons.arrow_back_rounded),
-                                      label: const Text('Back'),
-                                    )
-                                  else
-                                    const Spacer(),
-                                  const Spacer(),
-                                  GradientButton(
-                                    label: _busy
-                                        ? 'Saving…'
-                                        : (_step < 2 ? 'Continue' : 'Start learning'),
-                                    icon: Icons.arrow_forward_rounded,
-                                    onTap: (_busy || !_canContinue) ? null : _next,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+    final setupCard = ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 570),
+      child: GlassCard(
+        color: AppColors.surface.withValues(alpha: 0.96),
+        padding: EdgeInsets.fromLTRB(wide ? 32 : 22, 26, wide ? 32 : 22, 28),
+        shadow: AppTheme.softShadow,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.cinnabar,
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: const Text(
+                    '学',
+                    style: TextStyle(
+                      color: AppColors.paper,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
-              );
-            },
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'MANDARIN FOUNDATION',
+                        style: TextStyle(
+                          color: AppColors.cinnabar,
+                          fontSize: 10,
+                          letterSpacing: 1.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        'Set up your journey',
+                        style: TextStyle(
+                          color: AppColors.ink,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${_step + 1} / 3',
+                  style: text.labelLarge?.copyWith(color: AppColors.muted),
+                ),
+              ],
+            ),
+            const SizedBox(height: 26),
+            Text(
+              stepTitles[_step].$1,
+              style: text.headlineSmall?.copyWith(fontSize: wide ? 30 : 26),
+            ),
+            const SizedBox(height: 6),
+            Text(stepTitles[_step].$2, style: text.bodyMedium),
+            const SizedBox(height: 22),
+            _StepDots(step: _step),
+            const SizedBox(height: 26),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 420),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.08, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              ),
+              child: switch (_step) {
+                0 => _NameStep(
+                  key: const ValueKey('name'),
+                  controller: _name,
+                  onChanged: (_) => setState(() {}),
+                ),
+                1 => _AvatarStep(
+                  key: const ValueKey('avatar'),
+                  selected: _emoji,
+                  options: _avatars,
+                  onSelect: (emoji) => setState(() => _emoji = emoji),
+                ),
+                _ => _RoleStep(
+                  key: const ValueKey('role'),
+                  selected: _role,
+                  allowReviewer:
+                      ref.watch(authControllerProvider).role ==
+                      UserRole.reviewer,
+                  onSelect: (role) => setState(() => _role = role),
+                ),
+              },
+            ),
+            const SizedBox(height: 30),
+            Row(
+              children: [
+                if (_step > 0)
+                  TextButton.icon(
+                    onPressed: _busy ? null : _back,
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    label: const Text('Back'),
+                  )
+                else
+                  const Spacer(),
+                const Spacer(),
+                GradientButton(
+                  label: _busy
+                      ? 'Saving…'
+                      : (_step < 2 ? 'Continue' : 'Enter Kidversity'),
+                  icon: _step < 2
+                      ? Icons.arrow_forward_rounded
+                      : Icons.auto_awesome_rounded,
+                  onTap: (_busy || !_canContinue) ? null : _next,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return Scaffold(
+      backgroundColor: AppColors.paper,
+      body: _OnboardingBackdrop(
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: wide ? 58 : 20,
+                vertical: 28,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 56,
+                ),
+                child: Center(
+                  child: FadeInUp(
+                    child: wide
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: _OnboardingPreview(
+                                  step: _step,
+                                  avatar: _emoji,
+                                  role: _role,
+                                ),
+                              ),
+                              const SizedBox(width: 54),
+                              Expanded(child: setupCard),
+                            ],
+                          )
+                        : setupCard,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _OnboardingBackdrop extends StatelessWidget {
+  final Widget child;
+
+  const _OnboardingBackdrop({required this.child});
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFFAF3), AppColors.paper, Color(0xFFE8F0EB)],
+          ),
+        ),
+      ),
+      Positioned(
+        left: -120,
+        top: -100,
+        child: Container(
+          width: 360,
+          height: 360,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.cinnabar.withValues(alpha: 0.07),
+          ),
+        ),
+      ),
+      Positioned(
+        right: -90,
+        bottom: -120,
+        child: Container(
+          width: 330,
+          height: 330,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.jade.withValues(alpha: 0.08),
+          ),
+        ),
+      ),
+      child,
+    ],
+  );
+}
+
+class _OnboardingPreview extends StatelessWidget {
+  final int step;
+  final String avatar;
+  final UserRole? role;
+
+  const _OnboardingPreview({
+    required this.step,
+    required this.avatar,
+    required this.role,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final roleLabel = switch (role) {
+      UserRole.student => 'Learner path',
+      UserRole.teacher => 'Class coach',
+      UserRole.reviewer => 'Language reviewer',
+      null => 'Choose your role',
+    };
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 540),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '你好，WELCOME',
+            style: TextStyle(
+              color: AppColors.cinnabar,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+              letterSpacing: 2.2,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Your first Mandarin\njourney starts here.',
+            style: Theme.of(context).textTheme.displayMedium?.copyWith(
+              color: AppColors.ink,
+              fontSize: 44,
+              height: 1.03,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'A focused 30-lesson course with clear audio, playful practice, '
+            'and carefully reviewed Mandarin.',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: AppColors.inkSoft,
+              height: 1.55,
+            ),
+          ),
+          const SizedBox(height: 26),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: AppColors.mandarinGradient,
+              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+              boxShadow: AppTheme.softShadow,
+            ),
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 320),
+                  width: 76,
+                  height: 76,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.paper,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: AppColors.gold, width: 2),
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 260),
+                    child: Text(
+                      avatar,
+                      key: ValueKey(avatar),
+                      style: const TextStyle(fontSize: 38),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        roleLabel,
+                        style: const TextStyle(
+                          color: AppColors.paper,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        step == 0
+                            ? 'Tell us who is joining.'
+                            : step == 1
+                            ? 'Your companion is ready.'
+                            : 'We’ll open the right workspace.',
+                        style: TextStyle(
+                          color: AppColors.paper.withValues(alpha: 0.76),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_rounded, color: AppColors.gold),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          const Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              Pill(
+                label: 'Approved Mandarin',
+                icon: Icons.verified_rounded,
+                color: AppColors.jade,
+              ),
+              Pill(
+                label: '30 lessons',
+                icon: Icons.route_rounded,
+                color: AppColors.cinnabar,
+              ),
+              Pill(
+                label: 'Audio + quests',
+                icon: Icons.volume_up_rounded,
+                color: AppColors.gold,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -265,7 +555,10 @@ class _NameStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('What should we call you?', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'What should we call you?',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 12),
         TextField(
           controller: controller,
@@ -298,7 +591,10 @@ class _AvatarStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Choose your avatar', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Choose your avatar',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 16),
         Wrap(
           spacing: 12,
@@ -313,9 +609,13 @@ class _AvatarStep extends StatelessWidget {
                   height: 64,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: selected == emoji ? AppColors.primarySoft : AppColors.surface,
+                    color: selected == emoji
+                        ? AppColors.primarySoft
+                        : AppColors.surface,
                     border: Border.all(
-                      color: selected == emoji ? AppColors.primary : AppColors.line,
+                      color: selected == emoji
+                          ? AppColors.primary
+                          : AppColors.line,
                       width: selected == emoji ? 2.5 : 1,
                     ),
                     boxShadow: selected == emoji ? AppTheme.cardShadow : null,
@@ -333,11 +633,13 @@ class _AvatarStep extends StatelessWidget {
 
 class _RoleStep extends StatelessWidget {
   final UserRole? selected;
+  final bool allowReviewer;
   final ValueChanged<UserRole> onSelect;
 
   const _RoleStep({
     super.key,
     required this.selected,
+    required this.allowReviewer,
     required this.onSelect,
   });
 
@@ -346,12 +648,15 @@ class _RoleStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('How will you use Kidversity?', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'How will you use Kidversity?',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 14),
         _RoleCard(
           emoji: '🧒',
           title: "I'm a Student",
-          subtitle: 'Follow slides, listen along & earn badges',
+          subtitle: 'Follow the Mandarin path, practise & earn badges',
           gradient: AppColors.brandGradient,
           selected: selected == UserRole.student,
           onTap: () => onSelect(UserRole.student),
@@ -360,11 +665,22 @@ class _RoleStep extends StatelessWidget {
         _RoleCard(
           emoji: '🧑‍🏫',
           title: "I'm a Teacher or Parent",
-          subtitle: 'Upload a lesson or auto-generate with AI',
+          subtitle: 'Coach a class and follow Foundation progress',
           gradient: AppColors.sunsetGradient,
           selected: selected == UserRole.teacher,
           onTap: () => onSelect(UserRole.teacher),
         ),
+        if (allowReviewer) ...[
+          const SizedBox(height: 12),
+          _RoleCard(
+            emoji: '校',
+            title: "I'm a Reviewer",
+            subtitle: 'Review Mandarin lessons before they are published',
+            gradient: AppColors.mandarinGradient,
+            selected: selected == UserRole.reviewer,
+            onTap: () => onSelect(UserRole.reviewer),
+          ),
+        ],
       ],
     );
   }
@@ -387,41 +703,46 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      onTap: onTap,
-      gradient: gradient,
-      padding: const EdgeInsets.all(16),
-      border: selected ? Border.all(color: Colors.white, width: 2.5) : null,
-      child: Row(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 28)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
-                ),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 12.5,
-                      ),
-                ),
-              ],
+    return AnimatedScale(
+      scale: selected ? 1.018 : 1,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutBack,
+      child: GlassCard(
+        onTap: onTap,
+        gradient: gradient,
+        padding: const EdgeInsets.all(16),
+        border: selected ? Border.all(color: Colors.white, width: 2.5) : null,
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 28)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Icon(
-            selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-            color: Colors.white,
-          ),
-        ],
+            Icon(
+              selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+              color: Colors.white,
+            ),
+          ],
+        ),
       ),
     );
   }

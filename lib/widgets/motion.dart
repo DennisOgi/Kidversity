@@ -20,11 +20,16 @@ class FadeInUp extends StatefulWidget {
   State<FadeInUp> createState() => _FadeInUpState();
 }
 
-class _FadeInUpState extends State<FadeInUp> with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: widget.duration);
-  late final Animation<double> _fade =
-      CurvedAnimation(parent: _c, curve: Curves.easeOut);
+class _FadeInUpState extends State<FadeInUp>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: widget.duration,
+  );
+  late final Animation<double> _fade = CurvedAnimation(
+    parent: _c,
+    curve: Curves.easeOut,
+  );
   late final Animation<Offset> _slide = Tween(
     begin: Offset(0, widget.offset / 100),
     end: Offset.zero,
@@ -33,12 +38,15 @@ class _FadeInUpState extends State<FadeInUp> with SingleTickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _scheduleForward();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _c.value = 1;
+      return;
+    }
     // Animations started while a tab was offstage stay at opacity 0 until retried.
     if (_c.value == 0 && !_c.isAnimating) {
       _scheduleForward();
@@ -72,10 +80,7 @@ class _FadeInUpState extends State<FadeInUp> with SingleTickerProviderStateMixin
     final opacity = _c.isCompleted ? 1.0 : _fade.value.clamp(0.0, 1.0);
     return Opacity(
       opacity: opacity > 0 ? opacity : 1.0,
-      child: SlideTransition(
-        position: _slide,
-        child: widget.child,
-      ),
+      child: SlideTransition(position: _slide, child: widget.child),
     );
   }
 }
@@ -108,8 +113,11 @@ class StaggerColumn extends StatelessWidget {
 }
 
 /// Builds staggered entrance children for use inside a sliver list.
-List<Widget> staggerList(List<Widget> children,
-    {Duration step = const Duration(milliseconds: 70), Duration initialDelay = Duration.zero}) {
+List<Widget> staggerList(
+  List<Widget> children, {
+  Duration step = const Duration(milliseconds: 70),
+  Duration initialDelay = Duration.zero,
+}) {
   return [
     for (int i = 0; i < children.length; i++)
       FadeInUp(delay: initialDelay + step * i, child: children[i]),

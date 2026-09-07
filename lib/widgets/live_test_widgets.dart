@@ -74,12 +74,19 @@ class _LiveCountdownTimerState extends State<LiveCountdownTimer> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.timer_rounded, size: 16, color: urgent ? AppColors.danger : AppColors.primary),
-            const SizedBox(width: 6),
-            Text('$mins:$secs', style: text.titleMedium?.copyWith(
+            Icon(
+              Icons.timer_rounded,
+              size: 16,
               color: urgent ? AppColors.danger : AppColors.primary,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            )),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '$mins:$secs',
+              style: text.titleMedium?.copyWith(
+                color: urgent ? AppColors.danger : AppColors.primary,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
           ],
         ),
       );
@@ -94,15 +101,21 @@ class _LiveCountdownTimerState extends State<LiveCountdownTimer> {
       ),
       child: Column(
         children: [
-          Text(_remaining > Duration.zero ? 'Time remaining' : 'Time\'s up!',
-              style: text.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.9))),
+          Text(
+            _remaining > Duration.zero ? 'Time remaining' : 'Time\'s up!',
+            style: text.bodyMedium?.copyWith(
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
           const SizedBox(height: 8),
-          Text('$mins:$secs',
-              style: text.displayMedium?.copyWith(
-                color: Colors.white,
-                fontSize: 42,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              )),
+          Text(
+            '$mins:$secs',
+            style: text.displayMedium?.copyWith(
+              color: Colors.white,
+              fontSize: 42,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
         ],
       ),
     );
@@ -117,8 +130,12 @@ class LivePulseBadge extends StatefulWidget {
   State<LivePulseBadge> createState() => _LivePulseBadgeState();
 }
 
-class _LivePulseBadgeState extends State<LivePulseBadge> with SingleTickerProviderStateMixin {
-  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
+class _LivePulseBadgeState extends State<LivePulseBadge>
+    with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat(reverse: true);
 
   @override
   void dispose() {
@@ -143,12 +160,25 @@ class _LivePulseBadgeState extends State<LivePulseBadge> with SingleTickerProvid
             Container(
               width: 8,
               height: 8,
-              decoration: BoxDecoration(color: AppColors.danger, shape: BoxShape.circle, boxShadow: [
-                BoxShadow(color: AppColors.danger.withValues(alpha: 0.6), blurRadius: 6 + _c.value * 4),
-              ]),
+              decoration: BoxDecoration(
+                color: AppColors.danger,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.danger.withValues(alpha: 0.6),
+                    blurRadius: 6 + _c.value * 4,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(width: 8),
-            Text('LIVE', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.danger, fontSize: 12)),
+            Text(
+              'LIVE',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppColors.danger,
+                fontSize: 12,
+              ),
+            ),
           ],
         ),
       ),
@@ -161,7 +191,11 @@ class LiveTestAlertBanner extends StatelessWidget {
   final LiveTest test;
   final VoidCallback onJoin;
 
-  const LiveTestAlertBanner({super.key, required this.test, required this.onJoin});
+  const LiveTestAlertBanner({
+    super.key,
+    required this.test,
+    required this.onJoin,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -169,10 +203,19 @@ class LiveTestAlertBanner extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [AppColors.danger.withValues(alpha: 0.9), AppColors.secondary]),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.danger.withValues(alpha: 0.9),
+            AppColors.secondary,
+          ],
+        ),
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         boxShadow: [
-          BoxShadow(color: AppColors.danger.withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(
+            color: AppColors.danger.withValues(alpha: 0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Material(
@@ -190,8 +233,17 @@ class LiveTestAlertBanner extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Live quiz in progress!', style: text.titleMedium?.copyWith(color: Colors.white)),
-                      Text(test.title, style: text.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.9), fontSize: 13)),
+                      Text(
+                        'Live quiz in progress!',
+                        style: text.titleMedium?.copyWith(color: Colors.white),
+                      ),
+                      Text(
+                        test.title,
+                        style: text.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -261,13 +313,24 @@ class _OptionBar extends StatelessWidget {
     final color = isCorrect ? AppColors.success : AppColors.primary;
     return Row(
       children: [
-        SizedBox(width: 72, child: Text('$count', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 14))),
+        SizedBox(
+          width: 72,
+          child: Text(
+            '$count',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontSize: 14),
+          ),
+        ),
         Expanded(
           child: Stack(
             children: [
               Container(
                 height: 32,
-                decoration: BoxDecoration(color: AppColors.line, borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               FractionallySizedBox(
                 widthFactor: fraction.clamp(0.05, 1.0),
@@ -284,15 +347,31 @@ class _OptionBar extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: isCorrect ? Colors.white : AppColors.ink)),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: isCorrect ? Colors.white : AppColors.ink,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ],
           ),
         ),
-        if (isCorrect) const Padding(padding: EdgeInsets.only(left: 6), child: Icon(Icons.check_circle_rounded, color: AppColors.success, size: 18)),
+        if (isCorrect)
+          const Padding(
+            padding: EdgeInsets.only(left: 6),
+            child: Icon(
+              Icons.check_circle_rounded,
+              color: AppColors.success,
+              size: 18,
+            ),
+          ),
       ],
     );
   }
@@ -314,7 +393,10 @@ class JoinCodeChip extends StatelessWidget {
         onTap: () {
           Clipboard.setData(ClipboardData(text: code));
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Join code copied'), duration: Duration(seconds: 2)),
+            const SnackBar(
+              content: Text('Join code copied'),
+              duration: Duration(seconds: 2),
+            ),
           );
         },
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -323,11 +405,21 @@ class JoinCodeChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.tag_rounded, size: 18, color: AppColors.primary),
+              const Icon(Icons.tag_rounded, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('Code: $code', style: text.titleMedium?.copyWith(color: AppColors.primary, letterSpacing: 2)),
+              Text(
+                'Code: $code',
+                style: text.titleMedium?.copyWith(
+                  color: AppColors.primary,
+                  letterSpacing: 2,
+                ),
+              ),
               const SizedBox(width: 8),
-              Icon(Icons.copy_rounded, size: 16, color: AppColors.primary.withValues(alpha: 0.7)),
+              Icon(
+                Icons.copy_rounded,
+                size: 16,
+                color: AppColors.primary.withValues(alpha: 0.7),
+              ),
             ],
           ),
         ),
@@ -381,10 +473,10 @@ class _PodiumTile extends StatelessWidget {
   });
 
   Color get _rankColor => switch (rank) {
-        1 => const Color(0xFFFFD700),
-        2 => const Color(0xFFC0C0C0),
-        _ => const Color(0xFFCD7F32),
-      };
+    1 => const Color(0xFFFFD700),
+    2 => const Color(0xFFC0C0C0),
+    _ => const Color(0xFFCD7F32),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -392,9 +484,16 @@ class _PodiumTile extends StatelessWidget {
       children: [
         Text(participant.avatarEmoji, style: const TextStyle(fontSize: 28)),
         const SizedBox(height: 4),
-        Text(participant.displayName, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: text.labelLarge?.copyWith(fontSize: 12)),
-        Text('${participant.score} pts', style: text.bodySmall?.copyWith(color: AppColors.muted)),
+        Text(
+          participant.displayName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: text.labelLarge?.copyWith(fontSize: 12),
+        ),
+        Text(
+          '${participant.score} pts',
+          style: text.bodySmall?.copyWith(color: AppColors.muted),
+        ),
         const SizedBox(height: 8),
         Container(
           height: height,
@@ -402,13 +501,19 @@ class _PodiumTile extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [_rankColor.withValues(alpha: 0.35), _rankColor.withValues(alpha: 0.12)],
+              colors: [
+                _rankColor.withValues(alpha: 0.35),
+                _rankColor.withValues(alpha: 0.12),
+              ],
             ),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
             border: Border.all(color: _rankColor.withValues(alpha: 0.5)),
           ),
           alignment: Alignment.center,
-          child: Text('#$rank', style: text.titleLarge?.copyWith(color: _rankColor)),
+          child: Text(
+            '#$rank',
+            style: text.titleLarge?.copyWith(color: _rankColor),
+          ),
         ),
       ],
     );
@@ -442,8 +547,8 @@ class QuestionProgressDots extends StatelessWidget {
               color: i == current
                   ? AppColors.primary
                   : answered.contains(i)
-                      ? AppColors.success.withValues(alpha: 0.7)
-                      : AppColors.line,
+                  ? AppColors.success.withValues(alpha: 0.7)
+                  : AppColors.line,
               borderRadius: BorderRadius.circular(20),
             ),
           ),

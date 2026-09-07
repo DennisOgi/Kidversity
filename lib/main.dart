@@ -24,15 +24,17 @@ void main() {
         ),
       );
 
-    await _initializeApp();
+      await _initializeApp();
 
-    if (kDebugMode) {
-      debugPrint(Env.hasSupabase
-          ? '✅ Supabase credentials loaded from .env / dart-define'
-          : '⚠️ Supabase credentials missing — check .env is in pubspec assets');
-    }
+      if (kDebugMode) {
+        debugPrint(
+          Env.hasSupabase
+              ? '✅ Supabase credentials loaded from .env / dart-define'
+              : '⚠️ Supabase credentials missing — check .env is in pubspec assets',
+        );
+      }
 
-    FlutterError.onError = (details) {
+      FlutterError.onError = (details) {
         FlutterError.presentError(details);
         ErrorHandler.reportError(
           details.exception,
@@ -46,16 +48,16 @@ void main() {
         return true;
       };
 
-      ErrorWidget.builder = (details) {
-        return Material(
+      ErrorWidget.builder = (_) {
+        return const Material(
           color: AppColors.background,
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24),
               child: Text(
-                details.exceptionAsString(),
+                'We hit a problem while opening this page. Please restart Kidversity and try again.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.danger, fontSize: 14),
+                style: TextStyle(color: AppColors.danger, fontSize: 14),
               ),
             ),
           ),
@@ -74,7 +76,9 @@ Future<void> _initializeApp() async {
   try {
     if (!Env.hasSupabase) {
       if (kDebugMode) {
-        debugPrint('⚠️ Supabase credentials missing. Auth will not work until .env is configured.');
+        debugPrint(
+          '⚠️ Supabase credentials missing. Auth will not work until .env is configured.',
+        );
       } else {
         Env.validate();
       }
@@ -87,7 +91,11 @@ Future<void> _initializeApp() async {
     debugPrint('✅ Supabase initialized');
   } catch (e, stack) {
     debugPrint('❌ App initialization failed: $e');
-    await ErrorHandler.reportError(e, stack, context: 'App initialization error');
+    await ErrorHandler.reportError(
+      e,
+      stack,
+      context: 'App initialization error',
+    );
   }
 }
 
@@ -98,7 +106,7 @@ class KidversityApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
-      title: 'Kidversity',
+      title: 'Kidversity — Mandarin Foundation',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,

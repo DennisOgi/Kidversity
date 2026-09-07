@@ -34,18 +34,27 @@ class LiveTestService {
         return app_errors.Result.failure('Sign in to create a live test.');
       }
 
-      final classRow = await client.from('classes').select('id').eq('teacher_id', user.id).limit(1).maybeSingle();
+      final classRow = await client
+          .from('classes')
+          .select('id')
+          .eq('teacher_id', user.id)
+          .limit(1)
+          .maybeSingle();
       final classId = classRow?['id'] as String?;
 
-      final testRow = await client.from('live_tests').insert({
-        'teacher_id': user.id,
-        'class_id': classId,
-        'title': title,
-        'subject': subject,
-        'duration_seconds': durationSeconds,
-        'status': 'draft',
-        'join_code': _randomJoinCode(),
-      }).select().single();
+      final testRow = await client
+          .from('live_tests')
+          .insert({
+            'teacher_id': user.id,
+            'class_id': classId,
+            'title': title,
+            'subject': subject,
+            'duration_seconds': durationSeconds,
+            'status': 'draft',
+            'join_code': _randomJoinCode(),
+          })
+          .select()
+          .single();
 
       final testId = testRow['id'] as String;
       for (var i = 0; i < questions.length; i++) {
@@ -60,15 +69,22 @@ class LiveTestService {
       }
 
       return fetchTest(testId);
-    } on PostgrestException catch (e) {
-      return app_errors.Result.failure('Could not create test: ${e.message}');
+    } on PostgrestException {
+      return app_errors.Result.failure('Could not create the quiz.');
     } catch (e, stack) {
-      await app_errors.ErrorHandler.reportError(e, stack, context: 'createTest');
+      await app_errors.ErrorHandler.reportError(
+        e,
+        stack,
+        context: 'createTest',
+      );
       return app_errors.Result.failure('Unexpected error creating test.');
     }
   }
 
-  Future<app_errors.Result<LiveTest>> createFromTemplate(LiveQuizTemplate template, {int durationSeconds = 300}) {
+  Future<app_errors.Result<LiveTest>> createFromTemplate(
+    LiveQuizTemplate template, {
+    int durationSeconds = 300,
+  }) {
     final questions = template.questions.map((q) {
       final options = q.$2.asMap().entries.map((e) {
         return LiveTestOption(
@@ -93,16 +109,30 @@ class LiveTestService {
       final client = _client;
       if (client == null) return app_errors.Result.failure('Not connected');
 
-      final testRow = await client.from('live_tests').select().eq('id', testId).single();
+      final testRow = await client
+          .from('live_tests')
+          .select()
+          .eq('id', testId)
+          .single();
       final qRows = await client
           .from('live_test_questions')
           .select()
           .eq('test_id', testId)
           .order('order_index');
 
-      final questions = (qRows as List).map((r) => LiveTestQuestion.fromRow(Map<String, dynamic>.from(r as Map))).toList();
+      final questions = (qRows as List)
+          .map(
+            (r) =>
+                LiveTestQuestion.fromRow(Map<String, dynamic>.from(r as Map)),
+          )
+          .toList();
 
-      return app_errors.Result.success(LiveTest.fromRow(Map<String, dynamic>.from(testRow as Map), questions: questions));
+      return app_errors.Result.success(
+        LiveTest.fromRow(
+          Map<String, dynamic>.from(testRow as Map),
+          questions: questions,
+        ),
+      );
     } catch (e, stack) {
       await app_errors.ErrorHandler.reportError(e, stack, context: 'fetchTest');
       return app_errors.Result.failure('Could not load test.');
@@ -121,11 +151,14 @@ class LiveTestService {
       final now = DateTime.now().toUtc();
       final ends = now.add(Duration(seconds: test.durationSeconds));
 
-      await client.from('live_tests').update({
-        'status': 'live',
-        'started_at': now.toIso8601String(),
-        'ends_at': ends.toIso8601String(),
-      }).eq('id', testId);
+      await client
+          .from('live_tests')
+          .update({
+            'status': 'live',
+            'started_at': now.toIso8601String(),
+            'ends_at': ends.toIso8601String(),
+          })
+          .eq('id', testId);
 
       return fetchTest(testId);
     } catch (e, stack) {
@@ -139,14 +172,19 @@ class LiveTestService {
       final client = _client;
       if (client == null) return app_errors.Result.failure('Not connected');
 
-      await client.from('live_tests').update({'status': 'ended'}).eq('id', testId);
+      await client
+          .from('live_tests')
+          .update({'status': 'ended'})
+          .eq('id', testId);
       return app_errors.Result.success(null);
     } catch (e) {
       return app_errors.Result.failure('Could not end test.');
     }
   }
 
-  Future<app_errors.Result<List<LiveTest>>> fetchTeacherRecentTests({int limit = 8}) async {
+  Future<app_errors.Result<List<LiveTest>>> fetchTeacherRecentTests({
+    int limit = 8,
+  }) async {
     try {
       final client = _client;
       final user = client?.auth.currentUser;
@@ -162,14 +200,19 @@ class LiveTestService {
           .limit(limit);
 
       final tests = <LiveTest>[];
-      for (final row in rows as List) {
+      for (final raw in rows as List) {
+        final row = Map<String, dynamic>.from(raw as Map);
         final testId = row['id'] as String;
         final full = await fetchTest(testId);
         if (full.isSuccess && full.data != null) tests.add(full.data!);
       }
       return app_errors.Result.success(tests);
     } catch (e, stack) {
-      await app_errors.ErrorHandler.reportError(e, stack, context: 'fetchTeacherRecentTests');
+      await app_errors.ErrorHandler.reportError(
+        e,
+        stack,
+        context: 'fetchTeacherRecentTests',
+      );
       return app_errors.Result.failure('Could not load recent tests.');
     }
   }
@@ -178,10 +221,17 @@ class LiveTestService {
     try {
       final client = _client;
       final user = client?.auth.currentUser;
-      if (client == null || user == null) return app_errors.Result.success(null);
+      if (client == null || user == null) {
+        return app_errors.Result.success(null);
+      }
 
-      final memberships = await client.from('class_members').select('class_id').eq('user_id', user.id);
-      final classIds = (memberships as List).map((r) => r['class_id'] as String).toList();
+      final memberships = await client
+          .from('class_members')
+          .select('class_id')
+          .eq('user_id', user.id);
+      final classIds = (memberships as List)
+          .map((raw) => (raw as Map)['class_id'] as String)
+          .toList();
       if (classIds.isEmpty) return app_errors.Result.success(null);
 
       final rows = await client
@@ -216,15 +266,21 @@ class LiveTestService {
           .eq('user_id', user.id)
           .maybeSingle();
 
-      final row = await client.from('live_test_participants').upsert({
-        'test_id': testId,
-        'user_id': user.id,
-        'display_name': profile?['display_name'] ?? 'Student',
-        'avatar_emoji': profile?['avatar_emoji'] ?? '🦊',
-        'status': 'active',
-      }).select().single();
+      final row = await client
+          .from('live_test_participants')
+          .upsert({
+            'test_id': testId,
+            'user_id': user.id,
+            'display_name': profile?['display_name'] ?? 'Student',
+            'avatar_emoji': profile?['avatar_emoji'] ?? '🦊',
+            'status': 'active',
+          })
+          .select()
+          .single();
 
-      return app_errors.Result.success(LiveTestParticipant.fromRow(Map<String, dynamic>.from(row as Map)));
+      return app_errors.Result.success(
+        LiveTestParticipant.fromRow(Map<String, dynamic>.from(row as Map)),
+      );
     } catch (e, stack) {
       await app_errors.ErrorHandler.reportError(e, stack, context: 'joinTest');
       return app_errors.Result.failure('Could not join test.');
@@ -240,9 +296,13 @@ class LiveTestService {
     try {
       final client = _client;
       final user = client?.auth.currentUser;
-      if (client == null || user == null) return app_errors.Result.failure('Not signed in');
+      if (client == null || user == null) {
+        return app_errors.Result.failure('Not signed in');
+      }
 
-      final isCorrect = options.any((o) => o.id == selectedOptionId && o.isCorrect);
+      final isCorrect = options.any(
+        (o) => o.id == selectedOptionId && o.isCorrect,
+      );
 
       await client.from('live_test_answers').upsert({
         'test_id': testId,
@@ -261,16 +321,25 @@ class LiveTestService {
             .eq('user_id', user.id)
             .maybeSingle();
 
-        await client.from('live_test_participants').update({
-          'score': ((participant?['score'] as num?)?.toInt() ?? 0) + 1,
-          'correct_count': ((participant?['correct_count'] as num?)?.toInt() ?? 0) + 1,
-          'status': 'active',
-        }).eq('test_id', testId).eq('user_id', user.id);
+        await client
+            .from('live_test_participants')
+            .update({
+              'score': ((participant?['score'] as num?)?.toInt() ?? 0) + 1,
+              'correct_count':
+                  ((participant?['correct_count'] as num?)?.toInt() ?? 0) + 1,
+              'status': 'active',
+            })
+            .eq('test_id', testId)
+            .eq('user_id', user.id);
       }
 
       return app_errors.Result.success(null);
     } catch (e, stack) {
-      await app_errors.ErrorHandler.reportError(e, stack, context: 'submitAnswer');
+      await app_errors.ErrorHandler.reportError(
+        e,
+        stack,
+        context: 'submitAnswer',
+      );
       return app_errors.Result.failure('Could not save answer.');
     }
   }
@@ -279,12 +348,18 @@ class LiveTestService {
     try {
       final client = _client;
       final user = client?.auth.currentUser;
-      if (client == null || user == null) return app_errors.Result.failure('Not signed in');
+      if (client == null || user == null) {
+        return app_errors.Result.failure('Not signed in');
+      }
 
-      await client.from('live_test_participants').update({
-        'status': 'submitted',
-        'submitted_at': DateTime.now().toUtc().toIso8601String(),
-      }).eq('test_id', testId).eq('user_id', user.id);
+      await client
+          .from('live_test_participants')
+          .update({
+            'status': 'submitted',
+            'submitted_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('test_id', testId)
+          .eq('user_id', user.id);
 
       return app_errors.Result.success(null);
     } catch (e) {
@@ -292,7 +367,9 @@ class LiveTestService {
     }
   }
 
-  Future<app_errors.Result<LiveTestSnapshot>> fetchSnapshot(String testId) async {
+  Future<app_errors.Result<LiveTestSnapshot>> fetchSnapshot(
+    String testId,
+  ) async {
     try {
       final client = _client;
       if (client == null) return app_errors.Result.failure('Not connected');
@@ -302,16 +379,39 @@ class LiveTestService {
         return app_errors.Result.failure(testResult.error ?? 'Test not found');
       }
 
-      final pRows = await client.from('live_test_participants').select().eq('test_id', testId);
-      final aRows = await client.from('live_test_answers').select().eq('test_id', testId);
+      final pRows = await client
+          .from('live_test_participants')
+          .select()
+          .eq('test_id', testId);
+      final aRows = await client
+          .from('live_test_answers')
+          .select()
+          .eq('test_id', testId);
 
-      return app_errors.Result.success(LiveTestSnapshot(
-        test: testResult.data!,
-        participants: (pRows as List).map((r) => LiveTestParticipant.fromRow(Map<String, dynamic>.from(r as Map))).toList(),
-        answers: (aRows as List).map((r) => LiveTestAnswer.fromRow(Map<String, dynamic>.from(r as Map))).toList(),
-      ));
+      return app_errors.Result.success(
+        LiveTestSnapshot(
+          test: testResult.data!,
+          participants: (pRows as List)
+              .map(
+                (r) => LiveTestParticipant.fromRow(
+                  Map<String, dynamic>.from(r as Map),
+                ),
+              )
+              .toList(),
+          answers: (aRows as List)
+              .map(
+                (r) =>
+                    LiveTestAnswer.fromRow(Map<String, dynamic>.from(r as Map)),
+              )
+              .toList(),
+        ),
+      );
     } catch (e, stack) {
-      await app_errors.ErrorHandler.reportError(e, stack, context: 'fetchSnapshot');
+      await app_errors.ErrorHandler.reportError(
+        e,
+        stack,
+        context: 'fetchSnapshot',
+      );
       return app_errors.Result.failure('Could not load live data.');
     }
   }
@@ -339,21 +439,33 @@ class LiveTestService {
             event: PostgresChangeEvent.all,
             schema: 'public',
             table: 'live_test_answers',
-            filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'test_id', value: testId),
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'test_id',
+              value: testId,
+            ),
             callback: (_) => refresh(),
           )
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
             schema: 'public',
             table: 'live_test_participants',
-            filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'test_id', value: testId),
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'test_id',
+              value: testId,
+            ),
             callback: (_) => refresh(),
           )
           .onPostgresChanges(
             event: PostgresChangeEvent.update,
             schema: 'public',
             table: 'live_tests',
-            filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'id', value: testId),
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'id',
+              value: testId,
+            ),
             callback: (_) => refresh(),
           )
           .subscribe();
@@ -363,7 +475,12 @@ class LiveTestService {
 
     controller.onCancel = () async {
       timer?.cancel();
-      if (channel != null && client != null) await client.removeChannel(channel!);
+      if (channel != null && client != null) {
+        await client.removeChannel(channel);
+      }
+      if (!controller.isClosed) {
+        await controller.close();
+      }
     };
 
     return controller.stream;
@@ -399,7 +516,12 @@ class LiveTestService {
 
     controller.onCancel = () async {
       timer?.cancel();
-      if (channel != null && client != null) await client.removeChannel(channel!);
+      if (channel != null && client != null) {
+        await client.removeChannel(channel);
+      }
+      if (!controller.isClosed) {
+        await controller.close();
+      }
     };
 
     return controller.stream;

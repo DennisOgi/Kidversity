@@ -14,7 +14,8 @@ const kEmojiFontFallbacks = [
   'sans-serif',
 ];
 
-TextStyle emojiTextStyle({double size = 24, Color? color, double? height}) => TextStyle(
+TextStyle emojiTextStyle({double size = 24, Color? color, double? height}) =>
+    TextStyle(
       fontSize: size,
       height: height ?? 1.1,
       color: color,
@@ -29,7 +30,13 @@ class EmojiText extends StatelessWidget {
   final TextAlign? textAlign;
   final Color? color;
 
-  const EmojiText(this.text, {super.key, this.size = 24, this.textAlign, this.color});
+  const EmojiText(
+    this.text, {
+    super.key,
+    this.size = 24,
+    this.textAlign,
+    this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -76,13 +83,22 @@ class GlassCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: gradient == null
-            ? (color ?? (frosted ? Colors.white.withValues(alpha: 0.62) : AppColors.surface))
+            ? (color ??
+                  (frosted
+                      ? Colors.white.withValues(alpha: 0.62)
+                      : AppColors.surface))
             : null,
         gradient: gradient,
         borderRadius: BorderRadius.circular(radius),
         boxShadow: shadow ?? AppTheme.cardShadow,
-        border: border ??
-            (frosted ? Border.all(color: Colors.white.withValues(alpha: 0.65), width: 1.4) : null),
+        border:
+            border ??
+            (frosted
+                ? Border.all(
+                    color: Colors.white.withValues(alpha: 0.65),
+                    width: 1.4,
+                  )
+                : null),
       ),
       child: child,
     );
@@ -107,7 +123,11 @@ class _Pressable extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
   final double radius;
-  const _Pressable({required this.child, required this.onTap, required this.radius});
+  const _Pressable({
+    required this.child,
+    required this.onTap,
+    required this.radius,
+  });
 
   @override
   State<_Pressable> createState() => _PressableState();
@@ -165,7 +185,13 @@ class Pill extends StatelessWidget {
   final IconData? icon;
   final Color color;
   final Color? background;
-  const Pill({super.key, required this.label, this.icon, this.color = AppColors.primary, this.background});
+  const Pill({
+    super.key,
+    required this.label,
+    this.icon,
+    this.color = AppColors.primary,
+    this.background,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -178,12 +204,18 @@ class Pill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[Icon(icon, size: 15, color: color), const SizedBox(width: 6)],
-          Text(label,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelLarge
-                  ?.copyWith(color: color, fontSize: 12.5, fontWeight: FontWeight.w800)),
+          if (icon != null) ...[
+            Icon(icon, size: 15, color: color),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: color,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );
@@ -225,7 +257,7 @@ class GradientButton extends StatelessWidget {
                     color: gradient.colors.last.withValues(alpha: 0.35),
                     blurRadius: 18,
                     offset: const Offset(0, 8),
-                  )
+                  ),
                 ],
         ),
         child: Row(
@@ -233,12 +265,20 @@ class GradientButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, color: onTap == null ? AppColors.muted : Colors.white, size: 20),
+              Icon(
+                icon,
+                color: onTap == null ? AppColors.muted : Colors.white,
+                size: 20,
+              ),
               const SizedBox(width: 10),
             ],
-            Text(label,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: onTap == null ? AppColors.muted : Colors.white, fontSize: 16)),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: onTap == null ? AppColors.muted : Colors.white,
+                fontSize: 16,
+              ),
+            ),
           ],
         ),
       ),
@@ -264,9 +304,9 @@ class KidversityBrandMark extends StatelessWidget {
     final size = compact ? 38.0 : 44.0;
     final emojiSize = compact ? 20.0 : 24.0;
     final labelStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontSize: compact ? 16 : 18,
-          fontWeight: FontWeight.w800,
-        );
+      fontSize: compact ? 16 : 18,
+      fontWeight: FontWeight.w800,
+    );
 
     final mark = Row(
       mainAxisSize: MainAxisSize.min,
@@ -285,8 +325,28 @@ class KidversityBrandMark extends StatelessWidget {
               ),
             ],
           ),
-          alignment: Alignment.center,
-          child: EmojiText('🎓', size: emojiSize),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset('assets/mandarin/fox_mascot.png', fit: BoxFit.cover),
+              Align(
+                alignment: Alignment.bottomRight,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  color: AppColors.cinnabar,
+                  child: Text(
+                    '学',
+                    style: TextStyle(
+                      color: AppColors.paper,
+                      fontSize: emojiSize * 0.55,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         if (showLabel) ...[
           const SizedBox(width: 10),
@@ -326,6 +386,7 @@ class DashboardAppBar extends StatelessWidget {
   final Color accent;
   final IconData? icon;
   final VoidCallback? onBrandTap;
+  final VoidCallback? onSignOut;
 
   const DashboardAppBar({
     super.key,
@@ -334,6 +395,7 @@ class DashboardAppBar extends StatelessWidget {
     required this.accent,
     this.icon,
     this.onBrandTap,
+    this.onSignOut,
   });
 
   @override
@@ -388,8 +450,11 @@ class DashboardAppBar extends StatelessWidget {
             width: sideSlot,
             child: Align(
               alignment: Alignment.centerRight,
-              child: icon != null
-                  ? Container(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!narrow && icon != null) ...[
+                    Container(
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
@@ -397,8 +462,22 @@ class DashboardAppBar extends StatelessWidget {
                         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       ),
                       child: Icon(icon, color: accent, size: 22),
-                    )
-                  : const SizedBox(width: 42, height: 42),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  if (onSignOut != null)
+                    IconButton(
+                      onPressed: onSignOut,
+                      tooltip: 'Sign out',
+                      constraints: const BoxConstraints.tightFor(
+                        width: 42,
+                        height: 42,
+                      ),
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.logout_rounded),
+                    ),
+                ],
+              ),
             ),
           ),
         ],
@@ -421,7 +500,8 @@ class ShellScrollView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: padding ??
+      padding:
+          padding ??
           EdgeInsets.fromLTRB(20, 8, 20, shellScrollBottomPadding(context)),
       physics: const AlwaysScrollableScrollPhysics(),
       children: children,
@@ -434,7 +514,12 @@ class SectionHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget? action;
-  const SectionHeader({super.key, required this.title, this.subtitle, this.action});
+  const SectionHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.action,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -451,7 +536,10 @@ class SectionHeader extends StatelessWidget {
                 if (subtitle != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text(subtitle!, style: Theme.of(context).textTheme.bodyMedium),
+                    child: Text(
+                      subtitle!,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ),
               ],
             ),
@@ -468,7 +556,12 @@ class SoftIcon extends StatelessWidget {
   final IconData icon;
   final Color color;
   final double size;
-  const SoftIcon({super.key, required this.icon, this.color = AppColors.primary, this.size = 44});
+  const SoftIcon({
+    super.key,
+    required this.icon,
+    this.color = AppColors.primary,
+    this.size = 44,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -489,7 +582,12 @@ class MiniBarChart extends StatelessWidget {
   final List<double> values; // 0..1
   final Color color;
   final double height;
-  const MiniBarChart({super.key, required this.values, this.color = AppColors.primary, this.height = 56});
+  const MiniBarChart({
+    super.key,
+    required this.values,
+    this.color = AppColors.primary,
+    this.height = 56,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -521,7 +619,7 @@ class MiniBarChart extends StatelessWidget {
               ),
             ),
             if (i != values.length - 1) const SizedBox(width: 6),
-          ]
+          ],
         ],
       ),
     );
@@ -558,8 +656,8 @@ class BlobBackground extends StatelessWidget {
   }
 
   Widget _blob(double size, Color color) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      );
+    width: size,
+    height: size,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 }

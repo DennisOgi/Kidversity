@@ -4,103 +4,158 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/app_state.dart';
 import '../../data/auth_state.dart';
-import '../../router/navigation.dart';
 import '../../theme/app_colors.dart';
 import '../../models/user_preferences.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/common.dart';
-import '../../widgets/progress_ring.dart';
+import '../../widgets/error_boundary.dart';
+import 'join_class.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final learner = ref.watch(learnerProvider);
     final auth = ref.watch(authControllerProvider);
     final text = Theme.of(context).textTheme;
-    final displayName = auth.displayName.isNotEmpty ? auth.displayName : learner.name;
-    final avatar = auth.avatarEmoji.isNotEmpty ? auth.avatarEmoji : learner.avatarEmoji;
+    final displayName = auth.displayName.isNotEmpty
+        ? auth.displayName
+        : 'Mandarin learner';
+    final avatar = auth.avatarEmoji.isNotEmpty ? auth.avatarEmoji : '🦊';
+
+    Future<void> deleteAccount() async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Delete account?'),
+          content: const Text(
+            'This permanently removes your account, class membership, and '
+            'learning progress. This cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Delete permanently'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      final response = await SupabaseService.instance.client.functions.invoke(
+        'delete-account',
+        body: {'confirmation': 'DELETE'},
+      );
+      if (!context.mounted) return;
+      if (response.status >= 400) {
+        context.showErrorSnackbar('Your account could not be deleted.');
+        return;
+      }
+      await ref.read(authControllerProvider).signOut();
+      if (context.mounted) context.go('/');
+    }
 
     return ShellScrollView(
       children: [
-            Row(
-              children: [
-                Text('My profile', style: text.headlineSmall),
-                const Spacer(),
-                IconButton(
-                  onPressed: () async {
-                    ref.read(roleProvider.notifier).state = null;
-                    await ref.read(authControllerProvider).signOut();
-                    if (context.mounted) context.go(AppRoutes.home);
-                  },
-                  icon: const Icon(Icons.logout_rounded),
-                  tooltip: 'Sign out',
+        Text('My profile', style: text.headlineSmall),
+        const SizedBox(height: 8),
+        GlassCard(
+          gradient: AppColors.brandGradient,
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            GlassCard(
-              gradient: AppColors.brandGradient,
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                children: [
-                  Container(
-                    width: 88,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(avatar, style: const TextStyle(fontSize: 44)),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(displayName, style: text.headlineSmall?.copyWith(color: Colors.white)),
-                  Text('Level ${learner.level} Explorer',
-                      style: text.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.9))),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _StatColumn(value: '${learner.xp}', label: 'Total XP'),
-                      _divider(),
-                      _StatColumn(value: '${learner.lessonsCompleted}', label: 'Lessons'),
-                      _divider(),
-                      _StatColumn(value: '${learner.streakDays}', label: 'Streak'),
-                    ],
-                  ),
-                ],
+                alignment: Alignment.center,
+                child: Text(avatar, style: const TextStyle(fontSize: 44)),
               ),
+              const SizedBox(height: 12),
+              Text(
+                displayName,
+                style: text.headlineSmall?.copyWith(color: Colors.white),
+              ),
+              Text(
+                'Mandarin Foundation learner',
+                style: text.bodyMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.9),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 22),
+        const _FoundationProfileProgress(),
+        const SizedBox(height: 22),
+        const JoinClassCard(),
+        const SizedBox(height: 22),
+        const SectionHeader(title: 'Settings'),
+        const _SettingsSection(),
+        const SizedBox(height: 22),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            TextButton(
+              onPressed: () => context.push('/privacy'),
+              child: const Text('Privacy'),
             ),
-            const SizedBox(height: 22),
-            SectionHeader(title: 'Skills mastered'),
-            _SkillsSection(),
-            const SizedBox(height: 22),
-            const SectionHeader(title: 'Settings'),
-            const _SettingsSection(),
+            TextButton(
+              onPressed: () => context.push('/terms'),
+              child: const Text('Terms'),
+            ),
+            TextButton(
+              onPressed: () => context.push('/guardian-consent'),
+              child: const Text('Guardian consent'),
+            ),
+            TextButton(
+              onPressed: deleteAccount,
+              child: const Text('Delete my account'),
+            ),
           ],
+        ),
+      ],
     );
   }
-
-  Widget _divider() => Container(width: 1, height: 34, color: Colors.white.withValues(alpha: 0.25));
 }
 
-class _SkillsSection extends ConsumerWidget {
+class _FoundationProfileProgress extends ConsumerWidget {
+  const _FoundationProfileProgress();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final skills = ref.watch(subjectSkillsProvider).whenOrNull(data: (d) => d) ?? const [];
-    if (skills.isEmpty) {
-      return GlassCard(child: Text('Complete lessons to build your skills map.', style: Theme.of(context).textTheme.bodyLarge));
-    }
-    final colors = [AppColors.secondary, AppColors.primary, AppColors.accentTeal, AppColors.accentPink];
+    final completed =
+        ref
+            .watch(foundationCompletedLessonIdsProvider)
+            .whenOrNull(data: (value) => value.length) ??
+        0;
     return GlassCard(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (int i = 0; i < skills.length; i++) ...[
-            if (i > 0) const SizedBox(height: 14),
-            _SkillRow(skill: skills[i].subject, value: skills[i].mastery, color: colors[i % colors.length]),
-          ],
+          Text(
+            'Foundation progress',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text('$completed of 30 lessons complete'),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: completed / 30,
+              minHeight: 9,
+              backgroundColor: AppColors.backgroundAlt,
+              color: AppColors.jade,
+            ),
+          ),
         ],
       ),
     );
@@ -112,12 +167,13 @@ class _SettingsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final prefs = ref.watch(userPreferencesProvider).whenOrNull(data: (d) => d) ?? const UserPreferences();
+    final prefs =
+        ref.watch(userPreferencesProvider).whenOrNull(data: (d) => d) ??
+        const UserPreferences();
 
     Future<void> update(UserPreferences next) async {
       await SupabaseService.instance.saveUserPreferences(next);
       ref.invalidate(userPreferencesProvider);
-      ref.invalidate(catalogProvider);
     }
 
     return GlassCard(
@@ -143,69 +199,8 @@ class _SettingsSection extends ConsumerWidget {
               onChanged: (v) => update(prefs.copyWith(showCaptions: v)),
             ),
           ),
-          const Divider(indent: 16, endIndent: 16, height: 1),
-          _SettingRow(
-            icon: Icons.leaderboard_rounded,
-            label: 'Join class leaderboard',
-            trailing: Switch(
-              value: prefs.joinLeaderboard,
-              activeThumbColor: AppColors.primary,
-              onChanged: (v) => update(prefs.copyWith(joinLeaderboard: v)),
-            ),
-          ),
         ],
       ),
-    );
-  }
-}
-
-class _StatColumn extends StatelessWidget {
-  final String value, label;
-  const _StatColumn({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Column(
-      children: [
-        Text(value, style: text.headlineSmall?.copyWith(color: Colors.white)),
-        Text(label, style: text.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.85), fontSize: 12)),
-      ],
-    );
-  }
-}
-
-class _SkillRow extends StatelessWidget {
-  final String skill;
-  final double value;
-  final Color color;
-  const _SkillRow({required this.skill, required this.value, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        ProgressRing(progress: value, size: 46, stroke: 6, color: color),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(skill, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 15)),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: value,
-                  minHeight: 7,
-                  backgroundColor: AppColors.line,
-                  valueColor: AlwaysStoppedAnimation(color),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -214,7 +209,11 @@ class _SettingRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final Widget trailing;
-  const _SettingRow({required this.icon, required this.label, required this.trailing});
+  const _SettingRow({
+    required this.icon,
+    required this.label,
+    required this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -224,11 +223,17 @@ class _SettingRow extends StatelessWidget {
         children: [
           SoftIcon(icon: icon, size: 38),
           const SizedBox(width: 12),
-          Expanded(child: Text(label, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 15))),
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontSize: 15),
+            ),
+          ),
           trailing,
         ],
       ),
     );
   }
 }
-

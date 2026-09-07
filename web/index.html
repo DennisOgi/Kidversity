@@ -18,34 +18,47 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Kidversity — K-12 learning with slides, audio and rewards">
+  <meta name="description" content="Kidversity Mandarin Foundation — 30 sequenced, human-reviewed lessons">
+  <meta name="theme-color" content="#fffaf3">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="kidversity">
+  <meta name="apple-mobile-web-app-title" content="Kidversity Mandarin Foundation">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>Kidversity</title>
+  <title>Kidversity — Mandarin Foundation</title>
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
 
   <style>
+    :root {
+      --paper: #fffaf3;
+      --paper-deep: #f4eadc;
+      --ink: #231610;
+      --ink-soft: #6f625b;
+      --cinnabar: #c94132;
+      --gold: #d6a84b;
+      --jade: #457b65;
+    }
+    * { box-sizing: border-box; }
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      background: #f6f5fc;
+      background: var(--paper);
       overflow: hidden;
     }
     #loading {
+      position: fixed;
+      inset: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -53,29 +66,156 @@
       width: 100%;
       height: 100%;
       font-family: system-ui, -apple-system, Segoe UI, sans-serif;
-      color: #514e6a;
-      gap: 16px;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 15%, rgba(201, 65, 50, .10), transparent 31%),
+        radial-gradient(circle at 90% 80%, rgba(69, 123, 101, .11), transparent 34%),
+        linear-gradient(135deg, #fffaf3 0%, #f9f2e9 54%, #edf3ee 100%);
+      transition: opacity 260ms ease, visibility 260ms ease;
     }
-    #loading .logo {
-      width: 72px;
-      height: 72px;
-      border-radius: 22px;
-      background: linear-gradient(135deg, #7c6cff, #6c5ce7);
+    #loading::before {
+      content: "";
+      position: absolute;
+      width: min(74vw, 650px);
+      height: min(74vw, 650px);
+      border: 1px solid rgba(214, 168, 75, .28);
+      border-radius: 50%;
+      animation: orbit 12s linear infinite;
+    }
+    #loading.loaded {
+      opacity: 0;
+      visibility: hidden;
+    }
+    .brand {
+      position: absolute;
+      top: clamp(28px, 6vh, 58px);
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-size: 36px;
-      box-shadow: 0 16px 32px rgba(108, 92, 231, 0.35);
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 2.4px;
     }
-    #loading .spinner {
-      width: 28px;
-      height: 28px;
-      border: 3px solid #edebff;
-      border-top-color: #6c5ce7;
+    .brand-dot {
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      background: var(--cinnabar);
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .seal-wrap {
+      position: relative;
+      width: clamp(180px, 27vw, 250px);
+      height: clamp(180px, 27vw, 250px);
+      display: grid;
+      place-items: center;
+      animation: arrive 800ms cubic-bezier(.2, .8, .2, 1) both;
+    }
+    .seal-ring {
+      position: absolute;
+      inset: 3%;
+      border: 1.5px solid rgba(214, 168, 75, .58);
+      border-radius: 50%;
+      animation: breathe 2.2s ease-in-out infinite alternate;
+    }
+    .seal {
+      width: 72%;
+      height: 72%;
+      border-radius: 50%;
+      background: rgba(255, 253, 248, .92);
+      border: 1px solid rgba(201, 65, 50, .22);
+      box-shadow: 0 22px 70px rgba(201, 65, 50, .16);
+      display: grid;
+      place-items: center;
+      font-family: "Noto Color Emoji", "Microsoft YaHei", sans-serif;
+      font-size: clamp(64px, 10vw, 92px);
+      font-weight: 800;
+      color: var(--cinnabar);
+    }
+    .seal-small {
+      position: absolute;
+      right: 3%;
+      bottom: 10%;
+      width: 58px;
+      height: 58px;
+      border-radius: 13px;
+      background: var(--cinnabar);
+      border: 3px solid rgba(255, 250, 243, .92);
+      justify-content: center;
+      align-items: center;
+      display: flex;
+      color: var(--paper);
+      font-family: "Microsoft YaHei", sans-serif;
+      font-size: 29px;
+      font-weight: 800;
+      transform: rotate(-5deg);
+      box-shadow: 0 10px 24px rgba(35, 22, 16, .16);
+    }
+    .eyebrow {
+      margin-top: clamp(18px, 3vh, 30px);
+      color: var(--cinnabar);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      animation: arrive 800ms 100ms both;
+    }
+    .headline {
+      margin: 10px 24px 0;
+      max-width: 720px;
+      text-align: center;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.08;
+      font-weight: 800;
+      letter-spacing: -.8px;
+      animation: arrive 800ms 170ms both;
+    }
+    .subhead {
+      margin: 12px 24px 0;
+      color: var(--ink-soft);
+      text-align: center;
+      font-size: clamp(13px, 1.8vw, 16px);
+      animation: arrive 800ms 240ms both;
+    }
+    .pipeline {
+      position: absolute;
+      bottom: clamp(28px, 7vh, 64px);
+      text-align: center;
+      color: #8d8179;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .2px;
+    }
+    .steps {
+      display: flex;
+      justify-content: center;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+    .steps i {
+      display: block;
+      width: 7px;
+      height: 7px;
+      border-radius: 8px;
+      background: rgba(35, 22, 16, .14);
+      animation: step 2.8s ease-in-out infinite;
+    }
+    .steps i:nth-child(2) { animation-delay: .7s; }
+    .steps i:nth-child(3) { animation-delay: 1.4s; }
+    .steps i:nth-child(4) { animation-delay: 2.1s; }
+    @keyframes arrive {
+      from { opacity: 0; transform: translateY(24px) scale(.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes breathe {
+      to { transform: scale(1.035) rotate(1.5deg); }
+    }
+    @keyframes orbit { to { transform: rotate(360deg); } }
+    @keyframes step {
+      0%, 22% { width: 27px; background: var(--cinnabar); }
+      28%, 100% { width: 7px; background: rgba(35, 22, 16, .14); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+    }
   </style>
 </head>
 <body>
@@ -83,19 +223,36 @@
        this script satisfies the plugin on web. Bundled locally — no GitHub CDN at runtime. -->
   <script src="passkeys/bundle.js"></script>
 
-  <div id="loading">
-    <div class="logo">🎓</div>
-    <div style="font-size: 22px; font-weight: 700; color: #1b1830;">Kidversity</div>
-    <div class="spinner"></div>
+  <div id="loading" role="status" aria-label="Loading Kidversity Mandarin Foundation">
+    <div class="brand"><span class="brand-dot"></span>KIDVERSITY</div>
+    <div class="seal-wrap">
+      <div class="seal-ring"></div>
+      <div class="seal">你</div>
+      <div class="seal-small">学</div>
+    </div>
+    <div class="eyebrow">MANDARIN FOUNDATION</div>
+    <div class="headline">A clear first path into Mandarin</div>
+    <div class="subhead">30 sequenced lessons · clear audio · carefully reviewed</div>
+    <div class="pipeline">
+      <div class="steps"><i></i><i></i><i></i><i></i></div>
+      Getting your Mandarin journey ready…
+    </div>
   </div>
 
   <script>
+    window.__kidversityBootStartedAt = performance.now();
+    console.info('[Kidversity boot] Plan B bootstrap v1 started');
     window.addEventListener('flutter-first-frame', function () {
       var el = document.getElementById('loading');
-      if (el) el.remove();
+      var elapsed = Math.round(performance.now() - window.__kidversityBootStartedAt);
+      console.info('[Kidversity boot] Flutter first frame after ' + elapsed + 'ms');
+      if (el) {
+        el.classList.add('loaded');
+        window.setTimeout(function () { el.remove(); }, 280);
+      }
     });
   </script>
 
-  <script src="flutter_bootstrap.js" async></script>
+  <script src="flutter_bootstrap.js?v=plan-b-v1" async></script>
 </body>
 </html>

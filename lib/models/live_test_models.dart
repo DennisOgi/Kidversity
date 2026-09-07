@@ -9,19 +9,23 @@ class LiveTestOption {
   final String label;
   final bool isCorrect;
 
-  const LiveTestOption({required this.id, required this.label, this.isCorrect = false});
+  const LiveTestOption({
+    required this.id,
+    required this.label,
+    this.isCorrect = false,
+  });
 
   factory LiveTestOption.fromJson(Map<String, dynamic> json) => LiveTestOption(
-        id: json['id'] as String? ?? '',
-        label: json['label'] as String? ?? '',
-        isCorrect: json['is_correct'] as bool? ?? false,
-      );
+    id: json['id'] as String? ?? '',
+    label: json['label'] as String? ?? '',
+    isCorrect: json['is_correct'] as bool? ?? false,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'label': label,
-        if (isCorrect) 'is_correct': true,
-      };
+    'id': id,
+    'label': label,
+    if (isCorrect) 'is_correct': true,
+  };
 }
 
 class LiveTestQuestion {
@@ -49,7 +53,11 @@ class LiveTestQuestion {
       orderIndex: (row['order_index'] as num?)?.toInt() ?? 0,
       prompt: row['prompt'] as String? ?? '',
       points: (row['points'] as num?)?.toInt() ?? 1,
-      options: optionsRaw.map((o) => LiveTestOption.fromJson(Map<String, dynamic>.from(o as Map))).toList(),
+      options: optionsRaw
+          .map(
+            (o) => LiveTestOption.fromJson(Map<String, dynamic>.from(o as Map)),
+          )
+          .toList(),
     );
   }
 }
@@ -83,7 +91,10 @@ class LiveTest {
     this.questions = const [],
   });
 
-  factory LiveTest.fromRow(Map<String, dynamic> row, {List<LiveTestQuestion> questions = const []}) {
+  factory LiveTest.fromRow(
+    Map<String, dynamic> row, {
+    List<LiveTestQuestion> questions = const [],
+  }) {
     return LiveTest(
       id: row['id'] as String,
       teacherId: row['teacher_id'] as String,
@@ -93,9 +104,15 @@ class LiveTest {
       durationSeconds: (row['duration_seconds'] as num?)?.toInt() ?? 300,
       status: _statusFromDb(row['status'] as String?),
       joinCode: row['join_code'] as String?,
-      startedAt: row['started_at'] != null ? DateTime.tryParse(row['started_at'] as String) : null,
-      endsAt: row['ends_at'] != null ? DateTime.tryParse(row['ends_at'] as String) : null,
-      createdAt: DateTime.tryParse(row['created_at'] as String? ?? '') ?? DateTime.now(),
+      startedAt: row['started_at'] != null
+          ? DateTime.tryParse(row['started_at'] as String)
+          : null,
+      endsAt: row['ends_at'] != null
+          ? DateTime.tryParse(row['ends_at'] as String)
+          : null,
+      createdAt:
+          DateTime.tryParse(row['created_at'] as String? ?? '') ??
+          DateTime.now(),
       questions: questions,
     );
   }
@@ -106,13 +123,15 @@ class LiveTest {
     return left.isNegative ? Duration.zero : left;
   }
 
-  bool get isActive => status == LiveTestStatus.live && (remaining == null || remaining! > Duration.zero);
+  bool get isActive =>
+      status == LiveTestStatus.live &&
+      (remaining == null || remaining! > Duration.zero);
 
   static LiveTestStatus _statusFromDb(String? value) => switch (value) {
-        'live' => LiveTestStatus.live,
-        'ended' => LiveTestStatus.ended,
-        _ => LiveTestStatus.draft,
-      };
+    'live' => LiveTestStatus.live,
+    'ended' => LiveTestStatus.ended,
+    _ => LiveTestStatus.draft,
+  };
 }
 
 class LiveTestParticipant {
@@ -138,7 +157,8 @@ class LiveTestParticipant {
     this.submittedAt,
   });
 
-  factory LiveTestParticipant.fromRow(Map<String, dynamic> row) => LiveTestParticipant(
+  factory LiveTestParticipant.fromRow(Map<String, dynamic> row) =>
+      LiveTestParticipant(
         id: row['id'] as String,
         testId: row['test_id'] as String,
         userId: row['user_id'] as String,
@@ -147,14 +167,16 @@ class LiveTestParticipant {
         status: _statusFromDb(row['status'] as String?),
         score: (row['score'] as num?)?.toInt() ?? 0,
         correctCount: (row['correct_count'] as num?)?.toInt() ?? 0,
-        submittedAt: row['submitted_at'] != null ? DateTime.tryParse(row['submitted_at'] as String) : null,
+        submittedAt: row['submitted_at'] != null
+            ? DateTime.tryParse(row['submitted_at'] as String)
+            : null,
       );
 
   static ParticipantStatus _statusFromDb(String? value) => switch (value) {
-        'active' => ParticipantStatus.active,
-        'submitted' => ParticipantStatus.submitted,
-        _ => ParticipantStatus.waiting,
-      };
+    'active' => ParticipantStatus.active,
+    'submitted' => ParticipantStatus.submitted,
+    _ => ParticipantStatus.waiting,
+  };
 }
 
 class LiveTestAnswer {
@@ -177,14 +199,16 @@ class LiveTestAnswer {
   });
 
   factory LiveTestAnswer.fromRow(Map<String, dynamic> row) => LiveTestAnswer(
-        id: row['id'] as String,
-        testId: row['test_id'] as String,
-        questionId: row['question_id'] as String,
-        userId: row['user_id'] as String,
-        selectedOptionId: row['selected_option_id'] as String?,
-        isCorrect: row['is_correct'] as bool? ?? false,
-        answeredAt: DateTime.tryParse(row['answered_at'] as String? ?? '') ?? DateTime.now(),
-      );
+    id: row['id'] as String,
+    testId: row['test_id'] as String,
+    questionId: row['question_id'] as String,
+    userId: row['user_id'] as String,
+    selectedOptionId: row['selected_option_id'] as String?,
+    isCorrect: row['is_correct'] as bool? ?? false,
+    answeredAt:
+        DateTime.tryParse(row['answered_at'] as String? ?? '') ??
+        DateTime.now(),
+  );
 }
 
 /// Aggregated view for teacher monitor dashboard.
@@ -199,11 +223,13 @@ class LiveTestSnapshot {
     required this.answers,
   });
 
-  int get submittedCount => participants.where((p) => p.status == ParticipantStatus.submitted).length;
+  int get submittedCount =>
+      participants.where((p) => p.status == ParticipantStatus.submitted).length;
 
   double get averageScore {
     if (participants.isEmpty) return 0;
-    return participants.map((p) => p.score).reduce((a, b) => a + b) / participants.length;
+    return participants.map((p) => p.score).reduce((a, b) => a + b) /
+        participants.length;
   }
 
   Map<String, int> optionCounts(String questionId) {
@@ -250,7 +276,10 @@ class LiveQuizTemplate {
     emoji: '🀄',
     color: Color(0xFF6C5CE7),
     questions: [
-      ('What does 妈妈 mean?', [('Mum', true), ('Dad', false), ('Sister', false)]),
+      (
+        'What does 妈妈 mean?',
+        [('Mum', true), ('Dad', false), ('Sister', false)],
+      ),
       ('Which is "three"?', [('一', false), ('三', true), ('二', false)]),
       ('How do you say "hello"?', [('你好', true), ('再见', false), ('谢谢', false)]),
     ],
@@ -263,10 +292,13 @@ class LiveQuizTemplate {
     color: Color(0xFF00CEC9),
     questions: [
       ('What is 1/2 + 1/4?', [('3/4', true), ('2/4', false), ('1/3', false)]),
-      ('How many sides does a hexagon have?', [('6', true), ('5', false), ('8', false)]),
+      (
+        'How many sides does a hexagon have?',
+        [('6', true), ('5', false), ('8', false)],
+      ),
       ('12 × 3 = ?', [('36', true), ('32', false), ('39', false)]),
     ],
   );
 
-  static const all = [mandarinQuick, mathsWarmup];
+  static const all = [mandarinQuick];
 }

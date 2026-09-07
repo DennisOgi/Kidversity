@@ -50,7 +50,8 @@ class TeacherLiveMonitorScreen extends ConsumerWidget {
       ),
       body: snapshotAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Could not load: $e')),
+        error: (_, _) =>
+            const Center(child: Text('The live quiz could not be loaded.')),
         data: (snap) {
           if (snap == null) return const Center(child: Text('Test not found'));
           final test = snap.test;

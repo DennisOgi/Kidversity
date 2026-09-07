@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/demo_accounts.dart';
 import '../../data/app_state.dart';
 import '../../data/auth_remember_me.dart';
 import '../../data/auth_state.dart';
+import '../../data/supabase_auth.dart';
 import '../../router/navigation.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -22,7 +22,8 @@ class AuthScreen extends ConsumerStatefulWidget {
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProviderStateMixin {
+class _AuthScreenState extends ConsumerState<AuthScreen>
+    with SingleTickerProviderStateMixin {
   late final TabController _tabs = TabController(length: 2, vsync: this);
 
   @override
@@ -42,6 +43,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
       });
     });
   }
+
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
@@ -63,7 +65,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
     super.dispose();
   }
 
-  String? get _redirect => GoRouterState.of(context).uri.queryParameters['redirect'];
+  String? get _redirect =>
+      GoRouterState.of(context).uri.queryParameters['redirect'];
 
   Future<void> _resetPassword() async {
     final email = _email.text.trim();
@@ -74,7 +77,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
     final result = await SupabaseService.instance.resetPassword(email);
     if (!mounted) return;
     if (result.isSuccess) {
-      context.showSuccessSnackbar('Password reset email sent — check your inbox.');
+      context.showSuccessSnackbar(
+        'Password reset email sent — check your inbox.',
+      );
     } else {
       context.showErrorSnackbar(result.error ?? 'Could not send reset email.');
     }
@@ -82,7 +87,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
 
   Future<void> _submitSignIn() async {
     try {
-      await ref.read(authControllerProvider).signInWithEmail(_email.text, _password.text);
+      await ref
+          .read(authControllerProvider)
+          .signInWithEmail(_email.text, _password.text);
       await AuthRememberMe.save(enabled: _rememberMe, email: _email.text);
       if (!mounted) return;
       final auth = ref.read(authControllerProvider);
@@ -90,29 +97,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
         ref.read(roleProvider.notifier).state = auth.role;
       }
       continueAfterAuth(context, ref, redirect: _redirect);
-    } catch (e) {
-      if (mounted) context.showErrorSnackbar(e.toString().replaceFirst('Exception: ', ''));
+    } catch (_) {
+      if (mounted) {
+        context.showErrorSnackbar(
+          ref.read(authControllerProvider).lastError ??
+              'We could not sign you in. Please try again.',
+        );
+      }
     }
-  }
-
-  Future<void> _demoSignIn(DemoAccount account) async {
-    await ref.read(authControllerProvider).signInDemoAccount(account);
-    if (!mounted) return;
-    final auth = ref.read(authControllerProvider);
-    if (auth.lastError != null) {
-      context.showErrorSnackbar(auth.lastError!);
-      return;
-    }
-    if (_rememberMe) {
-      await AuthRememberMe.save(enabled: true, email: account.email);
-    } else {
-      await AuthRememberMe.clear();
-    }
-    if (!mounted) return;
-    if (auth.role != null) {
-      ref.read(roleProvider.notifier).state = auth.role;
-    }
-    continueAfterAuth(context, ref, redirect: _redirect);
   }
 
   Future<void> _submitSignUp() async {
@@ -149,17 +141,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
     }
 
     try {
-      await ref.read(authControllerProvider).signUpWithEmail(
-            email,
-            password,
-            name,
-            gender: _gender,
-            age: age,
-          );
+      await ref
+          .read(authControllerProvider)
+          .signUpWithEmail(email, password, name, gender: _gender, age: age);
       if (!mounted) return;
-      context.go(AppRoutes.onboarding);
-    } catch (e) {
-      if (mounted) context.showErrorSnackbar(e.toString().replaceFirst('Exception: ', ''));
+      final redirect = _redirect;
+      context.go(
+        redirect == null || redirect.isEmpty
+            ? AppRoutes.onboarding
+            : onboardingWithRedirect(redirect),
+      );
+    } catch (_) {
+      if (mounted) {
+        context.showErrorSnackbar(
+          ref.read(authControllerProvider).lastError ??
+              'We could not create your account. Please try again.',
+        );
+      }
     }
   }
 
@@ -176,7 +174,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: EdgeInsets.fromLTRB(wide ? 56 : 16, 8, wide ? 56 : 16, 0),
+                padding: EdgeInsets.fromLTRB(
+                  wide ? 56 : 16,
+                  8,
+                  wide ? 56 : 16,
+                  0,
+                ),
                 child: KidversityBrandMark(
                   onTap: () => context.go(AppRoutes.home),
                   showLabel: wide || MediaQuery.sizeOf(context).width > 360,
@@ -186,9 +189,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                 child: LayoutBuilder(
                   builder: (context, c) {
                     return SingleChildScrollView(
-                      padding: EdgeInsets.symmetric(horizontal: wide ? 56 : 22, vertical: 20),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: wide ? 56 : 22,
+                        vertical: 20,
+                      ),
                       child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: c.maxHeight - 80),
+                        constraints: BoxConstraints(
+                          minHeight: c.maxHeight - 80,
+                        ),
                         child: wide
                             ? Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -206,17 +214,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                                       name: _name,
                                       age: _age,
                                       gender: _gender,
-                                      onGenderChanged: (g) => setState(() => _gender = g),
+                                      onGenderChanged: (g) =>
+                                          setState(() => _gender = g),
                                       obscure: _obscure,
                                       obscureConfirm: _obscureConfirm,
-                                      onToggleObscure: () => setState(() => _obscure = !_obscure),
-                                      onToggleObscureConfirm: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                                      onToggleObscure: () =>
+                                          setState(() => _obscure = !_obscure),
+                                      onToggleObscureConfirm: () => setState(
+                                        () =>
+                                            _obscureConfirm = !_obscureConfirm,
+                                      ),
                                       onSignIn: _submitSignIn,
                                       onSignUp: _submitSignUp,
                                       onResetPassword: _resetPassword,
-                                      onDemoSignIn: _demoSignIn,
                                       rememberMe: _rememberMe,
-                                      onRememberMeChanged: (v) => setState(() => _rememberMe = v),
+                                      onRememberMeChanged: (v) =>
+                                          setState(() => _rememberMe = v),
                                     ),
                                   ),
                                 ],
@@ -235,17 +248,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                                     name: _name,
                                     age: _age,
                                     gender: _gender,
-                                    onGenderChanged: (g) => setState(() => _gender = g),
+                                    onGenderChanged: (g) =>
+                                        setState(() => _gender = g),
                                     obscure: _obscure,
                                     obscureConfirm: _obscureConfirm,
-                                    onToggleObscure: () => setState(() => _obscure = !_obscure),
-                                    onToggleObscureConfirm: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                                    onToggleObscure: () =>
+                                        setState(() => _obscure = !_obscure),
+                                    onToggleObscureConfirm: () => setState(
+                                      () => _obscureConfirm = !_obscureConfirm,
+                                    ),
                                     onSignIn: _submitSignIn,
                                     onSignUp: _submitSignUp,
                                     onResetPassword: _resetPassword,
-                                    onDemoSignIn: _demoSignIn,
                                     rememberMe: _rememberMe,
-                                    onRememberMeChanged: (v) => setState(() => _rememberMe = v),
+                                    onRememberMeChanged: (v) =>
+                                        setState(() => _rememberMe = v),
                                   ),
                                 ],
                               ),
@@ -274,31 +291,45 @@ class _HeroPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Pill(label: 'Welcome back', icon: Icons.waving_hand_rounded, color: AppColors.secondary),
+          const Pill(
+            label: 'Welcome back',
+            icon: Icons.waving_hand_rounded,
+            color: AppColors.secondary,
+          ),
           SizedBox(height: compact ? 14 : 22),
           ShaderMask(
             shaderCallback: (r) => const LinearGradient(
-              colors: [AppColors.primary, AppColors.accentPink, AppColors.secondary],
+              colors: [
+                AppColors.primary,
+                AppColors.accentPink,
+                AppColors.secondary,
+              ],
             ).createShader(r),
             child: Text(
-              compact ? 'Sign in to\nKidversity' : 'Your classroom,\nreimagined.',
-              style: text.displayMedium?.copyWith(color: Colors.white, fontSize: compact ? 34 : 44, height: 1.05),
+              compact
+                  ? 'Sign in to\nKidversity'
+                  : 'Your Mandarin path,\nmade clear.',
+              style: text.displayMedium?.copyWith(
+                color: Colors.white,
+                fontSize: compact ? 34 : 44,
+                height: 1.05,
+              ),
             ),
           ),
           const SizedBox(height: 14),
           Text(
-            'Upload lessons or auto-generate with AI. Students learn with slides, audio and badges.',
+            'Follow guided Mandarin lessons with clear audio, practice, and quests.',
             style: text.bodyLarge?.copyWith(fontSize: compact ? 15 : 16.5),
           ),
           if (!compact) ...[
             const SizedBox(height: 28),
-            Wrap(
+            const Wrap(
               spacing: 10,
               runSpacing: 10,
-              children: const [
-                _MiniStat(emoji: '🎧', label: 'Slides + audio'),
-                _MiniStat(emoji: '✨', label: 'AI lessons'),
-                _MiniStat(emoji: '🏅', label: 'Streaks & XP'),
+              children: [
+                _MiniStat(emoji: '路', label: '30-lesson path'),
+                _MiniStat(emoji: '✓', label: 'Human reviewed'),
+                _MiniStat(emoji: '听', label: 'Controlled audio'),
               ],
             ),
           ],
@@ -326,7 +357,12 @@ class _MiniStat extends StatelessWidget {
         children: [
           Text(emoji, style: const TextStyle(fontSize: 18)),
           const SizedBox(width: 8),
-          Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 13)),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontSize: 13),
+          ),
         ],
       ),
     );
@@ -336,13 +372,16 @@ class _MiniStat extends StatelessWidget {
 class _FormCard extends StatelessWidget {
   final TabController tabs;
   final TextTheme text;
-  final dynamic auth;
+  final SupabaseAuthController auth;
   final TextEditingController email, password, confirmPassword, name, age;
   final String? gender;
   final ValueChanged<String?> onGenderChanged;
   final bool obscure, obscureConfirm;
-  final VoidCallback onToggleObscure, onToggleObscureConfirm, onSignIn, onSignUp, onResetPassword;
-  final ValueChanged<DemoAccount> onDemoSignIn;
+  final VoidCallback onToggleObscure,
+      onToggleObscureConfirm,
+      onSignIn,
+      onSignUp,
+      onResetPassword;
   final bool rememberMe;
   final ValueChanged<bool> onRememberMeChanged;
 
@@ -364,7 +403,6 @@ class _FormCard extends StatelessWidget {
     required this.onSignIn,
     required this.onSignUp,
     required this.onResetPassword,
-    required this.onDemoSignIn,
     required this.rememberMe,
     required this.onRememberMeChanged,
   });
@@ -433,59 +471,49 @@ class _FormCard extends StatelessWidget {
                     child: Checkbox(
                       value: rememberMe,
                       activeColor: AppColors.primary,
-                      onChanged: auth.isLoading ? null : (v) => onRememberMeChanged(v ?? false),
+                      onChanged: auth.isLoading
+                          ? null
+                          : (v) => onRememberMeChanged(v ?? false),
                     ),
                   ),
                   Expanded(
                     child: GestureDetector(
-                      onTap: auth.isLoading ? null : () => onRememberMeChanged(!rememberMe),
+                      onTap: auth.isLoading
+                          ? null
+                          : () => onRememberMeChanged(!rememberMe),
                       child: Text(
                         'Remember me',
                         style: text.bodyMedium?.copyWith(fontSize: 13.5),
                       ),
                     ),
                   ),
-                  TextButton(onPressed: onResetPassword, child: const Text('Forgot password?')),
+                  TextButton(
+                    onPressed: onResetPassword,
+                    child: const Text('Forgot password?'),
+                  ),
                 ],
               ),
             ],
             const SizedBox(height: 12),
             GradientButton(
-              label: auth.isLoading ? 'Please wait…' : (tabs.index == 0 ? 'Sign in' : 'Create account'),
+              label: auth.isLoading
+                  ? 'Please wait…'
+                  : (tabs.index == 0 ? 'Sign in' : 'Create account'),
               icon: Icons.arrow_forward_rounded,
               expand: true,
-              onTap: auth.isLoading ? null : (tabs.index == 0 ? onSignIn : onSignUp),
+              onTap: auth.isLoading
+                  ? null
+                  : (tabs.index == 0 ? onSignIn : onSignUp),
             ),
-            if (tabs.index == 0) ...[
-              const SizedBox(height: 8),
-              Text('Try the demo', textAlign: TextAlign.center, style: text.labelLarge?.copyWith(color: AppColors.muted)),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: auth.isLoading ? null : () => onDemoSignIn(DemoAccounts.student),
-                      icon: EmojiText(DemoAccounts.student.buttonEmoji, size: 16),
-                      label: const Text('Student'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: auth.isLoading ? null : () => onDemoSignIn(DemoAccounts.teacher),
-                      icon: EmojiText(DemoAccounts.teacher.buttonEmoji, size: 16),
-                      label: const Text('Teacher'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
             if (auth.lastError != null) ...[
               const SizedBox(height: 12),
               Text(
                 auth.lastError!,
                 textAlign: TextAlign.center,
-                style: text.bodyMedium?.copyWith(color: AppColors.danger, fontSize: 13),
+                style: text.bodyMedium?.copyWith(
+                  color: AppColors.danger,
+                  fontSize: 13,
+                ),
               ),
             ],
           ],
@@ -535,7 +563,10 @@ class _Fields extends StatelessWidget {
           TextField(
             controller: name,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(hintText: 'Your name', prefixIcon: Icon(Icons.person_outline_rounded)),
+            decoration: const InputDecoration(
+              hintText: 'Your name',
+              prefixIcon: Icon(Icons.person_outline_rounded),
+            ),
           ),
           const SizedBox(height: 12),
         ],
@@ -543,19 +574,28 @@ class _Fields extends StatelessWidget {
           controller: email,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(hintText: 'Email', prefixIcon: Icon(Icons.mail_outline_rounded)),
+          decoration: const InputDecoration(
+            hintText: 'Email',
+            prefixIcon: Icon(Icons.mail_outline_rounded),
+          ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: password,
           obscureText: obscure,
-          textInputAction: showName ? TextInputAction.next : TextInputAction.done,
+          textInputAction: showName
+              ? TextInputAction.next
+              : TextInputAction.done,
           decoration: InputDecoration(
             hintText: 'Password',
             prefixIcon: const Icon(Icons.lock_outline_rounded),
             suffixIcon: IconButton(
               onPressed: onToggleObscure,
-              icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+              icon: Icon(
+                obscure
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+              ),
             ),
           ),
         ),
@@ -570,7 +610,11 @@ class _Fields extends StatelessWidget {
               prefixIcon: const Icon(Icons.lock_outline_rounded),
               suffixIcon: IconButton(
                 onPressed: onToggleObscureConfirm,
-                icon: Icon(obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                icon: Icon(
+                  obscureConfirm
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
               ),
             ),
           ),
@@ -578,7 +622,7 @@ class _Fields extends StatelessWidget {
         if (showName && onGenderChanged != null) ...[
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: gender,
+            initialValue: gender,
             decoration: const InputDecoration(
               hintText: 'Gender',
               prefixIcon: Icon(Icons.wc_outlined),

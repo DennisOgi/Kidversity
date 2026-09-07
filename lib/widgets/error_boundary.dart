@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/error_handler.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'common.dart';
@@ -10,11 +9,7 @@ class ErrorBoundary extends StatelessWidget {
   final Widget child;
   final Widget Function(Object error, StackTrace? stack)? errorBuilder;
 
-  const ErrorBoundary({
-    super.key,
-    required this.child,
-    this.errorBuilder,
-  });
+  const ErrorBoundary({super.key, required this.child, this.errorBuilder});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +22,6 @@ class ErrorDisplay extends StatelessWidget {
   final String title;
   final String message;
   final VoidCallback? onRetry;
-  final bool showDetails;
   final Object? error;
   final StackTrace? stackTrace;
 
@@ -36,7 +30,6 @@ class ErrorDisplay extends StatelessWidget {
     this.title = 'Something went wrong',
     required this.message,
     this.onRetry,
-    this.showDetails = false,
     this.error,
     this.stackTrace,
   });
@@ -65,42 +58,9 @@ class ErrorDisplay extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text(
-              title,
-              style: text.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
+            Text(title, style: text.headlineSmall, textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            Text(
-              message,
-              style: text.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
-            if (showDetails && error != null) ...[
-              const SizedBox(height: 20),
-              GlassCard(
-                color: AppColors.backgroundAlt,
-                shadow: const [],
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Technical Details',
-                      style: text.titleMedium?.copyWith(fontSize: 13),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      error.toString(),
-                      style: text.bodyMedium?.copyWith(
-                        fontSize: 11,
-                        fontFamily: 'monospace',
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            Text(message, style: text.bodyLarge, textAlign: TextAlign.center),
             const SizedBox(height: 24),
             if (onRetry != null)
               GradientButton(
@@ -157,9 +117,7 @@ extension ErrorSnackbar on BuildContext {
           children: [
             const Icon(Icons.error_outline_rounded, color: Colors.white),
             const SizedBox(width: 12),
-            Expanded(
-              child: Text(message),
-            ),
+            Expanded(child: Text(message)),
           ],
         ),
         backgroundColor: AppColors.danger,
@@ -179,9 +137,7 @@ extension ErrorSnackbar on BuildContext {
           children: [
             const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
             const SizedBox(width: 12),
-            Expanded(
-              child: Text(message),
-            ),
+            Expanded(child: Text(message)),
           ],
         ),
         backgroundColor: AppColors.success,

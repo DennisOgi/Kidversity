@@ -6,10 +6,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
 import '../models/user_preferences.dart';
 import '../services/supabase_service.dart';
-import 'demo_accounts.dart';
 
 /// Real auth backed by Supabase Auth + `user_profiles`.
 class SupabaseAuthController extends ChangeNotifier {
+  static const _minimumSplashDuration = Duration(milliseconds: 1400);
   bool isLoading = true;
   bool isAuthenticated = false;
   bool onboardingComplete = false;
@@ -23,16 +23,13 @@ class SupabaseAuthController extends ChangeNotifier {
   int lessonsCompleted = 0;
   int minutesLearned = 0;
   String? lastError;
-  bool _localDemo = false;
-
-  bool get isLocalDemo => _localDemo;
-
   StreamSubscription<AuthState>? _authSub;
 
   SupabaseClient? get _client =>
       SupabaseService.instance.isInitialized ? Supabase.instance.client : null;
 
   Future<void> bootstrap() async {
+    final splashStartedAt = DateTime.now();
     isLoading = true;
     notifyListeners();
 
@@ -55,6 +52,11 @@ class SupabaseAuthController extends ChangeNotifier {
         _resetSession(keepLoading: true);
       }
     } finally {
+      final elapsed = DateTime.now().difference(splashStartedAt);
+      final remaining = _minimumSplashDuration - elapsed;
+      if (remaining > Duration.zero) {
+        await Future<void>.delayed(remaining);
+      }
       isLoading = false;
       notifyListeners();
     }
@@ -75,7 +77,6 @@ class SupabaseAuthController extends ChangeNotifier {
   }
 
   Future<void> _applyUser(User user) async {
-    _localDemo = false;
     isAuthenticated = true;
     email = user.email ?? '';
     displayName = user.userMetadata?['display_name'] as String? ?? displayName;
@@ -109,8 +110,10 @@ class SupabaseAuthController extends ChangeNotifier {
       level = (row['level'] as num?)?.toInt() ?? level;
       xp = (row['xp'] as num?)?.toInt() ?? xp;
       streakDays = (row['streak_days'] as num?)?.toInt() ?? streakDays;
-      lessonsCompleted = (row['lessons_completed'] as num?)?.toInt() ?? lessonsCompleted;
-      minutesLearned = (row['minutes_learned'] as num?)?.toInt() ?? minutesLearned;
+      lessonsCompleted =
+          (row['lessons_completed'] as num?)?.toInt() ?? lessonsCompleted;
+      minutesLearned =
+          (row['minutes_learned'] as num?)?.toInt() ?? minutesLearned;
     } catch (e) {
       debugPrint('Profile load failed: $e');
     }
@@ -121,7 +124,8 @@ class SupabaseAuthController extends ChangeNotifier {
     if (client == null) return;
 
     final user = client.auth.currentUser;
-    final name = user?.userMetadata?['display_name'] as String? ??
+    final name =
+        user?.userMetadata?['display_name'] as String? ??
         (email.isNotEmpty ? email.split('@').first : 'Explorer');
 
     await SupabaseService.instance.upsertUserProfile({
@@ -150,124 +154,11 @@ class SupabaseAuthController extends ChangeNotifier {
       level = (row['level'] as num?)?.toInt() ?? level;
       xp = (row['xp'] as num?)?.toInt() ?? xp;
       streakDays = (row['streak_days'] as num?)?.toInt() ?? streakDays;
-      lessonsCompleted = (row['lessons_completed'] as num?)?.toInt() ?? lessonsCompleted;
-      minutesLearned = (row['minutes_learned'] as num?)?.toInt() ?? minutesLearned;
+      lessonsCompleted =
+          (row['lessons_completed'] as num?)?.toInt() ?? lessonsCompleted;
+      minutesLearned =
+          (row['minutes_learned'] as num?)?.toInt() ?? minutesLearned;
     }
-  }
-
-  Future<void> signInDemoAccount(DemoAccount account) async {
-    lastError = null;
-
-    if (_client == null) {
-      _applyLocalDemoSession(account);
-      notifyListeners();
-      return;
-    }
-
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      final signedIn = await _trySupabaseDemo(account);
-      if (!signedIn) {
-        lastError ??= 'Demo sign-in failed. Please try again or use Sign in with the credentials below.';
-      }
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> _trySupabaseDemo(DemoAccount account) async {
-    final service = SupabaseService.instance;
-
-    var result = await service.signIn(account.email, account.password);
-    if (result.isFailure) {
-      result = await service.signUp(account.email, account.password, account.displayName);
-      if (result.isFailure) {
-        lastError = result.error;
-        return false;
-      }
-
-      if (_client?.auth.currentSession == null) {
-        final retry = await service.signIn(account.email, account.password);
-        if (retry.isFailure) {
-          lastError = retry.error ?? 'Demo account created but sign-in failed.';
-          return false;
-        }
-      }
-    }
-
-    final user = result.data ?? _client?.auth.currentUser;
-    if (user == null) {
-      lastError = 'Could not establish a session. Please try again.';
-      return false;
-    }
-
-    await _applyUser(user);
-
-    if (!onboardingComplete) {
-      try {
-        await completeOnboarding(
-          name: account.displayName,
-          emoji: account.avatarEmoji,
-          selectedRole: account.role,
-        );
-      } catch (e) {
-        debugPrint('Demo onboarding failed: $e');
-      }
-    }
-
-    role ??= account.role;
-    await _upsertDemoStats(account);
-    _applyDemoStats(account);
-    _localDemo = false;
-    lastError = null;
-    return true;
-  }
-
-  Future<void> _upsertDemoStats(DemoAccount account) async {
-    final client = _client;
-    final userId = client?.auth.currentUser?.id;
-    if (client == null || userId == null) return;
-
-    try {
-      await SupabaseService.instance.upsertUserProfile({
-        'user_id': userId,
-        'display_name': account.displayName,
-        'avatar_emoji': account.avatarEmoji,
-        'role': account.role.name,
-        'onboarding_complete': true,
-        'level': account.level,
-        'xp': account.xp,
-        'streak_days': account.streakDays,
-        'lessons_completed': account.lessonsCompleted,
-        'minutes_learned': account.minutesLearned,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      debugPrint('Demo stats upsert failed: $e');
-    }
-  }
-
-  void _applyLocalDemoSession(DemoAccount account) {
-    _localDemo = true;
-    isAuthenticated = true;
-    onboardingComplete = true;
-    email = account.email;
-    displayName = account.displayName;
-    avatarEmoji = account.avatarEmoji;
-    role = account.role;
-    _applyDemoStats(account);
-    lastError = null;
-  }
-
-  void _applyDemoStats(DemoAccount account) {
-    level = account.level;
-    xp = account.xp;
-    streakDays = account.streakDays;
-    lessonsCompleted = account.lessonsCompleted;
-    minutesLearned = account.minutesLearned;
   }
 
   Future<void> signInWithEmail(String emailInput, String password) async {
@@ -326,7 +217,10 @@ class SupabaseAuthController extends ChangeNotifier {
 
     // Email confirmation disabled — sign in immediately when signup returns no session.
     if (_client?.auth.currentSession == null) {
-      final signInResult = await SupabaseService.instance.signIn(emailInput, password);
+      final signInResult = await SupabaseService.instance.signIn(
+        emailInput,
+        password,
+      );
       if (signInResult.isSuccess && signInResult.data != null) {
         await _applyUser(signInResult.data!);
         await _saveRegistrationDetails(gender: gender, age: age);
@@ -334,7 +228,8 @@ class SupabaseAuthController extends ChangeNotifier {
         return;
       }
 
-      lastError = 'Account created but sign-in failed. Please sign in manually.';
+      lastError =
+          'Account created but sign-in failed. Please sign in manually.';
       isAuthenticated = false;
       notifyListeners();
       throw Exception(lastError);
@@ -361,10 +256,9 @@ class SupabaseAuthController extends ChangeNotifier {
       existingPrefs = row?['preferences'] as Map<String, dynamic>?;
     } catch (_) {}
 
-    final merged = UserPreferences.fromJson(existingPrefs).copyWith(
-      gender: gender,
-      age: age,
-    );
+    final merged = UserPreferences.fromJson(
+      existingPrefs,
+    ).copyWith(gender: gender, age: age);
 
     await SupabaseService.instance.upsertUserProfile({
       'user_id': userId,
@@ -400,7 +294,9 @@ class SupabaseAuthController extends ChangeNotifier {
     });
 
     if (selectedRole == UserRole.teacher) {
-      await SupabaseService.instance.ensureTeacherClass(className: '$name\'s Class');
+      await SupabaseService.instance.ensureTeacherClass(
+        className: '$name\'s Class',
+      );
     }
 
     await client.auth.updateUser(
@@ -420,9 +316,7 @@ class SupabaseAuthController extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    if (_localDemo) {
-      _localDemo = false;
-    } else if (SupabaseService.instance.isInitialized) {
+    if (SupabaseService.instance.isInitialized) {
       await SupabaseService.instance.signOut();
     }
 
@@ -440,7 +334,6 @@ class SupabaseAuthController extends ChangeNotifier {
   }
 
   void _resetSession({bool keepLoading = false}) {
-    _localDemo = false;
     isAuthenticated = false;
     onboardingComplete = false;
     email = '';
@@ -458,6 +351,7 @@ class SupabaseAuthController extends ChangeNotifier {
   UserRole? _roleFromDb(String? value) {
     if (value == 'teacher') return UserRole.teacher;
     if (value == 'student') return UserRole.student;
+    if (value == 'reviewer') return UserRole.reviewer;
     return null;
   }
 
