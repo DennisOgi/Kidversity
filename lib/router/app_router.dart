@@ -123,33 +123,43 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnboarding = path == AppRoutes.onboarding;
       final isProtected = isProtectedRoute(path);
 
+      // Hold splash for the entire auth bootstrap so home/onboarding never flash.
       if (session.isLoading) {
-        if (isSplash || isHome || isAuth || isOnboarding) return null;
-        if (session.isAuthenticated && isProtected) return null;
-        return AppRoutes.splash;
+        return isSplash ? null : AppRoutes.splash;
       }
 
-      if (isSplash) return AppRoutes.home;
-
-      if (session.isAuthenticated && session.onboardingComplete && isHome) {
-        final role = session.role ?? ref.read(roleProvider);
-        if (role == UserRole.teacher) return AppRoutes.teacherHome;
-        if (role == UserRole.student) return AppRoutes.studentPath;
-        if (role == UserRole.reviewer) return AppRoutes.reviewerHome;
+      if (isSplash) {
+        if (session.isAuthenticated && !session.onboardingComplete) {
+          return AppRoutes.onboarding;
+        }
+        if (session.isAuthenticated && session.onboardingComplete) {
+          final role = session.role ?? ref.read(roleProvider);
+          if (role == UserRole.teacher) return AppRoutes.teacherHome;
+          if (role == UserRole.student) return AppRoutes.studentPath;
+          if (role == UserRole.reviewer) return AppRoutes.reviewerHome;
+        }
+        return AppRoutes.home;
       }
 
       if (!session.isAuthenticated) {
+        // Stale /onboarding bookmarks must not linger for signed-out users.
+        if (isOnboarding) return AppRoutes.home;
         if (isHome || isAuth) return null;
         if (isProtected) return authWithRedirect(path);
         return null;
       }
 
       if (!session.onboardingComplete) {
-        if (isOnboarding || isAuth || isHome) return null;
-        if (isProtected) {
-          return onboardingWithRedirect(path);
-        }
+        if (isOnboarding) return null;
+        if (isProtected) return onboardingWithRedirect(path);
         return AppRoutes.onboarding;
+      }
+
+      if (session.isAuthenticated && session.onboardingComplete && isHome) {
+        final role = session.role ?? ref.read(roleProvider);
+        if (role == UserRole.teacher) return AppRoutes.teacherHome;
+        if (role == UserRole.student) return AppRoutes.studentPath;
+        if (role == UserRole.reviewer) return AppRoutes.reviewerHome;
       }
 
       if (isAuth || isOnboarding) {

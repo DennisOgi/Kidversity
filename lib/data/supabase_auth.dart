@@ -39,18 +39,26 @@ class SupabaseAuthController extends ChangeNotifier {
 
       final client = _client;
       if (client == null) {
-        _resetSession();
+        _resetSession(keepLoading: true);
         return;
       }
 
-      _authSub = client.auth.onAuthStateChange.listen(_onAuthStateChange);
-
-      final user = client.auth.currentUser;
+      // Supabase.initialize() already recovers persisted session before runApp.
+      // Apply that settled session before listening so initialSession cannot
+      // race splash → onboarding → home.
+      final user = client.auth.currentSession?.user ?? client.auth.currentUser;
       if (user != null) {
         await _applyUser(user);
       } else {
         _resetSession(keepLoading: true);
       }
+
+      debugPrint(
+        'Auth bootstrap settled: authenticated=$isAuthenticated '
+        'onboardingComplete=$onboardingComplete role=$role',
+      );
+
+      _authSub = client.auth.onAuthStateChange.listen(_onAuthStateChange);
     } finally {
       final elapsed = DateTime.now().difference(splashStartedAt);
       final remaining = _minimumSplashDuration - elapsed;
@@ -63,6 +71,12 @@ class SupabaseAuthController extends ChangeNotifier {
   }
 
   Future<void> _onAuthStateChange(AuthState state) async {
+    // Ignore auth chatter while splash ownership is still settling.
+    if (isLoading) {
+      debugPrint('Auth event ignored during splash: ${state.event}');
+      return;
+    }
+
     final user = state.session?.user;
     if (user != null &&
         (state.event == AuthChangeEvent.signedIn ||

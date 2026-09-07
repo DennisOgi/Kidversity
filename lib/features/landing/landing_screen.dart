@@ -16,9 +16,14 @@ class LandingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
-    final publishedCount = ref
-        .watch(publishedFoundationLessonCountProvider)
-        .whenOrNull(data: (value) => value);
+    final publishedCountAsync = ref.watch(publishedFoundationLessonCountProvider);
+    final publishedCount = publishedCountAsync.when(
+      data: (value) => value,
+      // Distinguish loading from failure so a bad Supabase env does not look
+      // like an endless "Checking availability" state.
+      loading: () => null,
+      error: (_, _) => 0,
+    );
     return Scaffold(
       body: AuroraBackground(
         child: SafeArea(

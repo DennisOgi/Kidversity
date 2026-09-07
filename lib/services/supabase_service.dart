@@ -33,6 +33,11 @@ class SupabaseService {
         ),
       );
       _client = Supabase.instance.client;
+      assert(() {
+        // ignore: avoid_print
+        print('Supabase client target: ${Env.supabaseUrl}');
+        return true;
+      }());
     } catch (error, stack) {
       await app_errors.ErrorHandler.reportError(
         error,
