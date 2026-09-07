@@ -19,18 +19,19 @@ class StudentsScreen extends ConsumerWidget {
     final roster =
         rosterAsync.whenOrNull(data: (d) => d) ?? const <StudentPerformance>[];
     final text = Theme.of(context).textTheme;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+    return ShellScrollView(
       children: [
-        Text('My class', style: text.headlineSmall),
+        Text('Your class', style: text.headlineSmall?.copyWith(fontSize: 26)),
+        const SizedBox(height: 6),
         Text(
-          'Manage your class code and learner roster.',
+          'Share the code. Learners join from Me → Join your class.',
           style: text.bodyMedium,
         ),
         const SizedBox(height: 18),
         const _InviteCard(),
         const SizedBox(height: 22),
-        const SectionHeader(title: 'Students'),
+        Text('Learners', style: text.titleLarge),
+        const SizedBox(height: 10),
         if (rosterAsync.isLoading)
           const Padding(
             padding: EdgeInsets.all(24),
@@ -42,28 +43,15 @@ class StudentsScreen extends ConsumerWidget {
             onRetry: () => ref.invalidate(rosterProvider),
           )
         else if (roster.isEmpty)
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('No students in your class yet.', style: text.titleMedium),
-                const SizedBox(height: 8),
-                Text(
-                  'Share the class code above. When students enter it from their Profile → “Join your class”, '
-                  'they’ll appear here automatically.',
-                  style: text.bodyMedium?.copyWith(
-                    fontSize: 13,
-                    color: AppColors.muted,
-                  ),
-                ),
-              ],
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              'No learners yet. Copy the code above and send it to your class.',
+              style: text.bodyMedium?.copyWith(color: AppColors.muted),
             ),
           )
         else
-          for (final s in roster) ...[
-            _StudentCard(student: s),
-            const SizedBox(height: 12),
-          ],
+          for (final s in roster) _StudentCard(student: s),
       ],
     );
   }
@@ -145,8 +133,10 @@ class _InviteCard extends ConsumerWidget {
                           code.isEmpty ? '——————' : code,
                           style: text.headlineSmall?.copyWith(
                             color: Colors.white,
-                            letterSpacing: 8,
-                            fontSize: 28,
+                            letterSpacing:
+                                MediaQuery.sizeOf(context).width < 400 ? 3 : 8,
+                            fontSize:
+                                MediaQuery.sizeOf(context).width < 400 ? 22 : 28,
                           ),
                         ),
                 ),
@@ -211,7 +201,11 @@ class _StudentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return GlassCard(
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.line)),
+      ),
       child: Row(
         children: [
           Container(

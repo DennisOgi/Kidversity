@@ -19,12 +19,12 @@ class FoundationProgressScreen extends ConsumerWidget {
     return ShellScrollView(
       children: [
         Text(
-          'Foundation progress',
-          style: Theme.of(context).textTheme.headlineSmall,
+          'Class progress',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 26),
         ),
         const SizedBox(height: 6),
         Text(
-          'See exactly where each learner is on the 30-lesson path.',
+          'Each learner unlocks one Foundation lesson at a time. This map shows who has finished what.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: 22),
@@ -79,16 +79,31 @@ class _ClassOverview extends StatelessWidget {
         students.fold<double>(0, (sum, student) => sum + student.averageScore) /
         students.length;
     final stalled = students.where((student) => student.isStalled).length;
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+    final metrics = [
+      _Metric(
+        label: 'Class completion',
+        value: '${(averageProgress * 100).round()}%',
+      ),
+      _Metric(label: 'Average score', value: '${averageScore.round()}%'),
+      _Metric(label: 'Need a check-in', value: '$stalled'),
+    ];
+    final narrow = MediaQuery.sizeOf(context).width < 560;
+    if (narrow) {
+      return Column(
+        children: [
+          for (final metric in metrics) ...[
+            metric,
+            const SizedBox(height: 10),
+          ],
+        ],
+      );
+    }
+    return Row(
       children: [
-        _Metric(
-          label: 'Class completion',
-          value: '${(averageProgress * 100).round()}%',
-        ),
-        _Metric(label: 'Average score', value: '${averageScore.round()}%'),
-        _Metric(label: 'Need a check-in', value: '$stalled'),
+        for (var i = 0; i < metrics.length; i++) ...[
+          if (i > 0) const SizedBox(width: 10),
+          Expanded(child: metrics[i]),
+        ],
       ],
     );
   }
@@ -101,17 +116,21 @@ class _Metric extends StatelessWidget {
   const _Metric({required this.label, required this.value});
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 190,
-    child: GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 5),
-          Text(value, style: Theme.of(context).textTheme.headlineSmall),
-        ],
-      ),
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppColors.line),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 5),
+        Text(value, style: Theme.of(context).textTheme.headlineSmall),
+      ],
     ),
   );
 }
@@ -125,7 +144,12 @@ class _StudentMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final completed = student.completedLessonIds.length;
-    return GlassCard(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(4, 16, 4, 20),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.line)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -207,8 +231,8 @@ class _StudentMap extends StatelessWidget {
                       '${lesson.sequence}. ${lesson.title}'
                       '${student.scoresByLesson[lesson.id] == null ? '' : ' · ${student.scoresByLesson[lesson.id]}%'}',
                   child: Container(
-                    width: 31,
-                    height: 31,
+                    width: MediaQuery.sizeOf(context).width < 400 ? 26 : 31,
+                    height: MediaQuery.sizeOf(context).width < 400 ? 26 : 31,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: student.completedLessonIds.contains(lesson.id)
@@ -240,14 +264,11 @@ class _NoStudents extends StatelessWidget {
   const _NoStudents();
 
   @override
-  Widget build(BuildContext context) => const GlassCard(
-    child: Padding(
-      padding: EdgeInsets.symmetric(vertical: 30),
-      child: Center(
-        child: Text(
-          'Share your class code to add learners and see their Foundation path.',
-        ),
-      ),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 20),
+    child: Text(
+      'Share your class code on the Class tab to add learners and see their path here.',
+      style: Theme.of(context).textTheme.bodyMedium,
     ),
   );
 }

@@ -30,10 +30,11 @@ class LandingScreen extends ConsumerWidget {
           child: LayoutBuilder(
             builder: (context, c) {
               final wide = c.maxWidth > 900;
+              final compact = c.maxWidth < 560;
               return SingleChildScrollView(
                 padding: EdgeInsets.symmetric(
-                  horizontal: wide ? 64 : 22,
-                  vertical: 24,
+                  horizontal: wide ? 64 : (compact ? 16 : 22),
+                  vertical: compact ? 16 : 24,
                 ),
                 child: Center(
                   child: ConstrainedBox(
@@ -42,35 +43,41 @@ class LandingScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const FadeInUp(child: _Brand()),
-                        const SizedBox(height: 44),
-                        Flex(
-                          direction: wide ? Axis.horizontal : Axis.vertical,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              flex: wide ? 5 : 0,
-                              child: FadeInUp(
-                                delay: const Duration(milliseconds: 80),
-                                child: _Hero(
-                                  text: text,
-                                  wide: wide,
-                                  publishedCount: publishedCount,
+                        SizedBox(height: compact ? 24 : 44),
+                        if (wide)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                flex: 5,
+                                child: FadeInUp(
+                                  delay: const Duration(milliseconds: 80),
+                                  child: _Hero(
+                                    text: text,
+                                    wide: true,
+                                    publishedCount: publishedCount,
+                                  ),
                                 ),
                               ),
-                            ),
-                            SizedBox(
-                              width: wide ? 48 : 0,
-                              height: wide ? 0 : 34,
-                            ),
-                            Expanded(
-                              flex: wide ? 4 : 0,
-                              child: const FadeInUp(
-                                delay: Duration(milliseconds: 220),
-                                child: _HeroVisual(),
+                              const SizedBox(width: 48),
+                              const Expanded(
+                                flex: 4,
+                                child: FadeInUp(
+                                  delay: Duration(milliseconds: 220),
+                                  child: _HeroVisual(),
+                                ),
                               ),
+                            ],
+                          )
+                        else
+                          FadeInUp(
+                            delay: const Duration(milliseconds: 80),
+                            child: _Hero(
+                              text: text,
+                              wide: false,
+                              publishedCount: publishedCount,
                             ),
-                          ],
-                        ),
+                          ),
                         const SizedBox(height: 30),
                         const FadeInUp(
                           delay: Duration(milliseconds: 360),
@@ -201,33 +208,45 @@ class _AuthCallouts extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      crossAxisAlignment: WrapCrossAlignment.center,
+    final buttons = [
+      FilledButton.icon(
+        onPressed: () => context.go(AppRoutes.auth),
+        icon: const Icon(Icons.login_rounded, size: 20),
+        label: const Text('Sign in'),
+        style: FilledButton.styleFrom(
+          minimumSize: wide ? null : const Size(double.infinity, 50),
+          padding: EdgeInsets.symmetric(
+            horizontal: wide ? 28 : 22,
+            vertical: 16,
+          ),
+        ),
+      ),
+      OutlinedButton.icon(
+        onPressed: () => context.go('${AppRoutes.auth}?tab=signup'),
+        icon: const Icon(Icons.person_add_rounded, size: 20),
+        label: const Text('Create account'),
+        style: OutlinedButton.styleFrom(
+          minimumSize: wide ? null : const Size(double.infinity, 50),
+          padding: EdgeInsets.symmetric(
+            horizontal: wide ? 24 : 18,
+            vertical: 16,
+          ),
+        ),
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: wide
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.stretch,
       children: [
-        FilledButton.icon(
-          onPressed: () => context.go(AppRoutes.auth),
-          icon: const Icon(Icons.login_rounded, size: 20),
-          label: const Text('Sign in'),
-          style: FilledButton.styleFrom(
-            padding: EdgeInsets.symmetric(
-              horizontal: wide ? 28 : 22,
-              vertical: 16,
-            ),
-          ),
-        ),
-        OutlinedButton.icon(
-          onPressed: () => context.go('${AppRoutes.auth}?tab=signup'),
-          icon: const Icon(Icons.person_add_rounded, size: 20),
-          label: const Text('Create account'),
-          style: OutlinedButton.styleFrom(
-            padding: EdgeInsets.symmetric(
-              horizontal: wide ? 24 : 18,
-              vertical: 16,
-            ),
-          ),
-        ),
+        if (wide)
+          Wrap(spacing: 12, runSpacing: 12, children: buttons)
+        else ...[
+          buttons[0],
+          const SizedBox(height: 10),
+          buttons[1],
+        ],
+        const SizedBox(height: 12),
         Text(
           'Choose a learner or teacher account when you register.',
           style: text.bodyMedium?.copyWith(
@@ -400,9 +419,13 @@ class _FeatureGrid extends ConsumerWidget {
           crossAxisCount: cross,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          childAspectRatio: cross == 1 ? 3.6 : 1.12,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: cross == 1
+              ? 2.8
+              : cross == 2
+              ? 1.35
+              : 1.12,
           children: [
             for (int i = 0; i < items.length; i++)
               FadeInUp(

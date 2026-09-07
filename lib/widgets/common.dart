@@ -520,7 +520,12 @@ class ShellScrollView extends StatelessWidget {
     return ListView(
       padding:
           padding ??
-          EdgeInsets.fromLTRB(20, 8, 20, shellScrollBottomPadding(context)),
+          EdgeInsets.fromLTRB(
+            MediaQuery.sizeOf(context).width < 400 ? 16 : 20,
+            8,
+            MediaQuery.sizeOf(context).width < 400 ? 16 : 20,
+            shellScrollBottomPadding(context),
+          ),
       physics: const AlwaysScrollableScrollPhysics(),
       children: children,
     );

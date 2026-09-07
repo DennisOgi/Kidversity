@@ -110,7 +110,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootKey,
-    initialLocation: AppRoutes.splash,
+    initialLocation: AppRoutes.home,
     refreshListenable: auth,
     redirect: (context, state) {
       final session = ref.read(authControllerProvider);
@@ -123,24 +123,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnboarding = path == AppRoutes.onboarding;
       final isProtected = isProtectedRoute(path);
 
-      // Hold splash until the recovered session and profile are known.
-      // Do not use [isLoading] here — sign-in also sets that flag.
-      if (session.isBootstrapping) {
-        return isSplash ? null : AppRoutes.splash;
-      }
-
+      // Never show the branded splash after first paint. Stay on the
+      // destination page while auth settles.
       if (isSplash) {
-        if (session.isAuthenticated && !session.onboardingComplete) {
-          return AppRoutes.onboarding;
+        if (session.isBootstrapping || !session.isAuthenticated) {
+          return AppRoutes.home;
         }
-        if (session.isAuthenticated && session.onboardingComplete) {
-          final role = session.role ?? ref.read(roleProvider);
-          if (role == UserRole.teacher) return AppRoutes.teacherHome;
-          if (role == UserRole.student) return AppRoutes.studentPath;
-          if (role == UserRole.reviewer) return AppRoutes.reviewerHome;
-        }
+        if (!session.onboardingComplete) return AppRoutes.onboarding;
+        final role = session.role ?? ref.read(roleProvider);
+        if (role == UserRole.teacher) return AppRoutes.teacherHome;
+        if (role == UserRole.student) return AppRoutes.studentPath;
+        if (role == UserRole.reviewer) return AppRoutes.reviewerHome;
         return AppRoutes.home;
       }
+
+      if (session.isBootstrapping) return null;
 
       if (!session.isAuthenticated) {
         // Stale /onboarding bookmarks must not linger for signed-out users.

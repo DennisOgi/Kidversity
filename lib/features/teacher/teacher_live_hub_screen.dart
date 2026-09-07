@@ -59,8 +59,7 @@ class _TeacherLiveHubScreenState extends ConsumerState<TeacherLiveHubScreen> {
     final text = Theme.of(context).textTheme;
     final roster = ref.watch(rosterProvider).whenOrNull(data: (d) => d) ?? [];
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+    return ShellScrollView(
       children: [
         Row(
           children: [
