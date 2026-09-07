@@ -68,6 +68,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         return _emoji.isNotEmpty;
       case 2:
         return _role != null;
+      case 3:
+        return true;
       default:
         return false;
     }
@@ -75,7 +77,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _next() {
     if (!_canContinue) return;
-    if (_step < 2) {
+    if (_step < 3) {
       setState(() => _step++);
       return;
     }
@@ -149,6 +151,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         'Pick the character that will travel with you.',
       ),
       ('Choose your space', 'Your role shapes the experience you see next.'),
+      (
+        'How Kidversity works',
+        'A short map so the Path screen makes sense on day one.',
+      ),
     ];
 
     final setupCard = ConstrainedBox(
@@ -205,7 +211,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                 ),
                 Text(
-                  '${_step + 1} / 3',
+                  '${_step + 1} / 4',
                   style: text.labelLarge?.copyWith(color: AppColors.muted),
                 ),
               ],
@@ -246,13 +252,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   options: _avatars,
                   onSelect: (emoji) => setState(() => _emoji = emoji),
                 ),
-                _ => _RoleStep(
+                2 => _RoleStep(
                   key: const ValueKey('role'),
                   selected: _role,
                   allowReviewer:
                       ref.watch(authControllerProvider).role ==
                       UserRole.reviewer,
                   onSelect: (role) => setState(() => _role = role),
+                ),
+                _ => _HowItWorksStep(
+                  key: const ValueKey('howto'),
+                  role: _role,
                 ),
               },
             ),
@@ -271,8 +281,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 GradientButton(
                   label: _busy
                       ? 'Saving…'
-                      : (_step < 2 ? 'Continue' : 'Enter Kidversity'),
-                  icon: _step < 2
+                      : (_step < 3 ? 'Continue' : 'Enter Kidversity'),
+                  icon: _step < 3
                       ? Icons.arrow_forward_rounded
                       : Icons.auto_awesome_rounded,
                   onTap: (_busy || !_canContinue) ? null : _next,
@@ -473,7 +483,9 @@ class _OnboardingPreview extends StatelessWidget {
                             ? 'Tell us who is joining.'
                             : step == 1
                             ? 'Your companion is ready.'
-                            : 'We’ll open the right workspace.',
+                            : step == 2
+                            ? 'We’ll open the right workspace.'
+                            : 'Then the Path shows one lesson at a time.',
                         style: TextStyle(
                           color: AppColors.paper.withValues(alpha: 0.76),
                         ),
@@ -522,7 +534,7 @@ class _StepDots extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        for (int i = 0; i < 3; i++) ...[
+        for (int i = 0; i < 4; i++) ...[
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: i == step ? 28 : 10,
@@ -533,7 +545,7 @@ class _StepDots extends StatelessWidget {
               color: i <= step ? null : AppColors.line,
             ),
           ),
-          if (i != 2) const SizedBox(width: 8),
+          if (i != 3) const SizedBox(width: 8),
         ],
       ],
     );
@@ -626,6 +638,92 @@ class _AvatarStep extends StatelessWidget {
               ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+class _HowItWorksStep extends StatelessWidget {
+  final UserRole? role;
+
+  const _HowItWorksStep({super.key, required this.role});
+
+  @override
+  Widget build(BuildContext context) {
+    final student = role != UserRole.teacher && role != UserRole.reviewer;
+    final items = student
+        ? const [
+            (
+              Icons.route_rounded,
+              'Path',
+              'This is your 30-lesson course. Start the red lesson. The next one unlocks when you finish.',
+            ),
+            (
+              Icons.school_rounded,
+              'Practice',
+              'Replay words and sounds from lessons you have already opened.',
+            ),
+            (
+              Icons.person_rounded,
+              'Me',
+              'Your name, class, and sign-out live here.',
+            ),
+          ]
+        : const [
+            (
+              Icons.groups_rounded,
+              'Class',
+              'Share a class code so learners can join you.',
+            ),
+            (
+              Icons.route_rounded,
+              'Progress',
+              'See which Foundation lessons each learner has finished.',
+            ),
+            (
+              Icons.bolt_rounded,
+              'Live',
+              'Start a short timed quiz when the class is together.',
+            ),
+          ];
+
+    return Column(
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0) const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(items[i].$1, color: AppColors.cinnabar),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        items[i].$2,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        items[i].$3,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/app_state.dart';
+import '../../data/auth_state.dart';
 import '../../models/mandarin_content.dart';
 import '../../router/navigation.dart';
 import '../../theme/app_colors.dart';
-import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
 import '../../widgets/live_test_widgets.dart';
@@ -17,51 +17,86 @@ class FoundationPathScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final course = ref.watch(mandarinCourseProvider);
+    final name = ref.watch(authControllerProvider).displayName;
     final completedLessonIds =
         ref
             .watch(foundationCompletedLessonIdsProvider)
             .whenOrNull(data: (value) => value) ??
         const <String>{};
-    return ShellScrollView(
-      children: [
-        const _ActiveLiveSection(),
-        const _CourseHero(),
-        const SizedBox(height: 24),
-        course.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 64),
-            child: LoadingIndicator(message: 'Opening your Mandarin path…'),
-          ),
-          error: (error, _) => ErrorDisplay(
-            message: 'The course path could not be loaded.',
-            error: error,
-            onRetry: () => ref.invalidate(mandarinCourseProvider),
-          ),
-          data: (value) {
-            final unlockedLessonIds = {
-              for (final lesson in value.lessons)
-                if (isFoundationLessonUnlocked(
-                  lesson,
-                  completedLessonIds,
-                  value.lessons,
-                ))
-                  lesson.id,
-            };
-            return Column(
-              children: [
-                for (final module in value.modules) ...[
-                  _ModulePath(
-                    module: module,
-                    completedLessonIds: completedLessonIds,
-                    unlockedLessonIds: unlockedLessonIds,
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ],
-            );
-          },
-        ),
-      ],
+
+    return course.when(
+      loading: () => const Center(
+        child: LoadingIndicator(message: 'Opening your Mandarin path…'),
+      ),
+      error: (error, _) => ErrorDisplay(
+        message: 'The course path could not be loaded.',
+        error: error,
+        onRetry: () => ref.invalidate(mandarinCourseProvider),
+      ),
+      data: (value) {
+        final lessons = [...value.lessons]
+          ..sort((a, b) => a.sequence.compareTo(b.sequence));
+        final unlocked = {
+          for (final lesson in lessons)
+            if (isFoundationLessonUnlocked(
+              lesson,
+              completedLessonIds,
+              lessons,
+            ))
+              lesson.id,
+        };
+        MandarinCourseLesson? next;
+        for (final lesson in lessons) {
+          if (lesson.isPlayable &&
+              unlocked.contains(lesson.id) &&
+              !completedLessonIds.contains(lesson.id)) {
+            next = lesson;
+            break;
+          }
+        }
+        final done = lessons
+            .where((lesson) => completedLessonIds.contains(lesson.id))
+            .length;
+
+        return ShellScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+          children: [
+            const _ActiveLiveSection(),
+            _WelcomeHeader(
+              name: name,
+              done: done,
+              total: lessons.length,
+              next: next,
+            ),
+            const SizedBox(height: 18),
+            if (next != null) ...[
+              _ContinueCard(lesson: next, isFirstLesson: next.sequence == 1),
+              const SizedBox(height: 22),
+            ] else
+              const _CourseCompleteCard(),
+            const _HowItWorks(),
+            const SizedBox(height: 22),
+            for (final module in value.modules)
+              _ModuleSection(
+                module: _sortedModule(module),
+                completedLessonIds: completedLessonIds,
+                unlockedLessonIds: unlocked,
+                nextLessonId: next?.id,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  MandarinModule _sortedModule(MandarinModule module) {
+    final lessons = [...module.lessons]
+      ..sort((a, b) => a.sequence.compareTo(b.sequence));
+    return MandarinModule(
+      sequence: module.sequence,
+      title: module.title,
+      subtitle: module.subtitle,
+      lessons: lessons,
     );
   }
 }
@@ -77,7 +112,7 @@ class _ActiveLiveSection extends ConsumerWidget {
           data: (test) {
             if (test == null || !test.isActive) return const SizedBox.shrink();
             return Padding(
-              padding: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.only(bottom: 16),
               child: LiveTestAlertBanner(
                 test: test,
                 onJoin: () => context.go(AppRoutes.studentLiveTest(test.id)),
@@ -90,272 +125,406 @@ class _ActiveLiveSection extends ConsumerWidget {
   }
 }
 
-class _CourseHero extends StatelessWidget {
-  const _CourseHero();
+class _WelcomeHeader extends StatelessWidget {
+  final String name;
+  final int done;
+  final int total;
+  final MandarinCourseLesson? next;
 
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: AppColors.mandarinGradient,
-        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-        boxShadow: AppTheme.softShadow,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 68,
-            height: 68,
-            decoration: BoxDecoration(
-              color: AppColors.paper.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: AppColors.gold.withValues(alpha: 0.8)),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: const FoxMascotImage(),
-          ),
-          const SizedBox(width: 18),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Mandarin Foundation',
-                  style: text.headlineSmall?.copyWith(color: AppColors.paper),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '30 lessons · 3 learning quests · complete beginner',
-                  style: text.bodyMedium?.copyWith(
-                    color: AppColors.paper.withValues(alpha: 0.86),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ModulePath extends StatelessWidget {
-  final MandarinModule module;
-  final Set<String> completedLessonIds;
-  final Set<String> unlockedLessonIds;
-
-  const _ModulePath({
-    required this.module,
-    required this.completedLessonIds,
-    required this.unlockedLessonIds,
+  const _WelcomeHeader({
+    required this.name,
+    required this.done,
+    required this.total,
+    required this.next,
   });
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 20, 18, 22),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-        border: Border.all(color: AppColors.ink.withValues(alpha: 0.10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-            child: AspectRatio(
-              aspectRatio: 16 / 6,
-              child: Image.asset(_coverPath, fit: BoxFit.cover),
-            ),
+    final greeting = name.trim().isEmpty ? 'Welcome' : 'Hi, ${name.trim()}';
+    final progress = total == 0 ? 0.0 : done / total;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          greeting,
+          style: text.headlineSmall?.copyWith(fontSize: 26, height: 1.1),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          next == null
+              ? 'You have finished the Mandarin Foundation path.'
+              : next!.sequence == 1
+              ? 'Start Lesson 1. Each lesson unlocks the next one.'
+              : 'You are on Lesson ${next!.sequence} of $total.',
+          style: text.bodyLarge?.copyWith(color: AppColors.inkSoft),
+        ),
+        const SizedBox(height: 14),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 8,
+            backgroundColor: AppColors.line,
+            color: AppColors.cinnabar,
           ),
-          const SizedBox(height: 18),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '$done of $total lessons complete',
+          style: text.labelLarge?.copyWith(color: AppColors.muted),
+        ),
+      ],
+    );
+  }
+}
+
+class _ContinueCard extends StatelessWidget {
+  final MandarinCourseLesson lesson;
+  final bool isFirstLesson;
+
+  const _ContinueCard({required this.lesson, required this.isFirstLesson});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Material(
+      color: AppColors.ink,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: () => context.go(AppRoutes.mandarinLesson(lesson.id)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
+          child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
-                ),
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
-                  color: AppColors.cinnabarSoft,
-                  borderRadius: BorderRadius.circular(30),
+                  color: AppColors.cinnabar,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Text(
-                  'MODULE ${module.sequence}',
-                  style: text.labelLarge?.copyWith(
-                    color: AppColors.cinnabar,
-                    letterSpacing: 0.8,
-                  ),
+                child: const Icon(
+                  Icons.play_arrow_rounded,
+                  color: AppColors.paper,
+                  size: 30,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(module.title, style: text.titleLarge),
-                    const SizedBox(height: 3),
-                    Text(module.subtitle, style: text.bodyMedium),
+                    Text(
+                      isFirstLesson ? 'START HERE' : 'CONTINUE',
+                      style: text.labelLarge?.copyWith(
+                        color: AppColors.gold,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Lesson ${lesson.sequence}. ${lesson.title}',
+                      style: text.titleLarge?.copyWith(color: AppColors.paper),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      lesson.objective,
+                      style: text.bodyMedium?.copyWith(
+                        color: AppColors.paper.withValues(alpha: 0.78),
+                      ),
+                    ),
                   ],
                 ),
               ),
+              const Icon(Icons.arrow_forward_rounded, color: AppColors.paper),
             ],
           ),
-          const SizedBox(height: 20),
-          for (var i = 0; i < module.lessons.length; i++)
-            _PathNode(
-              lesson: module.lessons[i],
-              completed: completedLessonIds.contains(module.lessons[i].id),
-              unlocked: unlockedLessonIds.contains(module.lessons[i].id),
-              isLast: i == module.lessons.length - 1,
+        ),
+      ),
+    );
+  }
+}
+
+class _CourseCompleteCard extends StatelessWidget {
+  const _CourseCompleteCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 22),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.jade.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.jade.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        'The full 30-lesson path is complete. Use Practice to keep the words warm.',
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+    );
+  }
+}
+
+class _HowItWorks extends StatelessWidget {
+  const _HowItWorks();
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (Icons.play_circle_outline_rounded, 'Open the red lesson to learn'),
+      (Icons.lock_open_rounded, 'Finish it to unlock the next'),
+      (Icons.school_outlined, 'Practice keeps words fresh'),
+    ];
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final item in items)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: AppColors.line),
             ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(item.$1, size: 16, color: AppColors.cinnabar),
+                const SizedBox(width: 6),
+                Text(
+                  item.$2,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ModuleSection extends StatefulWidget {
+  final MandarinModule module;
+  final Set<String> completedLessonIds;
+  final Set<String> unlockedLessonIds;
+  final String? nextLessonId;
+
+  const _ModuleSection({
+    required this.module,
+    required this.completedLessonIds,
+    required this.unlockedLessonIds,
+    required this.nextLessonId,
+  });
+
+  @override
+  State<_ModuleSection> createState() => _ModuleSectionState();
+}
+
+class _ModuleSectionState extends State<_ModuleSection> {
+  bool _showLocked = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final lessons = widget.module.lessons;
+    final hasUnlocked = lessons.any(
+      (lesson) => widget.unlockedLessonIds.contains(lesson.id),
+    );
+    final visible = lessons.where((lesson) {
+      final unlocked = widget.unlockedLessonIds.contains(lesson.id);
+      final done = widget.completedLessonIds.contains(lesson.id);
+      if (unlocked || done) return true;
+      return _showLocked;
+    }).toList();
+    final hiddenCount = lessons.length - visible.length;
+    final doneCount = lessons
+        .where((lesson) => widget.completedLessonIds.contains(lesson.id))
+        .length;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Stack(
+              children: [
+                AspectRatio(
+                  aspectRatio: 2.4,
+                  child: Image.asset(_coverPath, fit: BoxFit.cover),
+                ),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          AppColors.ink.withValues(alpha: 0.72),
+                          AppColors.ink.withValues(alpha: 0.18),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 14,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'MODULE ${widget.module.sequence}',
+                        style: text.labelLarge?.copyWith(
+                          color: AppColors.gold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      Text(
+                        widget.module.title,
+                        style: text.titleLarge?.copyWith(
+                          color: AppColors.paper,
+                        ),
+                      ),
+                      Text(
+                        '$doneCount / ${lessons.length} complete',
+                        style: text.bodyMedium?.copyWith(
+                          color: AppColors.paper.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          if (!hasUnlocked)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
+              child: Text(
+                'Opens after you finish the previous module quest.',
+                style: text.bodyMedium?.copyWith(color: AppColors.muted),
+              ),
+            )
+          else ...[
+            for (final lesson in visible)
+              _LessonRow(
+                lesson: lesson,
+                completed: widget.completedLessonIds.contains(lesson.id),
+                unlocked: widget.unlockedLessonIds.contains(lesson.id),
+                isNext: lesson.id == widget.nextLessonId,
+              ),
+            if (hiddenCount > 0)
+              TextButton(
+                onPressed: () => setState(() => _showLocked = true),
+                child: Text('Show $hiddenCount upcoming lessons'),
+              ),
+          ],
         ],
       ),
     );
   }
 
-  String get _coverPath => switch (module.sequence) {
+  String get _coverPath => switch (widget.module.sequence) {
     1 => 'assets/mandarin/module_1_first_contact.png',
     2 => 'assets/mandarin/module_2_my_world.png',
     _ => 'assets/mandarin/module_3_everyday_mandarin.png',
   };
 }
 
-class _PathNode extends StatelessWidget {
+class _LessonRow extends StatelessWidget {
   final MandarinCourseLesson lesson;
   final bool completed;
   final bool unlocked;
-  final bool isLast;
+  final bool isNext;
 
-  const _PathNode({
+  const _LessonRow({
     required this.lesson,
     required this.completed,
     required this.unlocked,
-    required this.isLast,
+    required this.isNext,
   });
 
   @override
   Widget build(BuildContext context) {
     final playable = lesson.isPlayable && unlocked;
-    final isQuest = lesson.sequence % 10 == 0;
-    final nodeColor = playable ? AppColors.cinnabar : AppColors.muted;
+    final text = Theme.of(context).textTheme;
+    final status = completed
+        ? 'Done'
+        : isNext
+        ? 'Up next'
+        : playable
+        ? '${lesson.xpReward} XP'
+        : 'Finish the lesson above to unlock';
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            width: 52,
-            child: Column(
-              children: [
-                Material(
-                  color: playable
-                      ? AppColors.cinnabar
-                      : AppColors.backgroundAlt,
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: playable
-                        ? () => context.go(AppRoutes.mandarinLesson(lesson.id))
-                        : null,
-                    child: SizedBox(
-                      width: 46,
-                      height: 46,
-                      child: Icon(
-                        playable
-                            ? (completed
-                                  ? Icons.check_rounded
-                                  : isQuest
-                                  ? Icons.flag_rounded
-                                  : Icons.play_arrow_rounded)
-                            : Icons.lock_outline_rounded,
-                        color: playable ? AppColors.paper : AppColors.muted,
-                      ),
-                    ),
-                  ),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      color: AppColors.ink.withValues(alpha: 0.12),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 18),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                onTap: playable
-                    ? () => context.go(AppRoutes.mandarinLesson(lesson.id))
-                    : null,
-                child: Container(
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: playable ? AppColors.paper : AppColors.backgroundAlt,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    border: Border.all(
-                      color: nodeColor.withValues(alpha: 0.22),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${lesson.sequence}. ${lesson.title}',
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(
-                                    color: playable
-                                        ? AppColors.ink
-                                        : AppColors.inkSoft,
-                                  ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              lesson.objective,
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodyMedium?.copyWith(fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        completed
-                            ? 'DONE'
-                            : playable
-                            ? '${lesson.xpReward} XP'
-                            : lesson.isPlayable
-                            ? 'LOCKED'
-                            : lesson.status == CourseLessonStatus.shell
-                            ? 'COMING'
-                            : 'IN REVIEW',
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(
-                              color: nodeColor,
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
+    return InkWell(
+      onTap: playable
+          ? () => context.go(AppRoutes.mandarinLesson(lesson.id))
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: completed
+                    ? AppColors.jade
+                    : playable
+                    ? AppColors.cinnabar
+                    : AppColors.line,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                completed
+                    ? Icons.check_rounded
+                    : playable
+                    ? Icons.play_arrow_rounded
+                    : Icons.lock_outline_rounded,
+                size: 20,
+                color: playable || completed ? AppColors.paper : AppColors.muted,
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${lesson.sequence}. ${lesson.title}',
+                    style: text.titleMedium?.copyWith(
+                      color: playable || completed
+                          ? AppColors.ink
+                          : AppColors.inkSoft,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    status,
+                    style: text.bodyMedium?.copyWith(
+                      color: isNext ? AppColors.cinnabar : AppColors.muted,
+                      fontWeight: isNext ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (playable)
+              const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+          ],
+        ),
       ),
     );
   }
