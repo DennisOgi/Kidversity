@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/env.dart';
@@ -65,21 +66,46 @@ class SupabaseService {
       );
     }
     try {
-      final response = await client.auth.signUp(
-        email: email.trim(),
-        password: password,
-        data: {
-          'display_name': displayName.trim(),
-          'gender': ?gender,
-          'age': ?age,
-        },
-      );
-      final user = response.user;
+      AuthResponse response;
+      try {
+        response = await client.auth.signUp(
+          email: email.trim(),
+          password: password,
+          data: {
+            'display_name': displayName.trim(),
+            'gender': ?gender,
+            'age': ?age,
+          },
+        );
+      } on AuthException catch (error) {
+        // Confirmation email send can fail even after the user row exists.
+        // Email confirmation is off — complete signup by signing in.
+        debugPrint('Sign up AuthException: ${error.message}');
+        final lower = error.message.toLowerCase();
+        if (lower.contains('already registered') ||
+            lower.contains('already been registered')) {
+          return app_errors.Result.failure(_parseAuthError(error));
+        }
+        response = await client.auth.signInWithPassword(
+          email: email.trim(),
+          password: password,
+        );
+      }
+
+      var user = response.user;
+      if (user == null || client.auth.currentSession == null) {
+        final signedIn = await client.auth.signInWithPassword(
+          email: email.trim(),
+          password: password,
+        );
+        user = signedIn.user;
+      }
       if (user == null) {
         return app_errors.Result.failure('Sign up failed. Please try again.');
       }
       return app_errors.Result.success(user);
     } on AuthException catch (error) {
+      debugPrint('Sign up failed: ${error.statusCode} ${error.message}');
       return app_errors.Result.failure(_parseAuthError(error));
     } catch (error, stack) {
       await app_errors.ErrorHandler.reportError(
@@ -452,18 +478,29 @@ class SupabaseService {
   }
 
   String _parseAuthError(AuthException error) {
-    final message = error.message.toLowerCase();
+    final raw = error.message.trim();
+    final message = raw.toLowerCase();
     if (message.contains('invalid login credentials')) {
       return 'Incorrect email or password.';
     }
     if (message.contains('email not confirmed')) {
-      return 'Check your email to confirm your account.';
+      return 'Sign in with the same email and password.';
     }
-    if (message.contains('already registered')) {
+    if (message.contains('already registered') ||
+        message.contains('already been registered')) {
       return 'An account already exists for this email.';
     }
-    if (message.contains('password')) {
+    if (message.contains('database') || message.contains('saving new user')) {
+      return 'Account setup failed. Please try again in a moment.';
+    }
+    if (message.contains('password') &&
+        (message.contains('weak') ||
+            message.contains('least') ||
+            message.contains('short'))) {
       return 'Use a stronger password with at least 8 characters.';
+    }
+    if (raw.isNotEmpty && raw.length <= 140 && !raw.contains('eyJ')) {
+      return raw;
     }
     return 'Authentication could not be completed.';
   }

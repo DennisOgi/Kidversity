@@ -6,8 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'config/env.dart';
 import 'core/error_handler.dart';
-import 'data/auth_state.dart';
-import 'features/splash/splash_screen.dart';
 import 'router/app_router.dart';
 import 'services/supabase_service.dart';
 import 'theme/app_colors.dart';
@@ -107,22 +105,11 @@ class KidversityApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
-    final auth = ref.watch(authControllerProvider);
     return MaterialApp.router(
       title: 'Kidversity — Mandarin Foundation',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,
-      builder: (context, child) {
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            child ?? const SizedBox.shrink(),
-            if (auth.isBootstrapping)
-              const Positioned.fill(child: SplashScreen()),
-          ],
-        );
-      },
     );
   }
 }

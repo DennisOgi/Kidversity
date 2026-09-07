@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../theme/app_colors.dart';
+import '../../widgets/common.dart';
 
 /// Mandarin Foundation launch experience while authentication bootstraps.
 /// Routing remains owned by GoRouter so this screen never races auth state.
@@ -208,10 +209,7 @@ class _FoundationSeal extends StatelessWidget {
               ],
             ),
             clipBehavior: Clip.antiAlias,
-            child: Image.asset(
-              'assets/mandarin/fox_mascot.png',
-              fit: BoxFit.cover,
-            ),
+            child: const FoxMascotImage(),
           ),
           Positioned(
             right: compact ? 4 : 8,

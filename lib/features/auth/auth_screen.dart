@@ -135,8 +135,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       return;
     }
     final age = int.tryParse(ageText);
-    if (age == null || age < 5 || age > 18) {
-      context.showErrorSnackbar('Enter a valid age between 5 and 18.');
+    if (age == null || age < 5 || age > 99) {
+      context.showErrorSnackbar('Enter a valid age (5 or older).');
       return;
     }
 
@@ -641,7 +641,7 @@ class _Fields extends StatelessWidget {
             keyboardType: TextInputType.number,
             textInputAction: TextInputAction.done,
             decoration: const InputDecoration(
-              hintText: 'Age',
+              hintText: 'Age (5+)',
               prefixIcon: Icon(Icons.cake_outlined),
             ),
           ),

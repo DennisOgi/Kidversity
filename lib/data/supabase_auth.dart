@@ -11,8 +11,9 @@ import '../services/supabase_service.dart';
 
 /// Real auth backed by Supabase Auth + `user_profiles`.
 class SupabaseAuthController extends ChangeNotifier {
-  static const _minimumSplashDuration = Duration(milliseconds: 1400);
-  static const _sessionRecoveryTimeout = Duration(seconds: 4);
+  static const _minimumSplashDuration = Duration(milliseconds: 900);
+  static const _bootstrapTimeout = Duration(seconds: 3);
+  static const _sessionRecoveryTimeout = Duration(seconds: 2);
 
   bool isLoading = true;
   /// True only for the first launch settle. Sign-in uses [isLoading] without
@@ -53,32 +54,14 @@ class SupabaseAuthController extends ChangeNotifier {
         return;
       }
 
-      // initialize() starts recoverSession() but does not await it. A late
-      // recovered JWT with onboardingComplete still false is what flashes
-      // /onboarding, then a failed refresh signs the user out to home.
-      await _awaitSessionRecovery(client);
-
-      final user = client.auth.currentSession?.user ?? client.auth.currentUser;
-      if (user != null) {
-        try {
-          await _applyUser(user);
-        } catch (e) {
-          debugPrint('Auth bootstrap profile apply failed: $e');
-          profileReady = false;
-        }
-        if (!profileReady) {
-          debugPrint(
-            'Auth bootstrap: recovered session has no usable profile; signing out',
-          );
-          await client.auth.signOut();
-          _resetSession(keepLoading: true);
-        }
-      } else {
-        _resetSession(keepLoading: true);
-      }
-
-      _authSub = client.auth.onAuthStateChange.listen(_onAuthStateChange);
+      await _settleSession(client).timeout(_bootstrapTimeout);
+    } on TimeoutException {
+      debugPrint('Auth bootstrap timed out; continuing as guest if needed');
+      if (!isAuthenticated) _resetSession(keepLoading: true);
     } finally {
+      if (_authSub == null && _client != null) {
+        _authSub = _client!.auth.onAuthStateChange.listen(_onAuthStateChange);
+      }
       final elapsed = DateTime.now().difference(splashStartedAt);
       final remaining = _minimumSplashDuration - elapsed;
       if (remaining > Duration.zero) {
@@ -92,6 +75,20 @@ class SupabaseAuthController extends ChangeNotifier {
         'role=$role',
       );
       notifyListeners();
+    }
+  }
+
+  Future<void> _settleSession(SupabaseClient client) async {
+    await _awaitSessionRecovery(client);
+    final user = client.auth.currentSession?.user ?? client.auth.currentUser;
+    if (user != null) {
+      try {
+        await _applyUser(user);
+      } catch (e) {
+        debugPrint('Auth bootstrap profile apply failed: $e');
+      }
+    } else {
+      _resetSession(keepLoading: true);
     }
   }
 
@@ -156,11 +153,6 @@ class SupabaseAuthController extends ChangeNotifier {
             state.event == AuthChangeEvent.tokenRefreshed ||
             state.event == AuthChangeEvent.userUpdated)) {
       await _applyUser(user);
-      if (!profileReady && !isBootstrapping) {
-        debugPrint('Auth event applied a session without a profile; signing out');
-        await _client?.auth.signOut();
-        _resetSession();
-      }
     } else if (state.event == AuthChangeEvent.signedOut) {
       _resetSession(keepLoading: isBootstrapping);
     }
@@ -309,8 +301,8 @@ class SupabaseAuthController extends ChangeNotifier {
     }
 
     onboardingComplete = false;
+    isAuthenticated = true;
 
-    // Email confirmation disabled — sign in immediately when signup returns no session.
     if (_client?.auth.currentSession == null) {
       final signInResult = await SupabaseService.instance.signIn(
         emailInput,
@@ -322,16 +314,14 @@ class SupabaseAuthController extends ChangeNotifier {
         notifyListeners();
         return;
       }
-
-      lastError =
-          'Account created but sign-in failed. Please sign in manually.';
-      isAuthenticated = false;
-      notifyListeners();
-      throw Exception(lastError);
     }
 
-    await _applyUser(user);
-    await _saveRegistrationDetails(gender: gender, age: age);
+    try {
+      await _applyUser(user);
+      await _saveRegistrationDetails(gender: gender, age: age);
+    } catch (e) {
+      debugPrint('Post-signup profile write failed: $e');
+    }
     notifyListeners();
   }
 

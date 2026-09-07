@@ -23,6 +23,24 @@ TextStyle emojiTextStyle({double size = 24, Color? color, double? height}) =>
       fontFamilyFallback: kEmojiFontFallbacks,
     );
 
+/// Fox mark used on splash, brand, and path. Falls back if the PNG is missing.
+class FoxMascotImage extends StatelessWidget {
+  final BoxFit fit;
+  const FoxMascotImage({super.key, this.fit = BoxFit.cover});
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/mandarin/fox_mascot.png',
+      fit: fit,
+      errorBuilder: (_, _, _) => const ColoredBox(
+        color: Color(0xFFFFF4E8),
+        child: Center(child: EmojiText('🦊', size: 72)),
+      ),
+    );
+  }
+}
+
 /// Renders emoji with a system/color emoji font (required on Flutter web).
 class EmojiText extends StatelessWidget {
   final String text;
@@ -329,7 +347,7 @@ class KidversityBrandMark extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.asset('assets/mandarin/fox_mascot.png', fit: BoxFit.cover),
+              const FoxMascotImage(),
               Align(
                 alignment: Alignment.bottomRight,
                 child: Container(

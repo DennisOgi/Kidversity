@@ -130,9 +130,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (isSplash) {
-        if (session.isAuthenticated &&
-            session.profileReady &&
-            !session.onboardingComplete) {
+        if (session.isAuthenticated && !session.onboardingComplete) {
           return AppRoutes.onboarding;
         }
         if (session.isAuthenticated && session.onboardingComplete) {
@@ -152,10 +150,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      if (!session.profileReady || !session.onboardingComplete) {
-        if (!session.profileReady) {
-          return isSplash ? null : AppRoutes.splash;
-        }
+      if (!session.onboardingComplete) {
         if (isOnboarding) return null;
         if (isProtected) return onboardingWithRedirect(path);
         return AppRoutes.onboarding;

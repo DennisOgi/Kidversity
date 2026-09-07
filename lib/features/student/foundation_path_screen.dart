@@ -114,10 +114,7 @@ class _CourseHero extends StatelessWidget {
               border: Border.all(color: AppColors.gold.withValues(alpha: 0.8)),
             ),
             clipBehavior: Clip.antiAlias,
-            child: Image.asset(
-              'assets/mandarin/fox_mascot.png',
-              fit: BoxFit.cover,
-            ),
+            child: const FoxMascotImage(),
           ),
           const SizedBox(width: 18),
           Expanded(
