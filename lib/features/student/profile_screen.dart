@@ -75,7 +75,7 @@ class ProfileScreen extends ConsumerWidget {
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: Text(avatar, style: const TextStyle(fontSize: 44)),
+                child: EmojiText(avatar, size: 44),
               ),
               const SizedBox(height: 12),
               Text(

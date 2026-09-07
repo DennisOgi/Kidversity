@@ -201,7 +201,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                             ? Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Expanded(child: _HeroPanel(text: text)),
+                                  Expanded(
+                                    child: _HeroPanel(
+                                      text: text,
+                                      signup: _tabs.index == 1,
+                                    ),
+                                  ),
                                   const SizedBox(width: 48),
                                   Expanded(
                                     child: _FormCard(
@@ -236,8 +241,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                               )
                             : Column(
                                 children: [
-                                  _HeroPanel(text: text, compact: true),
-                                  const SizedBox(height: 20),
+                                  _HeroPanel(
+                                    text: text,
+                                    compact: true,
+                                    signup: _tabs.index == 1,
+                                  ),
+                                  const SizedBox(height: 16),
                                   _FormCard(
                                     tabs: _tabs,
                                     text: text,
@@ -282,7 +291,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 class _HeroPanel extends StatelessWidget {
   final TextTheme text;
   final bool compact;
-  const _HeroPanel({required this.text, this.compact = false});
+  final bool signup;
+  const _HeroPanel({
+    required this.text,
+    this.compact = false,
+    this.signup = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -291,12 +305,14 @@ class _HeroPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Pill(
-            label: 'Welcome back',
-            icon: Icons.waving_hand_rounded,
+          Pill(
+            label: signup ? 'New here' : 'Welcome back',
+            icon: signup
+                ? Icons.auto_awesome_rounded
+                : Icons.waving_hand_rounded,
             color: AppColors.secondary,
           ),
-          SizedBox(height: compact ? 14 : 22),
+          SizedBox(height: compact ? 12 : 22),
           ShaderMask(
             shaderCallback: (r) => const LinearGradient(
               colors: [
@@ -307,19 +323,25 @@ class _HeroPanel extends StatelessWidget {
             ).createShader(r),
             child: Text(
               compact
-                  ? 'Sign in to\nKidversity'
-                  : 'Your Mandarin path,\nmade clear.',
+                  ? (signup
+                        ? 'Create your\nKidversity path'
+                        : 'Sign in to\nKidversity')
+                  : (signup
+                        ? 'Start your Mandarin\npath today.'
+                        : 'Your Mandarin path,\nmade clear.'),
               style: text.displayMedium?.copyWith(
                 color: Colors.white,
-                fontSize: compact ? 34 : 44,
+                fontSize: compact ? 30 : 44,
                 height: 1.05,
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Text(
-            'Follow guided Mandarin lessons with clear audio, practice, and quests.',
-            style: text.bodyLarge?.copyWith(fontSize: compact ? 15 : 16.5),
+            signup
+                ? 'Set up a learner or teacher account, then follow one clear 30-lesson path.'
+                : 'Follow guided Mandarin lessons with clear audio, practice, and quests.',
+            style: text.bodyLarge?.copyWith(fontSize: compact ? 14.5 : 16.5),
           ),
           if (!compact) ...[
             const SizedBox(height: 28),
@@ -413,7 +435,7 @@ class _FormCard extends StatelessWidget {
       delay: const Duration(milliseconds: 160),
       child: GlassCard(
         frosted: true,
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
         shadow: AppTheme.softShadow,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -494,7 +516,7 @@ class _FormCard extends StatelessWidget {
                 ],
               ),
             ],
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             GradientButton(
               label: auth.isLoading
                   ? 'Please wait…'
@@ -535,8 +557,6 @@ class _Fields extends StatelessWidget {
   static const _genderOptions = [
     ('female', 'Female'),
     ('male', 'Male'),
-    ('non_binary', 'Non-binary'),
-    ('prefer_not_to_say', 'Prefer not to say'),
   ];
 
   const _Fields({

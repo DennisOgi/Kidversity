@@ -5,11 +5,12 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
-/// Font stack for emoji — avoids Google Fonts (Nunito/Fredoka) rendering tofu boxes on web.
+/// System color-emoji fonts only. Do not set a missing webfont as
+/// `fontFamily` — Flutter web paints empty rectangles until fallback loads.
 const kEmojiFontFallbacks = [
-  'Noto Color Emoji',
   'Apple Color Emoji',
   'Segoe UI Emoji',
+  'Noto Color Emoji',
   'Segoe UI Symbol',
   'sans-serif',
 ];
@@ -19,9 +20,38 @@ TextStyle emojiTextStyle({double size = 24, Color? color, double? height}) =>
       fontSize: size,
       height: height ?? 1.1,
       color: color,
-      fontFamily: 'Noto Color Emoji',
       fontFamilyFallback: kEmojiFontFallbacks,
     );
+
+const kAssetPlaceholder = Color(0xFFF6EFE4);
+
+/// Local PNG with a matching fill so decode delay is not a blank rectangle.
+class WarmAssetImage extends StatelessWidget {
+  final String asset;
+  final BoxFit fit;
+  final Color placeholder;
+
+  const WarmAssetImage(
+    this.asset, {
+    super.key,
+    this.fit = BoxFit.cover,
+    this.placeholder = kAssetPlaceholder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      asset,
+      fit: fit,
+      gaplessPlayback: true,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded || frame != null) return child;
+        return ColoredBox(color: placeholder);
+      },
+      errorBuilder: (_, _, _) => ColoredBox(color: placeholder),
+    );
+  }
+}
 
 /// Fox mark used on splash, brand, and path. Falls back if the PNG is missing.
 class FoxMascotImage extends StatelessWidget {
@@ -33,6 +63,11 @@ class FoxMascotImage extends StatelessWidget {
     return Image.asset(
       'assets/mandarin/fox_mascot.png',
       fit: fit,
+      gaplessPlayback: true,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded || frame != null) return child;
+        return const ColoredBox(color: Color(0xFFFFE4C4));
+      },
       errorBuilder: (_, _, _) => const ColoredBox(
         color: Color(0xFFFFF4E8),
         child: Center(child: EmojiText('🦊', size: 72)),

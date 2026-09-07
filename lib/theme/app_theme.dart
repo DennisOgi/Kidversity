@@ -4,9 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 const _emojiFontFallbacks = [
-  'Noto Color Emoji',
   'Apple Color Emoji',
   'Segoe UI Emoji',
+  'Noto Color Emoji',
   'Segoe UI Symbol',
   'sans-serif',
 ];

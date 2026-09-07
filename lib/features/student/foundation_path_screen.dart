@@ -359,7 +359,7 @@ class _ModuleSectionState extends State<_ModuleSection> {
               children: [
                 AspectRatio(
                   aspectRatio: 2.4,
-                  child: Image.asset(_coverPath, fit: BoxFit.cover),
+                  child: WarmAssetImage(_coverPath),
                 ),
                 Positioned.fill(
                   child: DecoratedBox(

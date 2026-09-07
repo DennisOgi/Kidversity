@@ -102,6 +102,15 @@ Future<void> _initializeApp() async {
 class KidversityApp extends ConsumerWidget {
   const KidversityApp({super.key});
 
+  static const _brandAssets = [
+    AssetImage('assets/mandarin/fox_mascot.png'),
+    AssetImage('assets/mandarin/module_1_first_contact.png'),
+    AssetImage('assets/mandarin/module_2_my_world.png'),
+    AssetImage('assets/mandarin/module_3_everyday_mandarin.png'),
+    AssetImage('assets/mandarin/four_tones_diagram.png'),
+    AssetImage('assets/mandarin/path_state_stamps.png'),
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
@@ -110,6 +119,12 @@ class KidversityApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,
+      builder: (context, child) {
+        for (final image in _brandAssets) {
+          precacheImage(image, context);
+        }
+        return child ?? const SizedBox.shrink();
+      },
     );
   }
 }

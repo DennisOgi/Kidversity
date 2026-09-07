@@ -101,15 +101,17 @@ class _Brand extends StatelessWidget {
   const _Brand();
   @override
   Widget build(BuildContext context) {
+    final showHeaderSignIn = MediaQuery.sizeOf(context).width >= 560;
     return Row(
       children: [
         const Expanded(
           child: KidversityBrandMark(compact: false, showLabel: true),
         ),
-        TextButton(
-          onPressed: () => context.go(AppRoutes.auth),
-          child: const Text('Sign in'),
-        ),
+        if (showHeaderSignIn)
+          TextButton(
+            onPressed: () => context.go(AppRoutes.auth),
+            child: const Text('Sign in'),
+          ),
       ],
     );
   }
@@ -145,15 +147,15 @@ class _Hero extends StatelessWidget {
             'Mandarin starts here.',
             style: text.displayLarge?.copyWith(
               color: Colors.white,
-              fontSize: wide ? 56 : 42,
-              height: 1.02,
+              fontSize: wide ? 56 : 36,
+              height: 1.05,
             ),
           ),
         ),
         Text(
           'One clear path. Human-reviewed.',
           style: text.displayMedium?.copyWith(
-            fontSize: wide ? 34 : 27,
+            fontSize: wide ? 34 : 24,
             color: AppColors.ink,
           ),
         ),
@@ -410,22 +412,61 @@ class _FeatureGrid extends ConsumerWidget {
     ];
     return LayoutBuilder(
       builder: (context, c) {
+        final compact = c.maxWidth <= 560;
         final cross = c.maxWidth > 900
             ? 4
-            : c.maxWidth > 560
-            ? 2
-            : 1;
+            : compact
+            ? 1
+            : 2;
+        if (compact) {
+          return Column(
+            children: [
+              for (int i = 0; i < items.length; i++) ...[
+                FadeInUp(
+                  delay: Duration(milliseconds: 400 + i * 80),
+                  child: GlassCard(
+                    frosted: true,
+                    onTap: () => openLandingFeature(context, ref, i),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SoftIcon(icon: items[i].$1, color: items[i].$4, size: 40),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                items[i].$2,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.titleMedium?.copyWith(fontSize: 15),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                items[i].$3,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (i != items.length - 1) const SizedBox(height: 10),
+              ],
+            ],
+          );
+        }
         return GridView.count(
           crossAxisCount: cross,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: cross == 1
-              ? 2.8
-              : cross == 2
-              ? 1.35
-              : 1.12,
+          childAspectRatio: cross == 2 ? 1.35 : 1.12,
           children: [
             for (int i = 0; i < items.length; i++)
               FadeInUp(
@@ -451,14 +492,6 @@ class _FeatureGrid extends ConsumerWidget {
                         style: Theme.of(
                           context,
                         ).textTheme.bodyMedium?.copyWith(fontSize: 12.5),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Try it →',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: items[i].$4,
-                          fontSize: 12,
-                        ),
                       ),
                     ],
                   ),

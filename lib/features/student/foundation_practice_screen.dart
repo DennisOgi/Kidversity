@@ -15,6 +15,11 @@ class FoundationPracticeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final course = ref.watch(mandarinCourseProvider);
+    final completedLessonIds =
+        ref
+            .watch(foundationCompletedLessonIdsProvider)
+            .whenOrNull(data: (ids) => ids) ??
+        const <String>{};
     return ShellScrollView(
       children: [
         Text('Word practice', style: Theme.of(context).textTheme.headlineSmall),
@@ -32,8 +37,18 @@ class FoundationPracticeScreen extends ConsumerWidget {
             onRetry: () => ref.invalidate(mandarinCourseProvider),
           ),
           data: (value) {
-            final reviewedWords = value.lessons
-                .where((lesson) => lesson.isPlayable)
+            final lessons = [...value.lessons]
+              ..sort((a, b) => a.sequence.compareTo(b.sequence));
+            final reviewedWords = lessons
+                .where(
+                  (lesson) =>
+                      lesson.isPlayable &&
+                      isFoundationLessonUnlocked(
+                        lesson,
+                        completedLessonIds,
+                        lessons,
+                      ),
+                )
                 .expand((lesson) => lesson.vocabulary)
                 .where(
                   (word) =>

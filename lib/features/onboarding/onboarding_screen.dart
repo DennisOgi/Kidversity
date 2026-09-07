@@ -457,10 +457,10 @@ class _OnboardingPreview extends StatelessWidget {
                   ),
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 260),
-                    child: Text(
+                    child: EmojiText(
                       avatar,
                       key: ValueKey(avatar),
-                      style: const TextStyle(fontSize: 38),
+                      size: 38,
                     ),
                   ),
                 ),
@@ -633,7 +633,7 @@ class _AvatarStep extends StatelessWidget {
                     boxShadow: selected == emoji ? AppTheme.cardShadow : null,
                   ),
                   alignment: Alignment.center,
-                  child: Text(emoji, style: const TextStyle(fontSize: 30)),
+                  child: EmojiText(emoji, size: 30),
                 ),
               ),
           ],

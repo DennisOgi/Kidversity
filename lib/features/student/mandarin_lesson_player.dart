@@ -10,6 +10,7 @@ import '../../services/mandarin_audio_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
 
 enum _FoundationStage { character, explain, dialogue, practice, quest, result }
@@ -395,9 +396,8 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
           const SizedBox(height: 22),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-            child: Image.asset(
+            child: const WarmAssetImage(
               'assets/mandarin/four_tones_diagram.png',
-              fit: BoxFit.cover,
             ),
           ),
         ],
