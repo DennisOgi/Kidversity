@@ -123,13 +123,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnboarding = path == AppRoutes.onboarding;
       final isProtected = isProtectedRoute(path);
 
-      // Hold splash for the entire auth bootstrap so home/onboarding never flash.
-      if (session.isLoading) {
+      // Hold splash until the recovered session and profile are known.
+      // Do not use [isLoading] here — sign-in also sets that flag.
+      if (session.isBootstrapping) {
         return isSplash ? null : AppRoutes.splash;
       }
 
       if (isSplash) {
-        if (session.isAuthenticated && !session.onboardingComplete) {
+        if (session.isAuthenticated &&
+            session.profileReady &&
+            !session.onboardingComplete) {
           return AppRoutes.onboarding;
         }
         if (session.isAuthenticated && session.onboardingComplete) {
@@ -149,7 +152,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      if (!session.onboardingComplete) {
+      if (!session.profileReady || !session.onboardingComplete) {
+        if (!session.profileReady) {
+          return isSplash ? null : AppRoutes.splash;
+        }
         if (isOnboarding) return null;
         if (isProtected) return onboardingWithRedirect(path);
         return AppRoutes.onboarding;

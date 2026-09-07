@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/env.dart';
 import '../models/models.dart';
 import '../models/user_preferences.dart';
 import '../services/supabase_service.dart';
@@ -10,9 +12,15 @@ import '../services/supabase_service.dart';
 /// Real auth backed by Supabase Auth + `user_profiles`.
 class SupabaseAuthController extends ChangeNotifier {
   static const _minimumSplashDuration = Duration(milliseconds: 1400);
+  static const _sessionRecoveryTimeout = Duration(seconds: 4);
+
   bool isLoading = true;
+  /// True only for the first launch settle. Sign-in uses [isLoading] without
+  /// remounting splash or sending the router back to `/splash`.
+  bool isBootstrapping = true;
   bool isAuthenticated = false;
   bool onboardingComplete = false;
+  bool profileReady = false;
   String email = '';
   String displayName = '';
   String avatarEmoji = '🦊';
@@ -31,6 +39,7 @@ class SupabaseAuthController extends ChangeNotifier {
   Future<void> bootstrap() async {
     final splashStartedAt = DateTime.now();
     isLoading = true;
+    isBootstrapping = true;
     notifyListeners();
 
     try {
@@ -39,24 +48,34 @@ class SupabaseAuthController extends ChangeNotifier {
 
       final client = _client;
       if (client == null) {
+        debugPrint('Auth bootstrap: Supabase client missing');
         _resetSession(keepLoading: true);
         return;
       }
 
-      // Supabase.initialize() already recovers persisted session before runApp.
-      // Apply that settled session before listening so initialSession cannot
-      // race splash → onboarding → home.
+      // initialize() starts recoverSession() but does not await it. A late
+      // recovered JWT with onboardingComplete still false is what flashes
+      // /onboarding, then a failed refresh signs the user out to home.
+      await _awaitSessionRecovery(client);
+
       final user = client.auth.currentSession?.user ?? client.auth.currentUser;
       if (user != null) {
-        await _applyUser(user);
+        try {
+          await _applyUser(user);
+        } catch (e) {
+          debugPrint('Auth bootstrap profile apply failed: $e');
+          profileReady = false;
+        }
+        if (!profileReady) {
+          debugPrint(
+            'Auth bootstrap: recovered session has no usable profile; signing out',
+          );
+          await client.auth.signOut();
+          _resetSession(keepLoading: true);
+        }
       } else {
         _resetSession(keepLoading: true);
       }
-
-      debugPrint(
-        'Auth bootstrap settled: authenticated=$isAuthenticated '
-        'onboardingComplete=$onboardingComplete role=$role',
-      );
 
       _authSub = client.auth.onAuthStateChange.listen(_onAuthStateChange);
     } finally {
@@ -65,17 +84,70 @@ class SupabaseAuthController extends ChangeNotifier {
       if (remaining > Duration.zero) {
         await Future<void>.delayed(remaining);
       }
+      isBootstrapping = false;
       isLoading = false;
+      debugPrint(
+        'Auth bootstrap done: authenticated=$isAuthenticated '
+        'onboardingComplete=$onboardingComplete profileReady=$profileReady '
+        'role=$role',
+      );
       notifyListeners();
     }
   }
 
-  Future<void> _onAuthStateChange(AuthState state) async {
-    // Ignore auth chatter while splash ownership is still settling.
-    if (isLoading) {
-      debugPrint('Auth event ignored during splash: ${state.event}');
+  Future<void> _awaitSessionRecovery(SupabaseClient client) async {
+    if (client.auth.currentSession != null) {
+      debugPrint('Auth recovery: session already present');
       return;
     }
+
+    final hasPersisted = await _hasPersistedSession();
+    debugPrint('Auth recovery: persistedSession=$hasPersisted');
+    if (!hasPersisted) return;
+
+    final settled = Completer<void>();
+    final sub = client.auth.onAuthStateChange.listen((state) {
+      debugPrint(
+        'Auth recovery event=${state.event} '
+        'hasUser=${state.session?.user != null}',
+      );
+      if (state.session?.user != null ||
+          state.event == AuthChangeEvent.signedOut) {
+        if (!settled.isCompleted) settled.complete();
+      }
+    });
+
+    try {
+      if (client.auth.currentSession != null) return;
+      await settled.future.timeout(_sessionRecoveryTimeout);
+    } on TimeoutException {
+      debugPrint(
+        'Auth recovery timed out; currentUser=${client.auth.currentUser != null}',
+      );
+    } finally {
+      await sub.cancel();
+    }
+  }
+
+  Future<bool> _hasPersistedSession() async {
+    final url = Env.supabaseUrl;
+    if (url.isEmpty) return false;
+    try {
+      final host = Uri.parse(url).host.split('.').first;
+      final prefs = await SharedPreferences.getInstance();
+      final value = prefs.getString('sb-$host-auth-token');
+      return value != null && value.isNotEmpty;
+    } catch (e) {
+      debugPrint('Auth persist check failed: $e');
+      return false;
+    }
+  }
+
+  Future<void> _onAuthStateChange(AuthState state) async {
+    debugPrint(
+      'Auth event=${state.event} bootstrapping=$isBootstrapping '
+      'hasUser=${state.session?.user != null}',
+    );
 
     final user = state.session?.user;
     if (user != null &&
@@ -84,10 +156,15 @@ class SupabaseAuthController extends ChangeNotifier {
             state.event == AuthChangeEvent.tokenRefreshed ||
             state.event == AuthChangeEvent.userUpdated)) {
       await _applyUser(user);
+      if (!profileReady && !isBootstrapping) {
+        debugPrint('Auth event applied a session without a profile; signing out');
+        await _client?.auth.signOut();
+        _resetSession();
+      }
     } else if (state.event == AuthChangeEvent.signedOut) {
-      _resetSession();
+      _resetSession(keepLoading: isBootstrapping);
     }
-    notifyListeners();
+    if (!isBootstrapping) notifyListeners();
   }
 
   Future<void> _applyUser(User user) async {
@@ -128,7 +205,9 @@ class SupabaseAuthController extends ChangeNotifier {
           (row['lessons_completed'] as num?)?.toInt() ?? lessonsCompleted;
       minutesLearned =
           (row['minutes_learned'] as num?)?.toInt() ?? minutesLearned;
+      profileReady = true;
     } catch (e) {
+      profileReady = false;
       debugPrint('Profile load failed: $e');
     }
   }
@@ -149,6 +228,7 @@ class SupabaseAuthController extends ChangeNotifier {
       'onboarding_complete': false,
     });
     onboardingComplete = false;
+    profileReady = true;
 
     // Trigger may have created the row first — reload to pick up DB values.
     final row = await client
@@ -172,6 +252,7 @@ class SupabaseAuthController extends ChangeNotifier {
           (row['lessons_completed'] as num?)?.toInt() ?? lessonsCompleted;
       minutesLearned =
           (row['minutes_learned'] as num?)?.toInt() ?? minutesLearned;
+      profileReady = true;
     }
   }
 
@@ -290,6 +371,7 @@ class SupabaseAuthController extends ChangeNotifier {
     avatarEmoji = emoji;
     if (selectedRole != null) role = selectedRole;
     onboardingComplete = true;
+    profileReady = true;
 
     final client = _client;
     final userId = client?.auth.currentUser?.id;
@@ -350,6 +432,7 @@ class SupabaseAuthController extends ChangeNotifier {
   void _resetSession({bool keepLoading = false}) {
     isAuthenticated = false;
     onboardingComplete = false;
+    profileReady = false;
     email = '';
     displayName = '';
     avatarEmoji = '🦊';
