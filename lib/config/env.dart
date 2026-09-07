@@ -9,6 +9,9 @@ class Env {
   static const _defineSupabasePublishableKey = String.fromEnvironment(
     'SUPABASE_PUBLISHABLE_KEY',
   );
+  static const _defineSupabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+  );
   static const _defineSentryDsn = String.fromEnvironment('SENTRY_DSN');
   static const _defineEnvironment = String.fromEnvironment(
     'ENVIRONMENT',
@@ -52,7 +55,7 @@ class Env {
       _defineSupabasePublishableKey,
     );
     if (modern.isNotEmpty) return modern;
-    return dotenv.maybeGet('SUPABASE_ANON_KEY') ?? '';
+    return _read('SUPABASE_ANON_KEY', _defineSupabaseAnonKey);
   }
 
   static String get sentryDsn => _read('SENTRY_DSN', _defineSentryDsn);

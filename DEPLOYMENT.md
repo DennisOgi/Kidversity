@@ -17,10 +17,10 @@ In Vercel → Project → **Settings → Environment Variables**, add:
 
 | Variable | Required | Notes |
 |----------|----------|--------|
-| `SUPABASE_URL` | Yes | Supabase project URL |
-| `SUPABASE_ANON_KEY` | Yes | Supabase **anon/public** key (not service_role) |
+| `SUPABASE_URL` | Yes | `https://cycidawgvxyrqmsejour.supabase.co` |
+| `SUPABASE_PUBLISHABLE_KEY` | Yes | Dashboard → API → publishable key |
+| `SUPABASE_ANON_KEY` | Yes until rebuild | Legacy anon JWT; keep in sync with the new project |
 | `ENVIRONMENT` | No | Use `production` |
-| `OPENAI_API_KEY` | No | Enables AI lesson generation |
 | `SENTRY_DSN` | No | Error tracking |
 
 Apply to **Production**, **Preview**, and **Development** if you use preview deployments.
@@ -34,7 +34,13 @@ In Supabase → **Authentication → URL Configuration**, add your Vercel URLs:
 
 ## 4. Deploy
 
-Push to `main` on GitHub. Vercel redeploys automatically on each push.
+Push to `main` on GitHub. Vercel production deploys **only** from `main`.
+Feature-branch pushes create preview URLs; they do not update
+https://kidversity.vercel.app.
+
+Point Vercel `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` (or
+`SUPABASE_ANON_KEY`) at project `cycidawgvxyrqmsejour` before the Mandarin
+Foundation build goes live. The previous project will not serve this schema.
 
 ## Local production build (optional)
 

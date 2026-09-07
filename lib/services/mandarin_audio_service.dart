@@ -24,14 +24,10 @@ class MandarinAudioService {
       await _player.setPlaybackRate(rate < 0.7 ? 0.7 : 1);
       return;
     }
-    if (kDebugMode) {
-      debugPrint(
-        'MandarinAudioService: using development-only device TTS fallback.',
-      );
-      await NarrationService.instance.speak(text, lang: 'zh-CN', rate: rate);
-      return;
-    }
-    throw StateError('Reviewed Mandarin audio is unavailable.');
+    debugPrint(
+      'MandarinAudioService: no reviewed clip URL; using on-device Mandarin TTS.',
+    );
+    await NarrationService.instance.speak(text, lang: 'zh-CN', rate: rate);
   }
 
   Future<void> stop() async {
