@@ -152,8 +152,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       ),
       ('Choose your space', 'Your role shapes the experience you see next.'),
       (
-        'How Kidversity works',
-        'A short map so the Path screen makes sense on day one.',
+        'How a lesson works',
+        'You will see this same pattern in every Foundation lesson.',
       ),
     ];
 
@@ -654,19 +654,19 @@ class _HowItWorksStep extends StatelessWidget {
     final items = student
         ? const [
             (
-              Icons.route_rounded,
-              'Path',
-              'This is your 30-lesson course. Start the red lesson. The next one unlocks when you finish.',
+              Icons.volume_up_rounded,
+              '1. Look, listen, repeat',
+              'Each lesson starts with a few words. Tap Listen, say the word out loud, then go to the next word.',
             ),
             (
-              Icons.school_rounded,
-              'Practice',
-              'Replay words and sounds from lessons you have already opened.',
+              Icons.menu_book_rounded,
+              '2. The idea, then practice',
+              'A short explanation comes next, then a conversation and a few practice questions.',
             ),
             (
-              Icons.person_rounded,
-              'Me',
-              'Your name, class, and sign-out live here.',
+              Icons.flag_rounded,
+              '3. Quest, then unlock',
+              'Finish five quest questions to complete the lesson. The next Path lesson opens after that.',
             ),
           ]
         : const [

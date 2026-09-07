@@ -221,22 +221,19 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
         top: false,
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: AnimatedSwitcher(
-                duration: MediaQuery.disableAnimationsOf(context)
-                    ? Duration.zero
-                    : const Duration(milliseconds: 260),
-                child: switch (_stage) {
-                  _FoundationStage.character => _characterStage(lesson),
-                  _FoundationStage.explain => _explainStage(lesson),
-                  _FoundationStage.dialogue => _dialogueStage(lesson),
-                  _FoundationStage.practice => _practiceStage(lesson),
-                  _FoundationStage.quest => _questStage(lesson),
-                  _FoundationStage.result => _resultStage(lesson),
-                },
-              ),
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: AnimatedSwitcher(
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 220),
+              child: switch (_stage) {
+                _FoundationStage.character => _characterStage(lesson),
+                _FoundationStage.explain => _explainStage(lesson),
+                _FoundationStage.dialogue => _dialogueStage(lesson),
+                _FoundationStage.practice => _practiceStage(lesson),
+                _FoundationStage.quest => _questStage(lesson),
+                _FoundationStage.result => _resultStage(lesson),
+              },
             ),
           ),
         ),
@@ -258,25 +255,36 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
 
   Widget _characterStage(MandarinCourseLesson lesson) {
     final item = lesson.vocabulary[_index];
-    return _StageCard(
+    final last = _index + 1 >= lesson.vocabulary.length;
+    return _LessonPage(
       key: ValueKey('character-${item.id}'),
-      eyebrow: 'LOOK · LISTEN · REPEAT',
+      eyebrow: 'Word ${_index + 1} of ${lesson.vocabulary.length}',
+      title: 'Look, listen, then say it',
+      hint: _index == 0
+          ? 'Tap Listen, repeat the word out loud, then go to the next word.'
+          : null,
+      footer: _ContinueButton(
+        label: last ? 'I’m ready for the idea' : 'Next word',
+        onTap: () => _nextItemOrStage(lesson.vocabulary.length, lesson),
+      ),
       child: Column(
         children: [
+          const Spacer(),
           Text(
             item.simplified,
             style: const TextStyle(
-              fontSize: 78,
+              fontSize: 96,
+              height: 1.05,
               fontWeight: FontWeight.w700,
               color: AppColors.ink,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           if (_showCaptions) ...[
             Text(
               item.pinyin,
               style: TextStyle(
-                fontSize: 28,
+                fontSize: 32,
                 color: _toneColor(item.pinyin),
                 fontWeight: FontWeight.w700,
               ),
@@ -284,48 +292,45 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
             const SizedBox(height: 6),
             Text(
               item.english,
-              style: const TextStyle(fontSize: 18, color: AppColors.inkSoft),
+              style: const TextStyle(fontSize: 20, color: AppColors.inkSoft),
             ),
           ],
-          const SizedBox(height: 30),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 12,
+          const Spacer(),
+          Row(
             children: [
-              FilledButton.icon(
-                onPressed: () =>
-                    _speak(item.simplified, audioUrl: item.audioUrl),
-                icon: const Icon(Icons.volume_up_rounded),
-                label: const Text('Listen'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => _speak(
-                  item.simplified,
-                  audioUrl: item.audioUrl,
-                  rate: 0.58,
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () =>
+                      _speak(item.simplified, audioUrl: item.audioUrl),
+                  icon: const Icon(Icons.volume_up_rounded),
+                  label: const Text('Listen'),
                 ),
-                icon: const Icon(Icons.slow_motion_video_rounded),
-                label: const Text('Slow'),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _speak(
+                    item.simplified,
+                    audioUrl: item.audioUrl,
+                    rate: 0.58,
+                  ),
+                  icon: const Icon(Icons.slow_motion_video_rounded),
+                  label: const Text('Slow'),
+                ),
               ),
             ],
-          ),
-          const SizedBox(height: 26),
-          _ContinueButton(
-            label: _index + 1 < lesson.vocabulary.length
-                ? 'Next word'
-                : 'I’m ready',
-            onTap: () => _nextItemOrStage(lesson.vocabulary.length, lesson),
           ),
         ],
       ),
     );
   }
 
-  Widget _explainStage(MandarinCourseLesson lesson) => _StageCard(
+  Widget _explainStage(MandarinCourseLesson lesson) => _LessonPage(
     key: const ValueKey('explain'),
-    eyebrow: 'MAKE SENSE OF IT',
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    eyebrow: 'The idea',
+    title: 'What this lesson is teaching',
+    footer: _ContinueButton(label: 'Try it', onTap: () => _nextStage(lesson)),
+    child: ListView(
       children: [
         const Text(
           'Here’s the idea',
@@ -396,17 +401,20 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
             ),
           ),
         ],
-        const SizedBox(height: 28),
-        _ContinueButton(label: 'Try it', onTap: () => _nextStage(lesson)),
       ],
     ),
   );
 
   Widget _dialogueStage(MandarinCourseLesson lesson) {
     final line = lesson.dialogue[_index];
-    return _StageCard(
+    return _LessonPage(
       key: ValueKey('dialogue-${line.id}'),
-      eyebrow: 'MINI DIALOGUE',
+      eyebrow: 'Dialogue ${_index + 1} of ${lesson.dialogue.length}',
+      title: 'Hear it in a short conversation',
+      footer: _ContinueButton(
+        label: 'Next',
+        onTap: () => _nextItemOrStage(lesson.dialogue.length, lesson),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -456,11 +464,6 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
             icon: const Icon(Icons.volume_up_rounded),
             label: const Text('Play line'),
           ),
-          const SizedBox(height: 18),
-          _ContinueButton(
-            label: 'Next',
-            onTap: () => _nextItemOrStage(lesson.dialogue.length, lesson),
-          ),
         ],
       ),
     );
@@ -470,7 +473,8 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
     final item = lesson.activities[_index];
     return _QuestionStage(
       key: ValueKey('practice-${item.id}'),
-      eyebrow: 'PRACTICE',
+      eyebrow: 'Practice ${_index + 1} of ${lesson.activities.length}',
+      title: 'Try this one',
       prompt: item.prompt,
       options: _ordered(item.options, item.id),
       selected: _selected,
@@ -497,7 +501,8 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
     final item = lesson.assessment[_index];
     return _QuestionStage(
       key: ValueKey('quest-${item.id}'),
-      eyebrow: 'QUEST · ${_index + 1}/${lesson.assessment.length}',
+      eyebrow: 'Quest ${_index + 1} of ${lesson.assessment.length}',
+      title: 'Check what you remember',
       prompt: item.question,
       options: _ordered(item.options, item.id),
       selected: _selected,
@@ -526,9 +531,14 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
     if (!_saved && !_saving && SupabaseService.instance.isInitialized) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _save(lesson));
     }
-    return _StageCard(
+    return _LessonPage(
       key: const ValueKey('result'),
-      eyebrow: 'LESSON COMPLETE',
+      eyebrow: 'Finished',
+      title: 'This lesson is complete',
+      footer: _ContinueButton(
+        label: 'Back to my path',
+        onTap: () => context.go('/student/path'),
+      ),
       child: Column(
         children: [
           const Text(
@@ -561,11 +571,6 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
             const SizedBox(height: 16),
             const CircularProgressIndicator(),
           ],
-          const SizedBox(height: 28),
-          _ContinueButton(
-            label: 'Back to my path',
-            onTap: () => context.go('/student/path'),
-          ),
         ],
       ),
     );
@@ -588,43 +593,85 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
   }
 }
 
-class _StageCard extends StatelessWidget {
+class _LessonPage extends StatelessWidget {
   final String eyebrow;
+  final String title;
+  final String? hint;
   final Widget child;
+  final Widget? footer;
 
-  const _StageCard({super.key, required this.eyebrow, required this.child});
+  const _LessonPage({
+    super.key,
+    required this.eyebrow,
+    required this.title,
+    this.hint,
+    required this.child,
+    this.footer,
+  });
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-        border: Border.all(color: AppColors.ink.withValues(alpha: 0.10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            eyebrow,
-            style: const TextStyle(
-              color: AppColors.cinnabar,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.1,
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                eyebrow.toUpperCase(),
+                style: const TextStyle(
+                  color: AppColors.cinnabar,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.1,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.headlineSmall?.copyWith(fontSize: 26),
+              ),
+              if (hint != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  hint!,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppColors.inkSoft),
+                ),
+              ],
+            ],
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+            child: child,
+          ),
+        ),
+        if (footer != null)
+          DecoratedBox(
+            decoration: const BoxDecoration(
+              color: AppColors.paper,
+              border: Border(top: BorderSide(color: AppColors.line)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: footer,
             ),
           ),
-          const SizedBox(height: 24),
-          child,
-        ],
-      ),
-    ),
-  );
+      ],
+    );
+  }
 }
 
 class _QuestionStage extends StatelessWidget {
   final String eyebrow;
+  final String title;
   final String prompt;
   final List<String> options;
   final String? selected;
@@ -641,6 +688,7 @@ class _QuestionStage extends StatelessWidget {
   const _QuestionStage({
     super.key,
     required this.eyebrow,
+    required this.title,
     required this.prompt,
     required this.options,
     required this.selected,
@@ -656,10 +704,13 @@ class _QuestionStage extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => _StageCard(
+  Widget build(BuildContext context) => _LessonPage(
     eyebrow: eyebrow,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    title: title,
+    footer: answered
+        ? _ContinueButton(label: 'Continue', onTap: onNext)
+        : null,
+    child: ListView(
       children: [
         if (audioText != null) ...[
           Center(
@@ -734,8 +785,6 @@ class _QuestionStage extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 20),
-          _ContinueButton(label: 'Continue', onTap: onNext),
         ],
       ],
     ),
@@ -791,11 +840,14 @@ class _ContinueButton extends StatelessWidget {
   const _ContinueButton({required this.label, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => FilledButton(
-    onPressed: onTap,
-    style: FilledButton.styleFrom(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    child: FilledButton(
+      onPressed: onTap,
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+      child: Text(label),
     ),
-    child: Text(label),
   );
 }
