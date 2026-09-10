@@ -148,11 +148,21 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
                 .toList(growable: false),
             examples: (exampleRows as List)
                 .where((item) => (item as Map)['lesson_id'] == id)
-                .map((item) => _example(Map<String, dynamic>.from(item as Map)))
+                .map(
+                  (item) => _example(
+                    Map<String, dynamic>.from(item as Map),
+                    audioUrls['example:${item['id']}'],
+                  ),
+                )
                 .toList(growable: false),
             grammar: (grammarRows as List)
                 .where((item) => (item as Map)['lesson_id'] == id)
-                .map((item) => _grammar(Map<String, dynamic>.from(item as Map)))
+                .map(
+                  (item) => _grammar(
+                    Map<String, dynamic>.from(item as Map),
+                    audioUrls['grammar:${item['id']}'],
+                  ),
+                )
                 .toList(growable: false),
             dialogue: (dialogueRows as List)
                 .where((item) => (item as Map)['lesson_id'] == id)
@@ -229,15 +239,17 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
         source: _source(row),
       );
 
-  MandarinExample _example(Map<String, dynamic> row) => MandarinExample(
-    id: row['id'] as String,
-    chinese: row['chinese'] as String,
-    pinyin: row['pinyin'] as String,
-    english: row['english'] as String,
-    source: _source(row),
-  );
+  MandarinExample _example(Map<String, dynamic> row, String? audioUrl) =>
+      MandarinExample(
+        id: row['id'] as String,
+        chinese: row['chinese'] as String,
+        pinyin: row['pinyin'] as String,
+        english: row['english'] as String,
+        audioUrl: audioUrl,
+        source: _source(row),
+      );
 
-  MandarinGrammarPattern _grammar(Map<String, dynamic> row) =>
+  MandarinGrammarPattern _grammar(Map<String, dynamic> row, String? audioUrl) =>
       MandarinGrammarPattern(
         id: row['id'] as String,
         pattern: row['pattern'] as String,
@@ -245,6 +257,7 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
         chinese: row['chinese'] as String,
         pinyin: row['pinyin'] as String,
         english: row['english'] as String,
+        audioUrl: audioUrl,
         source: _source(row),
       );
 

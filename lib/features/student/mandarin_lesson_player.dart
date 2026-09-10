@@ -76,6 +76,93 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
     }
   }
 
+  int _lastIndexFor(_FoundationStage stage, MandarinCourseLesson lesson) {
+    switch (stage) {
+      case _FoundationStage.character:
+        return (lesson.vocabulary.length - 1).clamp(0, 999);
+      case _FoundationStage.dialogue:
+        return (lesson.dialogue.length - 1).clamp(0, 999);
+      case _FoundationStage.practice:
+        return (lesson.activities.length - 1).clamp(0, 999);
+      case _FoundationStage.quest:
+        return (lesson.assessment.length - 1).clamp(0, 999);
+      case _FoundationStage.explain:
+      case _FoundationStage.result:
+        return 0;
+    }
+  }
+
+  bool _canGoBack(MandarinCourseLesson lesson) {
+    if (_stage == _FoundationStage.result) return false;
+    if (_index > 0) return true;
+    return _stagesFor(lesson).indexOf(_stage) > 0;
+  }
+
+  void _previousStage(MandarinCourseLesson lesson) {
+    final stages = _stagesFor(lesson);
+    final prev = stages.indexOf(_stage) - 1;
+    if (prev < 0) return;
+    final previous = stages[prev];
+    setState(() {
+      _stage = previous;
+      _index = _lastIndexFor(previous, lesson);
+      _selected = null;
+      _answered = false;
+      _typedAnswer.clear();
+    });
+  }
+
+  void _previousItemOrStage(int count, MandarinCourseLesson lesson) {
+    if (_index > 0) {
+      setState(() {
+        _index--;
+        _selected = null;
+        _answered = false;
+        _typedAnswer.clear();
+      });
+      return;
+    }
+    _previousStage(lesson);
+  }
+
+  String _normalizeChinese(String value) =>
+      value.replaceAll(RegExp(r'[！!？?。.\s，,]'), '');
+
+  String? _audioUrlForChinese(MandarinCourseLesson lesson, String chinese) {
+    final target = _normalizeChinese(chinese);
+    if (target.isEmpty) return null;
+    for (final item in lesson.vocabulary) {
+      if (_normalizeChinese(item.simplified) == target &&
+          item.audioUrl != null &&
+          item.audioUrl!.isNotEmpty) {
+        return item.audioUrl;
+      }
+    }
+    for (final line in lesson.dialogue) {
+      if (_normalizeChinese(line.chinese) == target &&
+          line.audioUrl != null &&
+          line.audioUrl!.isNotEmpty) {
+        return line.audioUrl;
+      }
+    }
+    for (final example in lesson.examples) {
+      if (_normalizeChinese(example.chinese) == target &&
+          example.audioUrl != null &&
+          example.audioUrl!.isNotEmpty) {
+        return example.audioUrl;
+      }
+    }
+    for (final pattern in lesson.grammar) {
+      if ((_normalizeChinese(pattern.chinese) == target ||
+              _normalizeChinese(pattern.pattern) == target) &&
+          pattern.audioUrl != null &&
+          pattern.audioUrl!.isNotEmpty) {
+        return pattern.audioUrl;
+      }
+    }
+    return null;
+  }
+
   void _answer({
     required String itemId,
     required String selected,
@@ -264,9 +351,12 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
       hint: _index == 0
           ? 'Tap Listen, repeat the word out loud, then go to the next word.'
           : null,
-      footer: _ContinueButton(
-        label: last ? 'I’m ready for the idea' : 'Next word',
-        onTap: () => _nextItemOrStage(lesson.vocabulary.length, lesson),
+      footer: _LessonNavFooter(
+        onBack: _canGoBack(lesson)
+            ? () => _previousItemOrStage(lesson.vocabulary.length, lesson)
+            : null,
+        continueLabel: last ? 'I’m ready for the idea' : 'Next word',
+        onContinue: () => _nextItemOrStage(lesson.vocabulary.length, lesson),
       ),
       child: Column(
         children: [
@@ -330,7 +420,11 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
     key: const ValueKey('explain'),
     eyebrow: 'The idea',
     title: 'What this lesson is teaching',
-    footer: _ContinueButton(label: 'Try it', onTap: () => _nextStage(lesson)),
+    footer: _LessonNavFooter(
+      onBack: _canGoBack(lesson) ? () => _previousStage(lesson) : null,
+      continueLabel: 'Try it',
+      onContinue: () => _nextStage(lesson),
+    ),
     child: ListView(
       children: [
         const Text(
@@ -355,40 +449,30 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
           const SizedBox(height: 5),
           Text(pattern.explanation),
           const SizedBox(height: 7),
-          Text(
-            '${pattern.chinese} · ${pattern.pinyin}',
-            style: const TextStyle(
-              color: AppColors.cinnabar,
-              fontWeight: FontWeight.w700,
+          _SpeakablePhraseCard(
+            chinese: pattern.chinese,
+            pinyin: pattern.pinyin,
+            english: pattern.english,
+            onListen: () => _speak(
+              pattern.chinese,
+              audioUrl:
+                  pattern.audioUrl ??
+                  _audioUrlForChinese(lesson, pattern.chinese) ??
+                  _audioUrlForChinese(lesson, pattern.pattern),
             ),
           ),
-          Text(pattern.english),
         ],
         for (final example in lesson.examples) ...[
           const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.backgroundAlt,
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  example.chinese,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  example.pinyin,
-                  style: const TextStyle(color: AppColors.cinnabar),
-                ),
-                Text(example.english),
-              ],
+          _SpeakablePhraseCard(
+            chinese: example.chinese,
+            pinyin: example.pinyin,
+            english: example.english,
+            onListen: () => _speak(
+              example.chinese,
+              audioUrl:
+                  example.audioUrl ??
+                  _audioUrlForChinese(lesson, example.chinese),
             ),
           ),
         ],
@@ -411,9 +495,12 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
       key: ValueKey('dialogue-${line.id}'),
       eyebrow: 'Dialogue ${_index + 1} of ${lesson.dialogue.length}',
       title: 'Hear it in a short conversation',
-      footer: _ContinueButton(
-        label: 'Next',
-        onTap: () => _nextItemOrStage(lesson.dialogue.length, lesson),
+      footer: _LessonNavFooter(
+        onBack: _canGoBack(lesson)
+            ? () => _previousItemOrStage(lesson.dialogue.length, lesson)
+            : null,
+        continueLabel: 'Next',
+        onContinue: () => _nextItemOrStage(lesson.dialogue.length, lesson),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -494,6 +581,9 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
         countsForScore: false,
       ),
       onNext: () => _nextItemOrStage(lesson.activities.length, lesson),
+      onBack: _canGoBack(lesson)
+          ? () => _previousItemOrStage(lesson.activities.length, lesson)
+          : null,
     );
   }
 
@@ -522,6 +612,9 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
         countsForScore: true,
       ),
       onNext: () => _nextItemOrStage(lesson.assessment.length, lesson),
+      onBack: _canGoBack(lesson)
+          ? () => _previousItemOrStage(lesson.assessment.length, lesson)
+          : null,
     );
   }
 
@@ -684,6 +777,7 @@ class _QuestionStage extends StatelessWidget {
   final String explanation;
   final ValueChanged<String> onAnswer;
   final VoidCallback onNext;
+  final VoidCallback? onBack;
 
   const _QuestionStage({
     super.key,
@@ -701,6 +795,7 @@ class _QuestionStage extends StatelessWidget {
     required this.explanation,
     required this.onAnswer,
     required this.onNext,
+    this.onBack,
   });
 
   @override
@@ -708,8 +803,21 @@ class _QuestionStage extends StatelessWidget {
     eyebrow: eyebrow,
     title: title,
     footer: answered
-        ? _ContinueButton(label: 'Continue', onTap: onNext)
-        : null,
+        ? _LessonNavFooter(
+            onBack: onBack,
+            continueLabel: 'Continue',
+            onContinue: onNext,
+          )
+        : (onBack == null
+              ? null
+              : Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: onBack,
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    label: const Text('Back'),
+                  ),
+                )),
     child: ListView(
       children: [
         if (audioText != null) ...[
@@ -833,9 +941,111 @@ class _AnswerOption extends StatelessWidget {
   }
 }
 
+class _SpeakablePhraseCard extends StatelessWidget {
+  final String chinese;
+  final String pinyin;
+  final String english;
+  final VoidCallback onListen;
+
+  const _SpeakablePhraseCard({
+    required this.chinese,
+    required this.pinyin,
+    required this.english,
+    required this.onListen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundAlt,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  chinese,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  pinyin,
+                  style: const TextStyle(
+                    color: AppColors.cinnabar,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(english),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Listen',
+            onPressed: onListen,
+            icon: const Icon(Icons.volume_up_rounded, color: AppColors.cinnabar),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LessonNavFooter extends StatelessWidget {
+  final VoidCallback? onBack;
+  final String continueLabel;
+  final VoidCallback? onContinue;
+
+  const _LessonNavFooter({
+    this.onBack,
+    required this.continueLabel,
+    required this.onContinue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (onBack == null) {
+      return _ContinueButton(label: continueLabel, onTap: onContinue);
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back_rounded),
+            label: const Text('Back'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 2,
+          child: FilledButton(
+            onPressed: onContinue,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: Text(continueLabel),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _ContinueButton extends StatelessWidget {
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _ContinueButton({required this.label, required this.onTap});
 

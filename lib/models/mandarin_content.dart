@@ -63,6 +63,7 @@ class MandarinExample {
   final String chinese;
   final String pinyin;
   final String english;
+  final String? audioUrl;
   final ContentSourceRef source;
 
   const MandarinExample({
@@ -70,6 +71,7 @@ class MandarinExample {
     required this.chinese,
     required this.pinyin,
     required this.english,
+    this.audioUrl,
     this.source = kKidversityFirstPartySource,
   });
 }
@@ -81,6 +83,7 @@ class MandarinGrammarPattern {
   final String chinese;
   final String pinyin;
   final String english;
+  final String? audioUrl;
   final ContentSourceRef source;
 
   const MandarinGrammarPattern({
@@ -90,6 +93,7 @@ class MandarinGrammarPattern {
     required this.chinese,
     required this.pinyin,
     required this.english,
+    this.audioUrl,
     this.source = kKidversityFirstPartySource,
   });
 }
