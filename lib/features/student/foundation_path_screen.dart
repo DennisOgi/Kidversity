@@ -38,11 +38,7 @@ class FoundationPathScreen extends ConsumerWidget {
           ..sort((a, b) => a.sequence.compareTo(b.sequence));
         final unlocked = {
           for (final lesson in lessons)
-            if (isFoundationLessonUnlocked(
-              lesson,
-              completedLessonIds,
-              lessons,
-            ))
+            if (isFoundationLessonUnlocked(lesson, completedLessonIds, lessons))
               lesson.id,
         };
         MandarinCourseLesson? next;
@@ -275,9 +271,12 @@ class _HowItWorks extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      (Icons.play_circle_outline_rounded, 'Open the red lesson to learn'),
-      (Icons.lock_open_rounded, 'Finish it to unlock the next'),
-      (Icons.school_outlined, 'Practice keeps words fresh'),
+      (
+        Icons.replay_rounded,
+        'Warm-up recycles yesterday, last week, and earlier',
+      ),
+      (Icons.record_voice_over_rounded, 'Say it out loud before the quiz'),
+      (Icons.school_outlined, 'Daily review keeps the path warm'),
     ];
     return Wrap(
       spacing: 8,
@@ -494,7 +493,9 @@ class _LessonRow extends StatelessWidget {
                     ? Icons.play_arrow_rounded
                     : Icons.lock_outline_rounded,
                 size: 20,
-                color: playable || completed ? AppColors.paper : AppColors.muted,
+                color: playable || completed
+                    ? AppColors.paper
+                    : AppColors.muted,
               ),
             ),
             const SizedBox(width: 12),

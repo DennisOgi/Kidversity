@@ -260,10 +260,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       UserRole.reviewer,
                   onSelect: (role) => setState(() => _role = role),
                 ),
-                _ => _HowItWorksStep(
-                  key: const ValueKey('howto'),
-                  role: _role,
-                ),
+                _ => _HowItWorksStep(key: const ValueKey('howto'), role: _role),
               },
             ),
             const SizedBox(height: 30),
@@ -457,11 +454,7 @@ class _OnboardingPreview extends StatelessWidget {
                   ),
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 260),
-                    child: EmojiText(
-                      avatar,
-                      key: ValueKey(avatar),
-                      size: 38,
-                    ),
+                    child: EmojiText(avatar, key: ValueKey(avatar), size: 38),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -654,19 +647,19 @@ class _HowItWorksStep extends StatelessWidget {
     final items = student
         ? const [
             (
+              Icons.replay_rounded,
+              '1. Warm-up words you already know',
+              'From Lesson 2, each lesson pulls earlier words from yesterday, a few lessons back, and further back — so they stick.',
+            ),
+            (
               Icons.volume_up_rounded,
-              '1. Look, listen, repeat',
-              'Each lesson starts with a few words. Tap Listen, say the word out loud, then go to the next word.',
+              '2. Look, listen, then say it',
+              'Learn today’s words with audio, then cover the English and say them out loud.',
             ),
             (
               Icons.menu_book_rounded,
-              '2. The idea, then practice',
-              'A short explanation comes next, then a conversation and a few practice questions.',
-            ),
-            (
-              Icons.flag_rounded,
-              '3. Quest, then unlock',
-              'Finish five quest questions to complete the lesson. The next Path lesson opens after that.',
+              '3. Idea, conversation, practice, quest',
+              'See the pattern, hear a dialogue, practise, then finish the quest to unlock the next lesson.',
             ),
           ]
         : const [

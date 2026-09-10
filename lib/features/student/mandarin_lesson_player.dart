@@ -13,7 +13,16 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
 
-enum _FoundationStage { character, explain, dialogue, practice, quest, result }
+enum _FoundationStage {
+  warmup,
+  character,
+  explain,
+  dialogue,
+  speak,
+  practice,
+  quest,
+  result,
+}
 
 class MandarinLessonPlayer extends ConsumerStatefulWidget {
   final String lessonId;
@@ -26,7 +35,7 @@ class MandarinLessonPlayer extends ConsumerStatefulWidget {
 }
 
 class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
-  _FoundationStage _stage = _FoundationStage.character;
+  _FoundationStage? _activeStage;
   int _index = 0;
   int _questCorrect = 0;
   String? _selected;
@@ -52,22 +61,77 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
     );
   }
 
-  List<_FoundationStage> _stagesFor(MandarinCourseLesson lesson) =>
-      <_FoundationStage>[
-        _FoundationStage.character,
-        _FoundationStage.explain,
-        if (lesson.dialogue.isNotEmpty) _FoundationStage.dialogue,
-        if (lesson.activities.isNotEmpty) _FoundationStage.practice,
-        _FoundationStage.quest,
-        _FoundationStage.result,
-      ];
+  _FoundationStage _stageFor(List<_FoundationStage> stages) {
+    final active = _activeStage;
+    if (active != null && stages.contains(active)) return active;
+    return stages.first;
+  }
+
+  List<MandarinVocabItem> _recycleWords(MandarinCourseLesson lesson) {
+    final course = ref.read(mandarinCourseProvider).whenOrNull(data: (c) => c);
+    if (course == null || lesson.sequence <= 1) return const [];
+    final current = {for (final word in lesson.vocabulary) word.simplified};
+    final byLesson = <int, List<MandarinVocabItem>>{};
+    final seen = <String>{};
+    final prior = [...course.lessons]
+      ..sort((a, b) => a.sequence.compareTo(b.sequence));
+    for (final older in prior.where(
+      (item) => item.sequence < lesson.sequence,
+    )) {
+      final bucket = <MandarinVocabItem>[];
+      for (final word in older.vocabulary) {
+        if (current.contains(word.simplified) ||
+            seen.contains(word.simplified)) {
+          continue;
+        }
+        seen.add(word.simplified);
+        bucket.add(word);
+      }
+      if (bucket.isNotEmpty) byLesson[older.sequence] = bucket;
+    }
+    if (byLesson.isEmpty) return const [];
+    final picks = <MandarinVocabItem>[];
+    void takeFrom(int sequence) {
+      final bucket = byLesson[sequence];
+      if (bucket == null || bucket.isEmpty) return;
+      final word = bucket.first;
+      if (picks.any((item) => item.simplified == word.simplified)) return;
+      picks.add(word);
+    }
+
+    takeFrom(lesson.sequence - 1);
+    takeFrom(lesson.sequence - 3);
+    takeFrom(lesson.sequence - 7);
+    for (final sequence in byLesson.keys) {
+      if (picks.length >= 4) break;
+      takeFrom(sequence);
+    }
+    return picks.take(4).toList(growable: false);
+  }
+
+  List<_FoundationStage> _stagesFor(
+    MandarinCourseLesson lesson, [
+    List<MandarinVocabItem>? recycle,
+  ]) {
+    final recycled = recycle ?? _recycleWords(lesson);
+    return <_FoundationStage>[
+      if (recycled.isNotEmpty) _FoundationStage.warmup,
+      _FoundationStage.character,
+      _FoundationStage.explain,
+      if (lesson.dialogue.isNotEmpty) _FoundationStage.dialogue,
+      if (lesson.vocabulary.isNotEmpty) _FoundationStage.speak,
+      if (lesson.activities.isNotEmpty) _FoundationStage.practice,
+      _FoundationStage.quest,
+      _FoundationStage.result,
+    ];
+  }
 
   void _nextStage(MandarinCourseLesson lesson) {
     final stages = _stagesFor(lesson);
-    final next = stages.indexOf(_stage) + 1;
+    final next = stages.indexOf(_stageFor(stages)) + 1;
     if (next < stages.length) {
       setState(() {
-        _stage = stages[next];
+        _activeStage = stages[next];
         _index = 0;
         _selected = null;
         _answered = false;
@@ -78,7 +142,10 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
 
   int _lastIndexFor(_FoundationStage stage, MandarinCourseLesson lesson) {
     switch (stage) {
+      case _FoundationStage.warmup:
+        return (_recycleWords(lesson).length - 1).clamp(0, 999);
       case _FoundationStage.character:
+      case _FoundationStage.speak:
         return (lesson.vocabulary.length - 1).clamp(0, 999);
       case _FoundationStage.dialogue:
         return (lesson.dialogue.length - 1).clamp(0, 999);
@@ -93,18 +160,20 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
   }
 
   bool _canGoBack(MandarinCourseLesson lesson) {
-    if (_stage == _FoundationStage.result) return false;
+    final stages = _stagesFor(lesson);
+    final stage = _stageFor(stages);
+    if (stage == _FoundationStage.result) return false;
     if (_index > 0) return true;
-    return _stagesFor(lesson).indexOf(_stage) > 0;
+    return stages.indexOf(stage) > 0;
   }
 
   void _previousStage(MandarinCourseLesson lesson) {
     final stages = _stagesFor(lesson);
-    final prev = stages.indexOf(_stage) - 1;
+    final prev = stages.indexOf(_stageFor(stages)) - 1;
     if (prev < 0) return;
     final previous = stages[prev];
     setState(() {
-      _stage = previous;
+      _activeStage = previous;
       _index = _lastIndexFor(previous, lesson);
       _selected = null;
       _answered = false;
@@ -273,8 +342,10 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
     MandarinCourseLesson lesson,
     bool dyslexiaFriendly,
   ) {
-    final stages = _stagesFor(lesson);
-    final progress = (stages.indexOf(_stage) + 1) / stages.length;
+    final recycle = _recycleWords(lesson);
+    final stages = _stagesFor(lesson, recycle);
+    final stage = _stageFor(stages);
+    final progress = (stages.indexOf(stage) + 1) / stages.length;
     final scaffold = Scaffold(
       backgroundColor: AppColors.paper,
       appBar: AppBar(
@@ -296,12 +367,17 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(4),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 4,
-            color: AppColors.cinnabar,
-            backgroundColor: AppColors.line,
+          preferredSize: const Size.fromHeight(28),
+          child: Column(
+            children: [
+              LinearProgressIndicator(
+                value: progress,
+                minHeight: 4,
+                color: AppColors.cinnabar,
+                backgroundColor: AppColors.line,
+              ),
+              _StageStrip(stages: stages, current: stage),
+            ],
           ),
         ),
       ),
@@ -314,10 +390,33 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
               duration: MediaQuery.disableAnimationsOf(context)
                   ? Duration.zero
                   : const Duration(milliseconds: 220),
-              child: switch (_stage) {
-                _FoundationStage.character => _characterStage(lesson),
+              child: switch (stage) {
+                _FoundationStage.warmup => _wordCardStage(
+                  lesson: lesson,
+                  keyPrefix: 'warmup',
+                  items: recycle,
+                  eyebrow: 'Warm-up ${_index + 1} of ${recycle.length}',
+                  title: 'Words you already know',
+                  hint:
+                      'Hear them again. These words come back on purpose so they stick.',
+                  lastLabel: 'Start today’s words',
+                  nextLabel: 'Next',
+                ),
+                _FoundationStage.character => _wordCardStage(
+                  lesson: lesson,
+                  keyPrefix: 'character',
+                  items: lesson.vocabulary,
+                  eyebrow: 'Word ${_index + 1} of ${lesson.vocabulary.length}',
+                  title: 'Look, listen, then say it',
+                  hint: _index == 0
+                      ? 'Tap Listen, repeat the word out loud, then go to the next word.'
+                      : null,
+                  lastLabel: 'I’m ready for the idea',
+                  nextLabel: 'Next word',
+                ),
                 _FoundationStage.explain => _explainStage(lesson),
                 _FoundationStage.dialogue => _dialogueStage(lesson),
+                _FoundationStage.speak => _speakStage(lesson),
                 _FoundationStage.practice => _practiceStage(lesson),
                 _FoundationStage.quest => _questStage(lesson),
                 _FoundationStage.result => _resultStage(lesson),
@@ -341,22 +440,30 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
     );
   }
 
-  Widget _characterStage(MandarinCourseLesson lesson) {
-    final item = lesson.vocabulary[_index];
-    final last = _index + 1 >= lesson.vocabulary.length;
+  Widget _wordCardStage({
+    required MandarinCourseLesson lesson,
+    required String keyPrefix,
+    required List<MandarinVocabItem> items,
+    required String eyebrow,
+    required String title,
+    required String lastLabel,
+    required String nextLabel,
+    String? hint,
+  }) {
+    final safeIndex = items.isEmpty ? 0 : _index.clamp(0, items.length - 1);
+    final item = items[safeIndex];
+    final last = safeIndex + 1 >= items.length;
     return _LessonPage(
-      key: ValueKey('character-${item.id}'),
-      eyebrow: 'Word ${_index + 1} of ${lesson.vocabulary.length}',
-      title: 'Look, listen, then say it',
-      hint: _index == 0
-          ? 'Tap Listen, repeat the word out loud, then go to the next word.'
-          : null,
+      key: ValueKey('$keyPrefix-${item.id}'),
+      eyebrow: eyebrow,
+      title: title,
+      hint: hint,
       footer: _LessonNavFooter(
         onBack: _canGoBack(lesson)
-            ? () => _previousItemOrStage(lesson.vocabulary.length, lesson)
+            ? () => _previousItemOrStage(items.length, lesson)
             : null,
-        continueLabel: last ? 'I’m ready for the idea' : 'Next word',
-        onContinue: () => _nextItemOrStage(lesson.vocabulary.length, lesson),
+        continueLabel: last ? lastLabel : nextLabel,
+        onContinue: () => _nextItemOrStage(items.length, lesson),
       ),
       child: Column(
         children: [
@@ -416,13 +523,68 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
     );
   }
 
+  Widget _speakStage(MandarinCourseLesson lesson) {
+    final item =
+        lesson.vocabulary[_index.clamp(0, lesson.vocabulary.length - 1)];
+    final last = _index + 1 >= lesson.vocabulary.length;
+    return _LessonPage(
+      key: ValueKey('speak-${item.id}'),
+      eyebrow: 'Your turn ${_index + 1} of ${lesson.vocabulary.length}',
+      title: 'Cover the English. Say it out loud.',
+      hint: 'Listen once, look away from the meaning, then say the Chinese.',
+      footer: _LessonNavFooter(
+        onBack: _canGoBack(lesson)
+            ? () => _previousItemOrStage(lesson.vocabulary.length, lesson)
+            : null,
+        continueLabel: last ? 'I’m ready to practise' : 'I said it',
+        onContinue: () => _nextItemOrStage(lesson.vocabulary.length, lesson),
+      ),
+      child: Column(
+        children: [
+          const Spacer(),
+          Text(
+            item.simplified,
+            style: const TextStyle(
+              fontSize: 88,
+              height: 1.05,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            item.pinyin,
+            style: TextStyle(
+              fontSize: 28,
+              color: _toneColor(item.pinyin),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'English is hidden so you produce the word, not just read it.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.inkSoft, fontSize: 15),
+          ),
+          const Spacer(),
+          FilledButton.icon(
+            onPressed: () => _speak(item.simplified, audioUrl: item.audioUrl),
+            icon: const Icon(Icons.volume_up_rounded),
+            label: const Text('Hear it again'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _explainStage(MandarinCourseLesson lesson) => _LessonPage(
     key: const ValueKey('explain'),
     eyebrow: 'The idea',
     title: 'What this lesson is teaching',
     footer: _LessonNavFooter(
       onBack: _canGoBack(lesson) ? () => _previousStage(lesson) : null,
-      continueLabel: 'Try it',
+      continueLabel: lesson.dialogue.isNotEmpty
+          ? 'Hear the conversation'
+          : 'Now you say it',
       onContinue: () => _nextStage(lesson),
     ),
     child: ListView(
@@ -499,7 +661,9 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
         onBack: _canGoBack(lesson)
             ? () => _previousItemOrStage(lesson.dialogue.length, lesson)
             : null,
-        continueLabel: 'Next',
+        continueLabel: _index + 1 >= lesson.dialogue.length
+            ? 'Now you say it'
+            : 'Next line',
         onContinue: () => _nextItemOrStage(lesson.dialogue.length, lesson),
       ),
       child: Column(
@@ -683,6 +847,60 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
     if (RegExp('[ǎěǐǒǔǚ]').hasMatch(pinyin)) return AppColors.gold;
     if (RegExp('[àèìòùǜ]').hasMatch(pinyin)) return AppColors.cinnabar;
     return AppColors.inkSoft;
+  }
+}
+
+class _StageStrip extends StatelessWidget {
+  final List<_FoundationStage> stages;
+  final _FoundationStage current;
+
+  const _StageStrip({required this.stages, required this.current});
+
+  static const _labels = {
+    _FoundationStage.warmup: 'Warm-up',
+    _FoundationStage.character: 'Words',
+    _FoundationStage.explain: 'Idea',
+    _FoundationStage.dialogue: 'Talk',
+    _FoundationStage.speak: 'Say',
+    _FoundationStage.practice: 'Practice',
+    _FoundationStage.quest: 'Quest',
+    _FoundationStage.result: 'Done',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var i = 0; i < stages.length; i++) ...[
+              if (i > 0)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Text(
+                    '·',
+                    style: TextStyle(color: AppColors.inkSoft, fontSize: 11),
+                  ),
+                ),
+              Text(
+                _labels[stages[i]] ?? '',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: stages[i] == current
+                      ? FontWeight.w800
+                      : FontWeight.w500,
+                  color: stages[i] == current
+                      ? AppColors.cinnabar
+                      : AppColors.inkSoft,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -991,7 +1209,10 @@ class _SpeakablePhraseCard extends StatelessWidget {
           IconButton(
             tooltip: 'Listen',
             onPressed: onListen,
-            icon: const Icon(Icons.volume_up_rounded, color: AppColors.cinnabar),
+            icon: const Icon(
+              Icons.volume_up_rounded,
+              color: AppColors.cinnabar,
+            ),
           ),
         ],
       ),

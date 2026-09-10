@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
     const source = {
       vocab: ["vocab_items", "simplified_chinese"],
       dialogue: ["dialogues", "chinese"],
+      example: ["examples", "chinese"],
       activity: ["activities", "answer"],
       assessment: ["assessment_items", "correct_answer"],
     }[clip.item_type] as [string, string] | undefined;
