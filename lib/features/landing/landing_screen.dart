@@ -139,17 +139,12 @@ class _Hero extends StatelessWidget {
           color: AppColors.cinnabar,
         ),
         const SizedBox(height: 20),
-        ShaderMask(
-          shaderCallback: (rect) => const LinearGradient(
-            colors: [AppColors.cinnabar, AppColors.gold, AppColors.jade],
-          ).createShader(rect),
-          child: Text(
-            'Mandarin starts here.',
-            style: text.displayLarge?.copyWith(
-              color: Colors.white,
-              fontSize: wide ? 56 : 36,
-              height: 1.05,
-            ),
+        Text(
+          'Mandarin starts here.',
+          style: text.displayLarge?.copyWith(
+            color: AppColors.cinnabar,
+            fontSize: wide ? 56 : 36,
+            height: 1.05,
           ),
         ),
         Text(

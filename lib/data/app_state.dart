@@ -21,8 +21,7 @@ final mandarinContentRepositoryProvider = Provider<MandarinContentRepository>(
   (ref) => const HybridMandarinContentRepository(),
 );
 
-final mandarinCourseProvider = FutureProvider<MandarinCourse>((ref) async {
-  ref.watch(authControllerProvider);
+final mandarinCourseProvider = FutureProvider<MandarinCourse>((ref) {
   return ref.read(mandarinContentRepositoryProvider).loadCourse();
 });
 

@@ -313,27 +313,18 @@ class _HeroPanel extends StatelessWidget {
             color: AppColors.secondary,
           ),
           SizedBox(height: compact ? 12 : 22),
-          ShaderMask(
-            shaderCallback: (r) => const LinearGradient(
-              colors: [
-                AppColors.primary,
-                AppColors.accentPink,
-                AppColors.secondary,
-              ],
-            ).createShader(r),
-            child: Text(
-              compact
-                  ? (signup
-                        ? 'Create your\nKidversity path'
-                        : 'Sign in to\nKidversity')
-                  : (signup
-                        ? 'Start your Mandarin\npath today.'
-                        : 'Your Mandarin path,\nmade clear.'),
-              style: text.displayMedium?.copyWith(
-                color: Colors.white,
-                fontSize: compact ? 30 : 44,
-                height: 1.05,
-              ),
+          Text(
+            compact
+                ? (signup
+                      ? 'Create your\nKidversity path'
+                      : 'Sign in to\nKidversity')
+                : (signup
+                      ? 'Start your Mandarin\npath today.'
+                      : 'Your Mandarin path,\nmade clear.'),
+            style: text.displayMedium?.copyWith(
+              color: AppColors.cinnabar,
+              fontSize: compact ? 30 : 44,
+              height: 1.05,
             ),
           ),
           const SizedBox(height: 12),

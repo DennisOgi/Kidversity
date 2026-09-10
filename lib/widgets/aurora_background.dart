@@ -100,7 +100,7 @@ class _AuroraPainter extends CustomPainter {
       final paint = Paint()
         ..shader = RadialGradient(
           colors: [
-            orb.color.withValues(alpha: blurOrbs ? 0.22 : 0.14),
+            orb.color.withValues(alpha: blurOrbs ? 0.28 : 0.22),
             orb.color.withValues(alpha: 0.0),
           ],
         ).createShader(Rect.fromCircle(center: orb.center, radius: orb.radius));

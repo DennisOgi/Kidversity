@@ -13,6 +13,7 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
 
   @override
   Future<MandarinCourse> loadCourse() async {
+    final totalSw = Stopwatch()..start();
     final service = SupabaseService.instance;
     if (!service.isInitialized) {
       if (kDebugMode) {
@@ -25,12 +26,14 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
     }
 
     try {
+      final lessonSw = Stopwatch()..start();
       final lessonRows = await service.client
           .from('course_lessons')
           .select()
           .eq('course_id', MandarinFoundationData.courseId)
           .eq('status', 'approved')
           .order('sequence');
+      lessonSw.stop();
 
       if ((lessonRows as List).isEmpty) {
         if (kDebugMode) {
@@ -43,8 +46,11 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
       }
 
       final remote = await _mapRemoteCourse(service, lessonRows);
+      totalSw.stop();
       debugPrint(
-        'MandarinContentRepository: loaded ${remote.lessons.length} remote lessons.',
+        'MandarinContentRepository: loaded ${remote.lessons.length} remote lessons '
+        'in ${totalSw.elapsedMilliseconds}ms '
+        '(lessons query ${lessonSw.elapsedMilliseconds}ms).',
       );
       return remote;
     } catch (error) {
@@ -65,64 +71,70 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
     final lessonIds = lessonRows
         .map((row) => (row as Map)['id'] as String)
         .toList();
-    final vocabRows = await service.client
-        .from('vocab_items')
-        .select(
-          '*, content_sources(source_name, url, licence, dataset_version)',
-        )
-        .inFilter('lesson_id', lessonIds)
-        .order('sequence');
-    final exampleRows = await service.client
-        .from('examples')
-        .select(
-          '*, content_sources(source_name, url, licence, dataset_version)',
-        )
-        .inFilter('lesson_id', lessonIds)
-        .order('sequence');
-    final grammarRows = await service.client
-        .from('grammar_patterns')
-        .select(
-          '*, content_sources(source_name, url, licence, dataset_version)',
-        )
-        .inFilter('lesson_id', lessonIds);
-    final dialogueRows = await service.client
-        .from('dialogues')
-        .select(
-          '*, content_sources(source_name, url, licence, dataset_version)',
-        )
-        .inFilter('lesson_id', lessonIds)
-        .order('sequence');
-    final activityRows = await service.client
-        .from('activities')
-        .select(
-          '*, content_sources(source_name, url, licence, dataset_version)',
-        )
-        .inFilter('lesson_id', lessonIds)
-        .order('sequence');
-    final assessmentRows = await service.client
-        .from('assessment_items')
-        .select(
-          '*, content_sources(source_name, url, licence, dataset_version)',
-        )
-        .inFilter('lesson_id', lessonIds)
-        .order('sequence');
-    final audioRows = await service.client
-        .from('audio_clips')
-        .select('item_type, item_id, audio_url, storage_path')
-        .inFilter('lesson_id', lessonIds);
+    const sourceSelect =
+        '*, content_sources(source_name, url, licence, dataset_version)';
+    final tablesSw = Stopwatch()..start();
+    final fetched = await Future.wait([
+      service.client
+          .from('vocab_items')
+          .select(sourceSelect)
+          .inFilter('lesson_id', lessonIds)
+          .order('sequence'),
+      service.client
+          .from('examples')
+          .select(sourceSelect)
+          .inFilter('lesson_id', lessonIds)
+          .order('sequence'),
+      service.client
+          .from('grammar_patterns')
+          .select(sourceSelect)
+          .inFilter('lesson_id', lessonIds),
+      service.client
+          .from('dialogues')
+          .select(sourceSelect)
+          .inFilter('lesson_id', lessonIds)
+          .order('sequence'),
+      service.client
+          .from('activities')
+          .select(sourceSelect)
+          .inFilter('lesson_id', lessonIds)
+          .order('sequence'),
+      service.client
+          .from('assessment_items')
+          .select(sourceSelect)
+          .inFilter('lesson_id', lessonIds)
+          .order('sequence'),
+      service.client
+          .from('audio_clips')
+          .select('item_type, item_id, audio_url, storage_path')
+          .inFilter('lesson_id', lessonIds),
+    ]);
+    tablesSw.stop();
+    final vocabRows = fetched[0] as List;
+    final exampleRows = fetched[1] as List;
+    final grammarRows = fetched[2] as List;
+    final dialogueRows = fetched[3] as List;
+    final activityRows = fetched[4] as List;
+    final assessmentRows = fetched[5] as List;
+    final audioRows = fetched[6] as List;
+
+    // Keep storage paths raw. Signing 300+ clips here blocked the path screen.
     final audioUrls = <String, String?>{};
-    for (final raw in audioRows as List) {
+    for (final raw in audioRows) {
       final row = Map<String, dynamic>.from(raw as Map);
       final key = '${row['item_type']}:${row['item_id']}';
       final storagePath = row['storage_path'] as String?;
+      final direct = row['audio_url'] as String?;
       if (storagePath != null && storagePath.isNotEmpty) {
-        audioUrls[key] = await service.client.storage
-            .from('mandarin-audio')
-            .createSignedUrl(storagePath, 3600);
+        audioUrls[key] = 'storage:$storagePath';
       } else {
-        audioUrls[key] = row['audio_url'] as String?;
+        audioUrls[key] = direct;
       }
     }
+    debugPrint(
+      'MandarinContentRepository: content tables ${tablesSw.elapsedMilliseconds}ms; '
+      'deferred ${audioUrls.length} audio refs.',
+    );
 
     final lessons = lessonRows
         .map((raw) {
@@ -137,7 +149,7 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
             explanation: row['explanation'] as String? ?? '',
             status: _lessonStatus(row['status'] as String?),
             xpReward: (row['xp_reward'] as num?)?.toInt() ?? 100,
-            vocabulary: (vocabRows as List)
+            vocabulary: vocabRows
                 .where((item) => (item as Map)['lesson_id'] == id)
                 .map(
                   (item) => _vocab(
@@ -146,7 +158,7 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
                   ),
                 )
                 .toList(growable: false),
-            examples: (exampleRows as List)
+            examples: exampleRows
                 .where((item) => (item as Map)['lesson_id'] == id)
                 .map(
                   (item) => _example(
@@ -155,7 +167,7 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
                   ),
                 )
                 .toList(growable: false),
-            grammar: (grammarRows as List)
+            grammar: grammarRows
                 .where((item) => (item as Map)['lesson_id'] == id)
                 .map(
                   (item) => _grammar(
@@ -164,7 +176,7 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
                   ),
                 )
                 .toList(growable: false),
-            dialogue: (dialogueRows as List)
+            dialogue: dialogueRows
                 .where((item) => (item as Map)['lesson_id'] == id)
                 .map(
                   (item) => _dialogue(
@@ -173,7 +185,7 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
                   ),
                 )
                 .toList(growable: false),
-            activities: (activityRows as List)
+            activities: activityRows
                 .where((item) => (item as Map)['lesson_id'] == id)
                 .map(
                   (item) => _activity(
@@ -182,7 +194,7 @@ class HybridMandarinContentRepository implements MandarinContentRepository {
                   ),
                 )
                 .toList(growable: false),
-            assessment: (assessmentRows as List)
+            assessment: assessmentRows
                 .where((item) => (item as Map)['lesson_id'] == id)
                 .map(
                   (item) => _assessment(
