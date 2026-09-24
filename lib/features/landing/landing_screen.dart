@@ -177,19 +177,13 @@ class _HeroArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(17),
-      child: AspectRatio(
-        aspectRatio: tall ? 1080 / 950 : 1080 / 950,
-        child: ColoredBox(
-          color: const Color(0xFFF7F4EC),
-          child: Lottie.asset(
-            'assets/Student.json',
-            fit: BoxFit.contain,
-            repeat: true,
-            animate: !MediaQuery.disableAnimationsOf(context),
-          ),
-        ),
+    return AspectRatio(
+      aspectRatio: tall ? 1080 / 950 : 1080 / 950,
+      child: Lottie.asset(
+        'assets/Student.json',
+        fit: BoxFit.contain,
+        repeat: true,
+        animate: !MediaQuery.disableAnimationsOf(context),
       ),
     );
   }

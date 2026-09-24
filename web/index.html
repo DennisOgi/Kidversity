@@ -1,41 +1,85 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Kidversity — Mandarin lessons, Nigerian exam practice, and live class play for curious learners.">
-  <meta name="theme-color" content="#4433CC">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- iOS meta tags & icons -->
+  <title>Kidversity — Mandarin, Nigerian exams, labs, and live class play</title>
+  <meta name="description" content="Kidversity helps students practise Mandarin, Nigerian past questions, mental maths, and science labs. Teachers assign work, follow progress, and run live quizzes.">
+  <meta name="keywords" content="Kidversity, Mandarin for kids, Nigerian past questions, UTME practice, WASSCE, NECO, mental maths, science labs, live class quiz, online learning Nigeria">
+  <meta name="author" content="Kidversity">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="theme-color" content="#4433CC">
+  <link rel="canonical" href="https://kidversity.vercel.app/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Kidversity">
+  <meta property="og:locale" content="en_NG">
+  <meta property="og:url" content="https://kidversity.vercel.app/">
+  <meta property="og:title" content="Kidversity — Mandarin, Nigerian exams, labs, and live class play">
+  <meta property="og:description" content="Students practise Mandarin, past questions, mental maths, and science labs. Teachers set the work and follow the class.">
+  <meta property="og:image" content="https://kidversity.vercel.app/icons/Icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="Kidversity open-door mark">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Kidversity — Mandarin, Nigerian exams, labs, and live class play">
+  <meta name="twitter:description" content="Students practise Mandarin, past questions, mental maths, and science labs. Teachers set the work and follow the class.">
+  <meta name="twitter:image" content="https://kidversity.vercel.app/icons/Icon-512.png">
+
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Kidversity">
   <link rel="apple-touch-icon" href="icons/Icon-192.png?v=doorway">
-
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png?v=doorway"/>
-
-  <title>Kidversity</title>
   <link rel="manifest" href="manifest.json">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://kidversity.vercel.app/#organization",
+        "name": "Kidversity",
+        "url": "https://kidversity.vercel.app/",
+        "logo": "https://kidversity.vercel.app/icons/Icon-512.png",
+        "description": "A learning home for Mandarin, Nigerian exam practice, mental maths, science labs, and live class play."
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://kidversity.vercel.app/#website",
+        "url": "https://kidversity.vercel.app/",
+        "name": "Kidversity",
+        "description": "Mandarin lessons, Nigerian past questions, mental maths, science labs, and live quizzes for students and teachers.",
+        "publisher": { "@id": "https://kidversity.vercel.app/#organization" },
+        "inLanguage": "en"
+      },
+      {
+        "@type": "WebApplication",
+        "@id": "https://kidversity.vercel.app/#app",
+        "name": "Kidversity",
+        "url": "https://kidversity.vercel.app/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web, Android, iOS",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "NGN"
+        },
+        "description": "Students practise Mandarin, UTME, WASSCE, NECO, mental maths, and concept labs. Teachers assign work, follow Mandarin progress, and run live quizzes."
+      }
+    ]
+  }
+  </script>
 
   <style>
     * { box-sizing: border-box; }
@@ -92,11 +136,18 @@
     @media (prefers-reduced-motion: reduce) {
       .splash-bar i { animation: none; width: 100%; }
     }
+    noscript {
+      display: block;
+      max-width: 40rem;
+      margin: 3rem auto;
+      padding: 1.5rem;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: #20213b;
+      line-height: 1.55;
+    }
   </style>
 </head>
 <body>
-  <!-- Pulled in by supabase_flutter (passkeys_web plugin). Kidversity uses email/password only;
-       this script satisfies the plugin on web. Bundled locally — no GitHub CDN at runtime. -->
   <script src="passkeys/bundle.js"></script>
 
   <div id="loading" role="status" aria-label="Loading Kidversity">
@@ -105,6 +156,19 @@
     </svg>
     <div class="splash-bar"><i></i></div>
   </div>
+
+  <noscript>
+    <h1>Kidversity</h1>
+    <p>
+      Kidversity is a learning home for Mandarin lessons, Nigerian past questions
+      (UTME, WASSCE, NECO), mental maths, science labs, and live class play.
+      Students practise on their own phone or computer. Teachers set the work and follow the class.
+    </p>
+    <p>
+      Enable JavaScript to open the app, or visit
+      <a href="https://kidversity.vercel.app/">kidversity.vercel.app</a>.
+    </p>
+  </noscript>
 
   <script>
     window.__kidversityBootStartedAt = performance.now();

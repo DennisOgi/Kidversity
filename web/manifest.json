@@ -5,8 +5,10 @@
     "display": "standalone",
     "background_color": "#F2F5F8",
     "theme_color": "#4433CC",
-    "description": "Many learning paths in one curious home — Mandarin, Nigerian exams, play, and more.",
+    "description": "Mandarin lessons, Nigerian past questions, mental maths, science labs, and live class quizzes for students and teachers.",
     "orientation": "portrait-primary",
+    "lang": "en",
+    "categories": ["education", "kids"],
     "prefer_related_applications": false,
     "icons": [
         {
