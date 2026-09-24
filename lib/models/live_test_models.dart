@@ -300,5 +300,5 @@ class LiveQuizTemplate {
     ],
   );
 
-  static const all = [mandarinQuick];
+  static const all = [mandarinQuick, mathsWarmup];
 }

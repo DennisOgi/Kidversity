@@ -6,7 +6,9 @@ import '../../data/app_state.dart';
 import '../../data/auth_state.dart';
 import '../../theme/app_colors.dart';
 import '../../models/user_preferences.dart';
+import '../../router/navigation.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/class_board_card.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
 import 'join_class.dart';
@@ -83,7 +85,7 @@ class ProfileScreen extends ConsumerWidget {
                 style: text.headlineSmall?.copyWith(color: Colors.white),
               ),
               Text(
-                'Mandarin Foundation learner',
+                'Kidversity learner',
                 style: text.bodyMedium?.copyWith(
                   color: Colors.white.withValues(alpha: 0.9),
                 ),
@@ -93,6 +95,34 @@ class ProfileScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 22),
         const _FoundationProfileProgress(),
+        const SizedBox(height: 12),
+        GlassCard(
+          child: Row(
+            children: [
+              const SoftIcon(icon: Icons.insights_rounded, size: 38),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Progress report', style: text.titleMedium),
+                    Text(
+                      'Mandarin, exams, and maths in one page. Print it or save a PDF for home.',
+                      style: text.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: () => context.push(AppRoutes.studentReport),
+                child: const Text('Open'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 22),
+        const _ClassBoardSection(),
         const SizedBox(height: 22),
         const JoinClassCard(),
         const SizedBox(height: 22),
@@ -162,6 +192,45 @@ class _FoundationProfileProgress extends ConsumerWidget {
   }
 }
 
+class _ClassBoardSection extends ConsumerWidget {
+  const _ClassBoardSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final board = ref.watch(classBoardProvider);
+    final prefs =
+        ref.watch(userPreferencesProvider).whenOrNull(data: (d) => d) ??
+        const UserPreferences();
+
+    Future<void> setOptIn(bool value) async {
+      await SupabaseService.instance.saveUserPreferences(
+        prefs.copyWith(classLeaderboard: value),
+      );
+      ref.invalidate(userPreferencesProvider);
+      ref.invalidate(classBoardProvider);
+    }
+
+    return board.when(
+      loading: () => const GlassCard(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: LoadingIndicator(message: 'Opening the class board…'),
+        ),
+      ),
+      error: (_, _) => GlassCard(
+        child: ErrorDisplay(
+          message: 'The class board could not be loaded.',
+          onRetry: () => ref.invalidate(classBoardProvider),
+        ),
+      ),
+      data: (snap) => ClassBoardCard(
+        snapshot: snap,
+        onOptInChanged: setOptIn,
+      ),
+    );
+  }
+}
+
 class _SettingsSection extends ConsumerWidget {
   const _SettingsSection();
 
@@ -174,6 +243,7 @@ class _SettingsSection extends ConsumerWidget {
     Future<void> update(UserPreferences next) async {
       await SupabaseService.instance.saveUserPreferences(next);
       ref.invalidate(userPreferencesProvider);
+      ref.invalidate(classBoardProvider);
     }
 
     return GlassCard(
@@ -197,6 +267,16 @@ class _SettingsSection extends ConsumerWidget {
               value: prefs.showCaptions,
               activeThumbColor: AppColors.primary,
               onChanged: (v) => update(prefs.copyWith(showCaptions: v)),
+            ),
+          ),
+          const Divider(indent: 16, endIndent: 16, height: 1),
+          _SettingRow(
+            icon: Icons.groups_rounded,
+            label: 'Show me on the class board',
+            trailing: Switch(
+              value: prefs.classLeaderboard,
+              activeThumbColor: AppColors.primary,
+              onChanged: (v) => update(prefs.copyWith(classLeaderboard: v)),
             ),
           ),
         ],

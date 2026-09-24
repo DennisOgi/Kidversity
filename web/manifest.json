@@ -1,11 +1,11 @@
 {
-    "name": "Kidversity Mandarin Foundation",
+    "name": "Kidversity",
     "short_name": "Kidversity",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#FFFAF3",
-    "theme_color": "#C94132",
-    "description": "A 30-lesson, human-reviewed Mandarin foundation course for children.",
+    "background_color": "#F2F5F8",
+    "theme_color": "#4433CC",
+    "description": "Many learning paths in one curious home — Mandarin, Nigerian exams, play, and more.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

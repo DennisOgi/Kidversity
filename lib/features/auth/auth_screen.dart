@@ -10,7 +10,6 @@ import '../../router/navigation.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../services/supabase_service.dart';
-import '../../widgets/aurora_background.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
 import '../../widgets/motion.dart';
@@ -168,8 +167,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     final wide = MediaQuery.sizeOf(context).width > 880;
 
     return Scaffold(
-      body: AuroraBackground(
-        child: SafeArea(
+      backgroundColor: AppColors.paper,
+      body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -283,7 +282,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             ],
           ),
         ),
-      ),
     );
   }
 }
@@ -319,10 +317,10 @@ class _HeroPanel extends StatelessWidget {
                       ? 'Create your\nKidversity path'
                       : 'Sign in to\nKidversity')
                 : (signup
-                      ? 'Start your Mandarin\npath today.'
-                      : 'Your Mandarin path,\nmade clear.'),
+                      ? 'Join Kidversity\ntoday.'
+                      : 'Welcome back to\nKidversity.'),
             style: text.displayMedium?.copyWith(
-              color: AppColors.cinnabar,
+              color: AppColors.ink,
               fontSize: compact ? 30 : 44,
               height: 1.05,
             ),
@@ -330,8 +328,8 @@ class _HeroPanel extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             signup
-                ? 'Set up a learner or teacher account, then follow one clear 30-lesson path.'
-                : 'Follow guided Mandarin lessons with clear audio, practice, and quests.',
+                ? 'Set up a learner or teacher account, then explore Mandarin, exams, and play.'
+                : 'Pick up where you left off across paths, practice, and class play.',
             style: text.bodyLarge?.copyWith(fontSize: compact ? 14.5 : 16.5),
           ),
           if (!compact) ...[
@@ -340,9 +338,9 @@ class _HeroPanel extends StatelessWidget {
               spacing: 10,
               runSpacing: 10,
               children: [
-                _MiniStat(emoji: '路', label: '30-lesson path'),
+                _MiniStat(emoji: '路', label: 'Many paths'),
                 _MiniStat(emoji: '✓', label: 'Human reviewed'),
-                _MiniStat(emoji: '听', label: 'Controlled audio'),
+                _MiniStat(emoji: '🇳🇬', label: 'Exam practice'),
               ],
             ),
           ],
@@ -361,7 +359,7 @@ class _MiniStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.75),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppColors.line),
       ),
@@ -425,7 +423,6 @@ class _FormCard extends StatelessWidget {
     return FadeInUp(
       delay: const Duration(milliseconds: 160),
       child: GlassCard(
-        frosted: true,
         padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
         shadow: AppTheme.softShadow,
         child: Column(

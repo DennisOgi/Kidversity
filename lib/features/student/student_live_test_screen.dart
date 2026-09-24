@@ -28,6 +28,7 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
   String? _joinError;
   bool _submitting = false;
   bool _finished = false;
+  LiveTest? _resultTest;
 
   @override
   void initState() {
@@ -66,7 +67,20 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
     if (_submitting) return;
     setState(() => _submitting = true);
     await LiveTestService.instance.submitTest(test.id);
-    if (mounted) setState(() => _finished = true);
+    final revealed = await LiveTestService.instance.fetchTest(test.id);
+    if (!mounted) return;
+    final data = revealed.data;
+    final marked =
+        data != null &&
+        data.questions.isNotEmpty &&
+        data.questions.every(
+          (question) => question.options.any((option) => option.isCorrect),
+        );
+    setState(() {
+      if (marked) _resultTest = data;
+      _finished = true;
+      _submitting = false;
+    });
   }
 
   @override
@@ -135,7 +149,14 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
           if (!_joined) return const Center(child: CircularProgressIndicator());
 
           if (_finished || test.status == LiveTestStatus.ended) {
-            return _ResultsView(test: test, answers: _answers);
+            final result = _resultTest ?? test;
+            final marked = result.questions.every(
+              (question) => question.options.any((option) => option.isCorrect),
+            );
+            if (!marked) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return _ResultsView(test: result, answers: _answers);
           }
 
           if (test.questions.isEmpty) {
@@ -193,7 +214,9 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
                         child: _AnswerTile(
                           label: opt.label,
                           selected: selected == opt.id,
-                          onTap: () => _selectAnswer(test, q, opt.id),
+                          onTap: selected == null
+                              ? () => _selectAnswer(test, q, opt.id)
+                              : null,
                         ),
                       ),
                   ],
@@ -242,7 +265,7 @@ class _StudentLiveTestScreenState extends ConsumerState<StudentLiveTestScreen> {
 class _AnswerTile extends StatelessWidget {
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _AnswerTile({
     required this.label,

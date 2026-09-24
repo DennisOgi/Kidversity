@@ -2,12 +2,14 @@
 class UserPreferences {
   final bool dyslexiaFriendly;
   final bool showCaptions;
+  final bool classLeaderboard;
   final String? gender;
   final int? age;
 
   const UserPreferences({
     this.dyslexiaFriendly = false,
     this.showCaptions = true,
+    this.classLeaderboard = false,
     this.gender,
     this.age,
   });
@@ -17,6 +19,7 @@ class UserPreferences {
     return UserPreferences(
       dyslexiaFriendly: json['dyslexia_friendly'] as bool? ?? false,
       showCaptions: json['show_captions'] as bool? ?? true,
+      classLeaderboard: json['class_leaderboard'] as bool? ?? false,
       gender: json['gender'] as String?,
       age: (json['age'] as num?)?.toInt(),
     );
@@ -25,6 +28,7 @@ class UserPreferences {
   Map<String, dynamic> toJson() => {
     'dyslexia_friendly': dyslexiaFriendly,
     'show_captions': showCaptions,
+    'class_leaderboard': classLeaderboard,
     if (gender != null) 'gender': gender,
     if (age != null) 'age': age,
   };
@@ -32,11 +36,13 @@ class UserPreferences {
   UserPreferences copyWith({
     bool? dyslexiaFriendly,
     bool? showCaptions,
+    bool? classLeaderboard,
     String? gender,
     int? age,
   }) => UserPreferences(
     dyslexiaFriendly: dyslexiaFriendly ?? this.dyslexiaFriendly,
     showCaptions: showCaptions ?? this.showCaptions,
+    classLeaderboard: classLeaderboard ?? this.classLeaderboard,
     gender: gender ?? this.gender,
     age: age ?? this.age,
   );

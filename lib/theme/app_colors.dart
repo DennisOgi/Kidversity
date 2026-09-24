@@ -1,85 +1,82 @@
 import 'package:flutter/material.dart';
 
-/// Central color palette for Kidversity.
-///
-/// The palette is intentionally playful (great for K-12) while staying
-/// premium and accessible (AA contrast on the primary actions).
+/// Kidversity light theme. Neutral surfaces, indigo actions, world accents.
 class AppColors {
   AppColors._();
 
-  // Mandarin Foundation brand
-  static const Color cinnabar = Color(0xFFC44536);
-  static const Color cinnabarDark = Color(0xFF943126);
-  static const Color cinnabarSoft = Color(0xFFF5DED8);
-  static const Color paper = Color(0xFFF7F1E8);
-  static const Color gold = Color(0xFFE8B84A);
-  static const Color jade = Color(0xFF2F6B5A);
+  static const Color primary = Color(0xFF4433CC);
+  static const Color primaryPressed = Color(0xFF3526A6);
+  static const Color primarySoft = Color(0xFFEEEBFF);
+  static const Color primaryTint = primarySoft;
 
-  static const Color primary = cinnabar;
-  static const Color primaryDark = cinnabarDark;
-  static const Color primarySoft = cinnabarSoft;
-
-  static const Color secondary = Color(0xFFFF7A59); // coral
-  static const Color secondarySoft = Color(0xFFFFE6DE);
-
-  static const Color accentTeal = Color(0xFF00CEC9);
-  static const Color accentYellow = Color(0xFFFFC233);
-  static const Color accentPink = Color(0xFFFF5DA2);
-  static const Color accentBlue = Color(0xFF4DA3FF);
-
-  // Semantic
-  static const Color success = Color(0xFF22C55E);
-  static const Color successSoft = Color(0xFFDCFCE7);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color danger = Color(0xFFEF4444);
-  static const Color dangerSoft = Color(0xFFFEE2E2);
-
-  // Neutrals
-  static const Color ink = Color(0xFF1A1410);
-  static const Color inkSoft = Color(0xFF5B5048);
-  static const Color muted = Color(0xFF887A70);
-  static const Color line = Color(0xFFE5D9CA);
-  static const Color surface = Color(0xFFFFFCF7);
+  static const Color ink = Color(0xFF20213B);
+  static const Color inkSoft = Color(0xFF595B72);
+  static const Color muted = Color(0xFF73778B);
+  static const Color line = Color(0xFFDADDEA);
+  static const Color controlBorder = Color(0xFF73778B);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color paper = Color(0xFFF5F6FB);
   static const Color background = paper;
-  static const Color backgroundAlt = Color(0xFFEFE5D8);
+  static const Color backgroundAlt = Color(0xFFEEEFF6);
 
-  // Gradients
+  static const Color spark = Color(0xFFF5C56A);
+  static const Color worldLanguage = Color(0xFF6751B5);
+  static const Color worldExams = Color(0xFF2456A6);
+  static const Color worldPlay = Color(0xFF916015);
+
+  static const Color success = Color(0xFF16714A);
+  static const Color successSoft = Color(0xFFE5F6EE);
+  static const Color warning = Color(0xFF865B00);
+  static const Color danger = Color(0xFFB42332);
+  static const Color dangerSoft = Color(0xFFFDECEE);
+
+  // Names kept so existing screens follow the new system.
+  static const Color cinnabar = primary;
+  static const Color cinnabarDark = primaryPressed;
+  static const Color cinnabarSoft = primarySoft;
+  static const Color emerald = primary;
+  static const Color emeraldDark = primaryPressed;
+  static const Color emeraldSoft = primarySoft;
+  static const Color coral = primary;
+  static const Color coralDark = primaryPressed;
+  static const Color coralSoft = primarySoft;
+  static const Color jade = success;
+  static const Color gold = spark;
+  static const Color sun = spark;
+  static const Color cobalt = worldExams;
+
+  static const Color primaryDark = primaryPressed;
+  static const Color secondary = worldLanguage;
+  static const Color secondarySoft = Color(0xFFEDE8F8);
+  static const Color accentTeal = Color(0xFF0F766E);
+  static const Color accentYellow = spark;
+  static const Color accentPink = Color(0xFF9D4E6C);
+  static const Color accentBlue = worldExams;
+
   static const LinearGradient brandGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFD35B49), cinnabar, cinnabarDark],
+    colors: [primary, primaryPressed],
   );
-
+  static const LinearGradient energyGradient = brandGradient;
+  static const LinearGradient sunsetGradient = brandGradient;
   static const LinearGradient mandarinGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF38271E), ink, Color(0xFF562A22)],
+    colors: [Color(0xFF2A2458), Color(0xFF17142E)],
   );
-
-  static const LinearGradient sunsetGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFFF9A6C), Color(0xFFFF7A59)],
-  );
-
   static const LinearGradient tealGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF2BE3D8), Color(0xFF00CEC9)],
+    colors: [worldExams, Color(0xFF1A3E78)],
   );
-
   static const LinearGradient goldGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFFFD86B), Color(0xFFFFB020)],
+    colors: [Color(0xFFE8B85A), spark],
+  );
+  static const LinearGradient examGradient = tealGradient;
+  static const LinearGradient playGradient = LinearGradient(
+    colors: [Color(0xFF8A5A12), worldPlay],
   );
 
   static const List<Color> subjectColors = [
-    cinnabar,
-    jade,
-    gold,
-    Color(0xFF527A8E),
-    Color(0xFF9B5A6D),
-    Color(0xFFB9793B),
+    primary,
+    worldLanguage,
+    worldExams,
+    worldPlay,
+    success,
   ];
 }

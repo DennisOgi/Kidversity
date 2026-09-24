@@ -7,7 +7,9 @@ import '../../models/models.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/class_board_card.dart';
 import '../../widgets/common.dart';
+import '../../widgets/empty_panel.dart';
 import '../../widgets/error_boundary.dart';
 
 class StudentsScreen extends ConsumerWidget {
@@ -24,11 +26,13 @@ class StudentsScreen extends ConsumerWidget {
         Text('Your class', style: text.headlineSmall?.copyWith(fontSize: 26)),
         const SizedBox(height: 6),
         Text(
-          'Share the code. Learners join from Me → Join your class.',
+          'Invite learners, then open Progress to see who is moving, struggling, or needs a check-in.',
           style: text.bodyMedium,
         ),
         const SizedBox(height: 18),
         const _InviteCard(),
+        const SizedBox(height: 22),
+        const _ClassBoardSection(),
         const SizedBox(height: 22),
         Text('Learners', style: text.titleLarge),
         const SizedBox(height: 10),
@@ -43,12 +47,11 @@ class StudentsScreen extends ConsumerWidget {
             onRetry: () => ref.invalidate(rosterProvider),
           )
         else if (roster.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              'No learners yet. Copy the code above and send it to your class.',
-              style: text.bodyMedium?.copyWith(color: AppColors.muted),
-            ),
+          const EmptyPanel(
+            icon: Icons.person_add_alt_1_rounded,
+            title: 'No learners yet',
+            body:
+                'Copy the code above. Students open Profile, tap Join your class, and type it in. Their names land here.',
           )
         else
           for (final s in roster) _StudentCard(student: s),
@@ -130,13 +133,19 @@ class _InviteCard extends ConsumerWidget {
                           ),
                         )
                       : Text(
-                          code.isEmpty ? '——————' : code,
+                          code.isEmpty ? 'No code yet' : code,
                           style: text.headlineSmall?.copyWith(
                             color: Colors.white,
-                            letterSpacing:
-                                MediaQuery.sizeOf(context).width < 400 ? 3 : 8,
-                            fontSize:
-                                MediaQuery.sizeOf(context).width < 400 ? 22 : 28,
+                            letterSpacing: code.isEmpty
+                                ? 0
+                                : (MediaQuery.sizeOf(context).width < 400
+                                      ? 3
+                                      : 8),
+                            fontSize: code.isEmpty
+                                ? 20
+                                : (MediaQuery.sizeOf(context).width < 400
+                                      ? 22
+                                      : 28),
                           ),
                         ),
                 ),
@@ -157,8 +166,10 @@ class _InviteCard extends ConsumerWidget {
               const SizedBox(width: 8),
               _IconAction(
                 icon: Icons.refresh_rounded,
-                tooltip: 'New code',
-                onTap: info == null ? null : regenerate,
+                tooltip: info == null ? 'Try again' : 'New code',
+                onTap: info == null
+                    ? () => ref.invalidate(teacherClassInfoProvider)
+                    : regenerate,
               ),
             ],
           ),
@@ -231,6 +242,30 @@ class _StudentCard extends StatelessWidget {
           const Icon(Icons.check_circle_outline_rounded, color: AppColors.jade),
         ],
       ),
+    );
+  }
+}
+
+class _ClassBoardSection extends ConsumerWidget {
+  const _ClassBoardSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final board = ref.watch(classBoardProvider);
+    return board.when(
+      loading: () => const GlassCard(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: LoadingIndicator(message: 'Opening the class board…'),
+        ),
+      ),
+      error: (_, _) => GlassCard(
+        child: ErrorDisplay(
+          message: 'The class board could not be loaded.',
+          onRetry: () => ref.invalidate(classBoardProvider),
+        ),
+      ),
+      data: (snap) => ClassBoardCard(snapshot: snap, teacherView: true),
     );
   }
 }

@@ -250,7 +250,7 @@ class SupabaseService {
           .insert({
             'name': className ?? 'My Class',
             'teacher_id': teacherId,
-            'description': 'Your Mandarin Foundation class',
+            'description': 'Your Kidversity class',
           })
           .select('id')
           .single();
@@ -407,7 +407,7 @@ class SupabaseService {
             avatarEmoji: profile['avatar_emoji'] as String? ?? '🦊',
             overallMastery: average,
             lessonsDone: scores.length,
-            strength: 'Mandarin Foundation',
+            strength: 'Kidversity',
             growthArea: 'Continue the path',
             weeklyActivity: const [],
           ),

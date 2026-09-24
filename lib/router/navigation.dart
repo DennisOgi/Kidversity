@@ -14,7 +14,16 @@ abstract final class AppRoutes {
   static const onboarding = '/onboarding';
   static const studentPath = '/student/path';
   static const studentHome = studentPath;
+  static const studentMandarin = '/student/mandarin';
   static const studentPractice = '/student/practice';
+  static const studentPlay = '/student/play';
+  static const studentMaths = '/student/maths';
+  static const studentLabs = '/student/labs';
+  static String studentLab(String id) => '/student/labs/$id';
+  static String studentRopeBoard(String roomId) =>
+      '/student/rope/$roomId/board';
+  static const studentExams = '/student/exams';
+  static const studentExamSession = '/student/exams/session';
   static const studentProfile = '/student/profile';
   static const studentRewards = '/student/rewards';
   static const studentExplore = '/student/explore';
@@ -22,12 +31,20 @@ abstract final class AppRoutes {
   static const teacherProgress = '/teacher/progress';
   static const teacherCreate = '/teacher/create';
   static const teacherLive = '/teacher/live';
+  static const teacherLiveCompose = '/teacher/live/compose';
+  static const teacherPlay = '/teacher/play';
+  static const teacherAssign = '/teacher/assign';
+  static const studentReport = '/student/report';
   static const reviewerHome = '/reviewer/queue';
+
+  static String teacherReport(String studentId) => '/teacher/report/$studentId';
 
   static String studentLesson(String lessonId) => '/student/lesson/$lessonId';
   static String mandarinLesson(String lessonId) =>
       '/student/foundation/$lessonId';
   static String studentLiveTest(String testId) => '/student/live-test/$testId';
+  static String studentRope(String roomId) => '/student/rope/$roomId';
+  static String teacherRope(String roomId) => '/teacher/rope/$roomId';
   static String teacherLiveMonitor(String testId) =>
       '/teacher/live/$testId/monitor';
 }
@@ -80,6 +97,15 @@ void enterRoleSpace(
   context.go(route);
 }
 
+/// Sign-in uses [go], which replaces the stack, so exam practice has nothing to pop.
+void popOrGo(BuildContext context, String fallback) {
+  if (context.canPop()) {
+    context.pop();
+    return;
+  }
+  context.go(fallback);
+}
+
 /// After sign-in / sign-up — honour ?redirect= when onboarding is done.
 void continueAfterAuth(
   BuildContext context,
@@ -121,13 +147,15 @@ void continueAfterAuth(
   context.go(AppRoutes.home);
 }
 
-/// Homepage feature cards — deep-link into live app areas.
+/// Homepage path tiles — deep-link into live app areas.
 void openLandingFeature(BuildContext context, WidgetRef ref, int featureIndex) {
   switch (featureIndex) {
     case 0:
+      enterRoleSpace(context, ref, UserRole.student, AppRoutes.studentMandarin);
     case 1:
+      enterRoleSpace(context, ref, UserRole.student, AppRoutes.studentExams);
     case 2:
-      enterStudentSpace(context, ref);
+      enterRoleSpace(context, ref, UserRole.student, AppRoutes.studentPlay);
     case 3:
       enterRoleSpace(context, ref, UserRole.teacher, AppRoutes.teacherProgress);
     default:

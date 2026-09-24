@@ -9,16 +9,27 @@ import '../features/auth/auth_screen.dart';
 import '../features/landing/landing_screen.dart';
 import '../features/legal/legal_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
+import '../features/reports/progress_report_screen.dart';
+import '../features/teacher/assignments_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/reviewer/review_queue_screen.dart';
 import '../features/student/foundation_path_screen.dart';
+import '../features/student/student_home_screen.dart';
 import '../features/student/foundation_practice_screen.dart';
 import '../features/student/mandarin_lesson_player.dart';
+import '../features/student/labs/lab_screen.dart';
+import '../features/student/labs/labs_hub_screen.dart';
+import '../features/student/maths_path_screen.dart';
+import '../features/student/past_questions_hub_screen.dart';
+import '../features/student/past_questions_session_screen.dart';
 import '../features/student/profile_screen.dart';
+import '../features/student/rope_pull_screen.dart';
 import '../features/student/student_live_test_screen.dart';
+import '../models/past_questions_models.dart';
 import '../features/teacher/foundation_progress_screen.dart';
 import '../features/teacher/students_screen.dart';
+import '../features/teacher/teacher_live_compose_screen.dart';
 import '../features/teacher/teacher_live_hub_screen.dart';
 import '../features/teacher/teacher_live_monitor_screen.dart';
 import '../theme/app_colors.dart';
@@ -30,16 +41,23 @@ const _studentNav = [
   NavItem(
     Icons.route_outlined,
     Icons.route_rounded,
-    'Path',
+    'Home',
     '/student/path',
-    'Your Mandarin Foundation journey',
+    'Your next step',
   ),
   NavItem(
     Icons.school_outlined,
     Icons.school_rounded,
     'Practice',
     '/student/practice',
-    'Build confidence with every word',
+    'Review, exams, and drills',
+  ),
+  NavItem(
+    Icons.sports_esports_outlined,
+    Icons.sports_esports_rounded,
+    'Play',
+    '/student/play',
+    'Rope Pull with friends',
   ),
   NavItem(
     Icons.person_outline_rounded,
@@ -59,11 +77,18 @@ const _teacherNav = [
     'Class code & roster',
   ),
   NavItem(
-    Icons.route_outlined,
-    Icons.route_rounded,
+    Icons.insights_outlined,
+    Icons.insights_rounded,
     'Progress',
     '/teacher/progress',
-    'Foundation lesson map',
+    'Learning movement & check-ins',
+  ),
+  NavItem(
+    Icons.assignment_outlined,
+    Icons.assignment_rounded,
+    'Assign',
+    '/teacher/assign',
+    'Set work and see who finished',
   ),
   NavItem(
     Icons.bolt_outlined,
@@ -223,6 +248,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/student/path',
         builder: (_, _) =>
+            _studentShell('/student/path', const StudentHomeScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.studentMandarin,
+        builder: (_, _) =>
             _studentShell('/student/path', const FoundationPathScreen()),
       ),
       GoRoute(
@@ -231,6 +261,60 @@ final routerProvider = Provider<GoRouter>((ref) {
           '/student/practice',
           const FoundationPracticeScreen(),
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.studentExams,
+        builder: (_, _) => const PastQuestionsHubScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.studentExamSession,
+        builder: (_, state) {
+          final config = state.extra;
+          if (config is! PastQuestionsSessionConfig) {
+            return const PastQuestionsHubScreen();
+          }
+          return PastQuestionsSessionScreen(config: config);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.studentLabs,
+        builder: (_, _) =>
+            _studentShell('/student/path', const LabsHubScreen()),
+      ),
+      GoRoute(
+        path: '/student/labs/:id',
+        builder: (_, state) => _studentShell(
+          '/student/path',
+          LabScreen(id: state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.studentMaths,
+        builder: (_, state) => _studentShell(
+          '/student/path',
+          MathsPathScreen(
+            key: ValueKey(state.uri.toString()),
+            startLevel: int.tryParse(state.uri.queryParameters['level'] ?? ''),
+            assignmentId: state.uri.queryParameters['assignment'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/student/play',
+        builder: (_, _) =>
+            _studentShell('/student/play', const RopePullHubScreen()),
+      ),
+      GoRoute(
+        path: '/student/rope/:id/board',
+        builder: (_, state) => RopePullRoomScreen(
+          roomId: state.pathParameters['id']!,
+          boardMode: true,
+        ),
+      ),
+      GoRoute(
+        path: '/student/rope/:id',
+        builder: (_, state) =>
+            RopePullRoomScreen(roomId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/student/profile',
@@ -263,6 +347,45 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/teacher/live',
         builder: (_, _) =>
             _teacherShell('/teacher/live', const TeacherLiveHubScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.teacherAssign,
+        builder: (_, _) =>
+            _teacherShell(AppRoutes.teacherAssign, const AssignmentsScreen()),
+      ),
+      GoRoute(
+        path: '/teacher/report/:id',
+        builder: (_, state) => ProgressReportScreen(
+          studentId: state.pathParameters['id'],
+          backRoute: AppRoutes.teacherAssign,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.studentReport,
+        builder: (_, _) =>
+            const ProgressReportScreen(backRoute: AppRoutes.studentProfile),
+      ),
+      GoRoute(
+        path: '/teacher/play',
+        builder: (_, _) => _teacherShell(
+          '/teacher/live',
+          const RopePullHubScreen(hostPlays: false, boardByDefault: true),
+        ),
+      ),
+      GoRoute(
+        path: '/teacher/rope/:id',
+        builder: (_, state) => RopePullRoomScreen(
+          roomId: state.pathParameters['id']!,
+          boardMode: true,
+          closeRoute: AppRoutes.teacherPlay,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.teacherLiveCompose,
+        builder: (_, _) => _teacherShell(
+          '/teacher/live',
+          const TeacherLiveComposeScreen(),
+        ),
       ),
       GoRoute(
         path: '/teacher/live/:id/monitor',

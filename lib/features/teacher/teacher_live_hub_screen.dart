@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/app_state.dart';
 import '../../models/live_test_models.dart';
+import '../../router/navigation.dart';
 import '../../services/live_test_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
 import '../../widgets/live_test_widgets.dart';
+import '../../widgets/surfaces.dart';
 
-/// Teacher hub for approved Mandarin live-quiz templates.
+/// Teacher hub for a quiz they write, plus short ready-made checks.
 class TeacherLiveHubScreen extends ConsumerStatefulWidget {
   const TeacherLiveHubScreen({super.key});
 
@@ -82,7 +84,7 @@ class _TeacherLiveHubScreenState extends ConsumerState<TeacherLiveHubScreen> {
                 children: [
                   Text('Live Quiz', style: text.headlineSmall),
                   Text(
-                    'Timed tests with real-time student responses',
+                    'Write your own questions, or start a short ready-made check',
                     style: text.bodyMedium,
                   ),
                 ],
@@ -114,9 +116,79 @@ class _TeacherLiveHubScreenState extends ConsumerState<TeacherLiveHubScreen> {
           ),
         ),
         const SizedBox(height: 24),
+        GlassCard(
+          onTap: _busy ? null : () => context.go(AppRoutes.teacherPlay),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1F4E8C), Color(0xFFC44536)],
+          ),
+          padding: const EdgeInsets.all(18),
+          child: const Row(
+            children: [
+              EmojiText('🪢', size: 30),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Rope Pull — class board',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                      ),
+                    ),
+                    Text(
+                      'Big-screen rope. Learners join with a 4-letter code.',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        LiftCard(
+          onTap: _busy ? null : () => context.go(AppRoutes.teacherLiveCompose),
+          padding: const EdgeInsets.all(18),
+          hoverBorder: AppColors.primary,
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.edit_note_rounded,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Write your own quiz', style: text.titleMedium),
+                    Text(
+                      'As many questions as you want. Watch each option fill in while the class answers.',
+                      style: text.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
         const SectionHeader(
-          title: 'Quick start templates',
-          subtitle: 'One tap to go live',
+          title: 'Ready-made checks',
+          subtitle: 'Three questions, five minutes',
         ),
         const SizedBox(height: 12),
         for (final t in LiveQuizTemplate.all) ...[

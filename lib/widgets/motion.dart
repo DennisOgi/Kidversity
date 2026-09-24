@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Plays a subtle fade + slide-up entrance the first time the widget mounts.
@@ -34,17 +37,33 @@ class _FadeInUpState extends State<FadeInUp>
     begin: Offset(0, widget.offset / 100),
     end: Offset.zero,
   ).animate(CurvedAnimation(parent: _c, curve: Curves.easeOutCubic));
+  Timer? _stallCheck;
+  Timer? _delayed;
 
   @override
   void initState() {
     super.initState();
+    // Web often misses animation ticks until the next click, which leaves
+    // whole panels looking washed out. Show them sharp immediately.
+    if (kIsWeb) {
+      _c.value = 1;
+      return;
+    }
+    final wait = widget.delay + widget.duration + const Duration(milliseconds: 120);
+    _stallCheck = Timer(wait, () {
+      if (!mounted || _c.isCompleted) return;
+      debugPrint(
+        '[Kidversity] FadeInUp stalled at ${_c.value.toStringAsFixed(2)}; snapping to full opacity',
+      );
+      _c.value = 1;
+    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _c.value = 1;
+    if (kIsWeb || MediaQuery.disableAnimationsOf(context)) {
+      if (_c.value < 1) _c.value = 1;
       return;
     }
     // Animations started while a tab was offstage stay at opacity 0 until retried.
@@ -62,24 +81,29 @@ class _FadeInUpState extends State<FadeInUp>
     if (widget.delay == Duration.zero) {
       run();
     } else {
-      Future.delayed(widget.delay, () {
-        if (mounted) run();
-      });
+      _delayed?.cancel();
+      _delayed = Timer(widget.delay, run);
     }
   }
 
   @override
   void dispose() {
+    _stallCheck?.cancel();
+    _delayed?.cancel();
     _c.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Never leave content fully transparent — offstage tabs can miss the first animation tick.
-    final opacity = _c.isCompleted ? 1.0 : _fade.value.clamp(0.0, 1.0);
-    return Opacity(
-      opacity: opacity > 0 ? opacity : 1.0,
+    if (kIsWeb || _c.isCompleted || MediaQuery.disableAnimationsOf(context)) {
+      return widget.child;
+    }
+    // A zero fade means the ticker has not started. Paint the child sharp
+    // rather than a translucent layer that can stick until the next click.
+    if (_fade.value <= 0) return widget.child;
+    return FadeTransition(
+      opacity: _fade,
       child: SlideTransition(position: _slide, child: widget.child),
     );
   }

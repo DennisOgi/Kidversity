@@ -3,16 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
-/// App-wide theme. Display/headers use Fredoka (rounded, friendly),
-/// body uses Nunito (highly readable). Do not attach emoji fallbacks here —
-/// on Flutter web they steal space glyphs and fake-bold Latin text.
+/// App-wide theme. Headings use Plus Jakarta Sans. Body uses DM Sans.
 class AppTheme {
   AppTheme._();
 
-  static const double radiusSm = 12;
-  static const double radiusMd = 18;
-  static const double radiusLg = 26;
-  static const double radiusXl = 34;
+  static const double radiusSm = 8;
+  static const double radiusMd = 12;
+  static const double radiusLg = 16;
+  static const double radiusXl = 16;
 
   static List<BoxShadow> get softShadow => [
         BoxShadow(
@@ -33,25 +31,41 @@ class AppTheme {
   static ThemeData get light {
     final base = ThemeData(useMaterial3: true, brightness: Brightness.light);
 
-    final textTheme = GoogleFonts.nunitoTextTheme(base.textTheme).copyWith(
-      displayLarge: GoogleFonts.fredoka(
-        fontSize: 44, fontWeight: FontWeight.w600, color: AppColors.ink, height: 1.05),
-      displayMedium: GoogleFonts.fredoka(
-        fontSize: 34, fontWeight: FontWeight.w600, color: AppColors.ink, height: 1.1),
-      headlineMedium: GoogleFonts.fredoka(
-        fontSize: 26, fontWeight: FontWeight.w600, color: AppColors.ink),
-      headlineSmall: GoogleFonts.fredoka(
-        fontSize: 21, fontWeight: FontWeight.w500, color: AppColors.ink),
-      titleLarge: GoogleFonts.fredoka(
-        fontSize: 18, fontWeight: FontWeight.w500, color: AppColors.ink),
-      titleMedium: GoogleFonts.nunito(
-        fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.ink),
-      bodyLarge: GoogleFonts.nunito(
-        fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.inkSoft, height: 1.45),
-      bodyMedium: GoogleFonts.nunito(
-        fontSize: 14.5, fontWeight: FontWeight.w500, color: AppColors.inkSoft, height: 1.45),
-      labelLarge: GoogleFonts.nunito(
-        fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.ink),
+    TextStyle heading(double size, FontWeight weight, double height) =>
+        GoogleFonts.plusJakartaSans(
+          fontSize: size,
+          fontWeight: weight,
+          height: height,
+          color: AppColors.ink,
+        );
+    final textTheme = GoogleFonts.dmSansTextTheme(base.textTheme).copyWith(
+      displayLarge: heading(48, FontWeight.w700, 1.12),
+      displayMedium: heading(34, FontWeight.w700, 1.15),
+      headlineMedium: heading(26, FontWeight.w700, 1.2),
+      headlineSmall: heading(22, FontWeight.w700, 1.3),
+      titleLarge: heading(18, FontWeight.w600, 1.35),
+      titleMedium: GoogleFonts.dmSans(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: AppColors.ink,
+      ),
+      bodyLarge: GoogleFonts.dmSans(
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        color: AppColors.ink,
+        height: 1.55,
+      ),
+      bodyMedium: GoogleFonts.dmSans(
+        fontSize: 15,
+        fontWeight: FontWeight.w400,
+        color: AppColors.inkSoft,
+        height: 1.5,
+      ),
+      labelLarge: GoogleFonts.dmSans(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: AppColors.ink,
+      ),
     );
 
     final scheme = ColorScheme.fromSeed(
@@ -92,8 +106,9 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.line, width: 1.5),
+          foregroundColor: AppColors.ink,
+          backgroundColor: AppColors.surface,
+          side: const BorderSide(color: AppColors.ink, width: 1.8),
           textStyle: textTheme.labelLarge,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd)),

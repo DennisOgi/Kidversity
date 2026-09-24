@@ -14,7 +14,10 @@ Future<void> showJoinClassDialog(BuildContext context, WidgetRef ref) async {
   await showDialog<void>(
     context: context,
     builder: (_) => const _JoinClassDialog(),
-  ).then((_) => ref.invalidate(activeLiveTestProvider));
+  ).then((_) {
+    ref.invalidate(activeLiveTestProvider);
+    ref.invalidate(classBoardProvider);
+  });
 }
 
 class _JoinClassDialog extends ConsumerStatefulWidget {
@@ -56,6 +59,7 @@ class _JoinClassDialogState extends ConsumerState<_JoinClassDialog> {
     }
 
     ref.invalidate(activeLiveTestProvider);
+    ref.invalidate(classBoardProvider);
     Navigator.of(context).pop();
     context.showSuccessSnackbar('You joined ${result.data}! 🎉');
   }

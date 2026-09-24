@@ -16,13 +16,13 @@ class LegalScreen extends StatelessWidget {
     final (title, summary) = switch (document) {
       LegalDocument.privacy => (
         'Privacy',
-        'Kidversity stores account, class, and Mandarin learning progress data '
+        'Kidversity stores account, class, and learning progress data '
             'only to provide the learning service. We do not sell learner data.',
       ),
       LegalDocument.terms => (
         'Terms',
-        'Kidversity is a guided Mandarin learning service for children, '
-            'families, teachers, and approved language reviewers.',
+        'Kidversity is a learning platform for children, families, teachers, '
+            'and approved reviewers — Mandarin paths, exam practice, and more.',
       ),
       LegalDocument.guardianConsent => (
         'Guardian consent',

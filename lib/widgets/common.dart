@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -30,12 +31,14 @@ class WarmAssetImage extends StatelessWidget {
   final String asset;
   final BoxFit fit;
   final Color placeholder;
+  final AlignmentGeometry alignment;
 
   const WarmAssetImage(
     this.asset, {
     super.key,
     this.fit = BoxFit.cover,
     this.placeholder = kAssetPlaceholder,
+    this.alignment = Alignment.center,
   });
 
   @override
@@ -43,6 +46,7 @@ class WarmAssetImage extends StatelessWidget {
     return Image.asset(
       asset,
       fit: fit,
+      alignment: alignment,
       gaplessPlayback: true,
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
         if (wasSynchronouslyLoaded || frame != null) return child;
@@ -246,25 +250,35 @@ class Pill extends StatelessWidget {
     this.background,
   });
 
+  /// Light accent colors (esp. gold) fail AA on cream — darken the label.
+  Color get _labelColor {
+    if (color.computeLuminance() > 0.45) {
+      return Color.lerp(color, AppColors.ink, 0.62)!;
+    }
+    return color;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final labelColor = _labelColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: background ?? color.withValues(alpha: 0.12),
+        color: background ?? color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 15, color: color),
+            Icon(icon, size: 15, color: labelColor),
             const SizedBox(width: 6),
           ],
           Text(
             label,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: color,
+              color: labelColor,
               fontSize: 12.5,
               fontWeight: FontWeight.w800,
             ),
@@ -339,76 +353,100 @@ class GradientButton extends StatelessWidget {
   }
 }
 
-/// Tappable Kidversity logo — use on auth and dashboard shells.
+/// Canonical open-door mark. Matches assets/brand/mark-indigo.svg.
+class KidversityMark extends StatelessWidget {
+  final double size;
+  final Color color;
+
+  const KidversityMark({
+    super.key,
+    this.size = 32,
+    this.color = AppColors.primary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: SizedBox.square(
+        dimension: size,
+        child: CustomPaint(painter: _DoorPainter(color)),
+      ),
+    );
+  }
+}
+
+class _DoorPainter extends CustomPainter {
+  final Color color;
+  const _DoorPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 64, size.height / 64);
+    final path = Path()
+      ..fillType = PathFillType.evenOdd
+      ..moveTo(8, 60)
+      ..lineTo(8, 28)
+      ..cubicTo(8, 14.745, 18.745, 4, 32, 4)
+      ..cubicTo(45.255, 4, 56, 14.745, 56, 28)
+      ..lineTo(56, 60)
+      ..close()
+      ..moveTo(26, 60)
+      ..lineTo(26, 29)
+      ..cubicTo(26, 23.477, 30.477, 19, 36, 19)
+      ..cubicTo(41.523, 19, 46, 23.477, 46, 29)
+      ..lineTo(46, 60)
+      ..close();
+    canvas.drawPath(path, Paint()..color = color);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _DoorPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+/// Tappable Kidversity logo — doorway mark plus lowercase wordmark.
 class KidversityBrandMark extends StatelessWidget {
   final VoidCallback? onTap;
   final bool compact;
   final bool showLabel;
+  final bool reversed;
 
   const KidversityBrandMark({
     super.key,
     this.onTap,
     this.compact = false,
     this.showLabel = true,
+    this.reversed = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final size = compact ? 38.0 : 44.0;
-    final emojiSize = compact ? 20.0 : 24.0;
-    final labelStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
-      fontSize: compact ? 16 : 18,
-      fontWeight: FontWeight.w800,
-    );
+    final markSize = compact ? 24.0 : 32.0;
+    final wordSize = compact ? 20.0 : 24.0;
+    final gap = compact ? 8.0 : 10.0;
+    final color = reversed ? Colors.white : AppColors.ink;
+    final markColor = reversed ? Colors.white : AppColors.primary;
 
     final mark = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            gradient: AppColors.brandGradient,
-            borderRadius: BorderRadius.circular(compact ? 12 : 14),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.28),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              const FoxMascotImage(),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  color: AppColors.cinnabar,
-                  child: Text(
-                    '学',
-                    style: TextStyle(
-                      color: AppColors.paper,
-                      fontSize: emojiSize * 0.55,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        KidversityMark(size: markSize, color: markColor),
         if (showLabel) ...[
-          const SizedBox(width: 10),
+          SizedBox(width: gap),
           Flexible(
             child: Text(
-              'Kidversity',
-              style: labelStyle,
+              'kidversity',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: wordSize,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.6,
+                color: color,
+                height: 1,
+              ),
             ),
           ),
         ],
@@ -434,105 +472,33 @@ class KidversityBrandMark extends StatelessWidget {
 
 /// Top app bar for student/teacher dashboard shells.
 class DashboardAppBar extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-  final Color accent;
-  final IconData? icon;
   final VoidCallback? onBrandTap;
   final VoidCallback? onSignOut;
 
   const DashboardAppBar({
     super.key,
-    required this.title,
-    this.subtitle,
-    required this.accent,
-    this.icon,
     this.onBrandTap,
     this.onSignOut,
   });
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final width = MediaQuery.sizeOf(context).width;
-    final narrow = width < 400;
-    final sideSlot = narrow ? 42.0 : 118.0;
-
     return Padding(
-      padding: EdgeInsets.fromLTRB(narrow ? 12 : 16, 10, narrow ? 12 : 16, 6),
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
       child: Row(
         children: [
-          SizedBox(
-            width: sideSlot,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: KidversityBrandMark(
-                onTap: onBrandTap,
-                compact: true,
-                showLabel: false,
-              ),
-            ),
+          KidversityBrandMark(
+            onTap: onBrandTap,
+            compact: true,
+            showLabel: true,
           ),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.titleLarge?.copyWith(fontSize: narrow ? 18 : 20),
-                ),
-                if (subtitle != null)
-                  Text(
-                    subtitle!,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.bodyMedium?.copyWith(
-                      fontSize: narrow ? 11.5 : 12.5,
-                      color: AppColors.muted,
-                    ),
-                  ),
-              ],
+          const Spacer(),
+          if (onSignOut != null)
+            IconButton(
+              onPressed: onSignOut,
+              tooltip: 'Sign out',
+              icon: const Icon(Icons.logout_rounded),
             ),
-          ),
-          SizedBox(
-            width: sideSlot,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!narrow && icon != null) ...[
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: accent.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                      ),
-                      child: Icon(icon, color: accent, size: 22),
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-                  if (onSignOut != null)
-                    IconButton(
-                      onPressed: onSignOut,
-                      tooltip: 'Sign out',
-                      constraints: const BoxConstraints.tightFor(
-                        width: 42,
-                        height: 42,
-                      ),
-                      padding: EdgeInsets.zero,
-                      icon: const Icon(Icons.logout_rounded),
-                    ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );

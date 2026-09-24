@@ -1,95 +1,193 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 
-import '../../data/app_state.dart';
+import '../../models/models.dart';
 import '../../router/navigation.dart';
 import '../../theme/app_colors.dart';
-import '../../theme/app_theme.dart';
-import '../../widgets/aurora_background.dart';
 import '../../widgets/common.dart';
-import '../../widgets/motion.dart';
+import '../../widgets/labs_entry_card.dart';
+import '../../widgets/surfaces.dart';
 
 class LandingScreen extends ConsumerWidget {
   const LandingScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final text = Theme.of(context).textTheme;
-    final publishedCountAsync = ref.watch(publishedFoundationLessonCountProvider);
-    final publishedCount = publishedCountAsync.when(
-      data: (value) => value,
-      // Distinguish loading from failure so a bad Supabase env does not look
-      // like an endless "Checking availability" state.
-      loading: () => null,
-      error: (_, _) => 0,
-    );
     return Scaffold(
-      body: AuroraBackground(
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, c) {
-              final wide = c.maxWidth > 900;
-              final compact = c.maxWidth < 560;
-              return SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: wide ? 64 : (compact ? 16 : 22),
-                  vertical: compact ? 16 : 24,
-                ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1180),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const FadeInUp(child: _Brand()),
-                        SizedBox(height: compact ? 24 : 44),
-                        if (wide)
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                flex: 5,
-                                child: FadeInUp(
-                                  delay: const Duration(milliseconds: 80),
-                                  child: _Hero(
-                                    text: text,
-                                    wide: true,
-                                    publishedCount: publishedCount,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 48),
-                              const Expanded(
-                                flex: 4,
-                                child: FadeInUp(
-                                  delay: Duration(milliseconds: 220),
-                                  child: _HeroVisual(),
-                                ),
-                              ),
-                            ],
-                          )
-                        else
-                          FadeInUp(
-                            delay: const Duration(milliseconds: 80),
-                            child: _Hero(
-                              text: text,
-                              wide: false,
-                              publishedCount: publishedCount,
-                            ),
-                          ),
-                        const SizedBox(height: 30),
-                        const FadeInUp(
-                          delay: Duration(milliseconds: 360),
-                          child: _FeatureGrid(),
-                        ),
-                        const SizedBox(height: 20),
-                      ],
+      backgroundColor: AppColors.paper,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 960;
+            final pad = wide ? 48.0 : 20.0;
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(pad, 12, pad, 0),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1120),
+                        child: const _Header(),
+                      ),
                     ),
                   ),
                 ),
-              );
-            },
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(pad, 20, pad, 40),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1120),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (wide)
+                              const Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    flex: 6,
+                                    child: _HeroCopy(wide: true),
+                                  ),
+                                  SizedBox(width: 36),
+                                  Expanded(
+                                    flex: 5,
+                                    child: _HeroArt(tall: true),
+                                  ),
+                                ],
+                              )
+                            else ...[
+                              const _HeroCopy(wide: false),
+                              const SizedBox(height: 22),
+                              const _HeroArt(tall: false),
+                            ],
+                            const SizedBox(height: 48),
+                            const _WorldDirectory(),
+                            const SizedBox(height: 48),
+                            const _Proof(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header();
+
+  @override
+  Widget build(BuildContext context) {
+    final showSignIn = MediaQuery.sizeOf(context).width >= 560;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(left: 8),
+              child: KidversityBrandMark(),
+            ),
+          ),
+          if (showSignIn)
+            TextButton(
+              onPressed: () => context.go(AppRoutes.auth),
+              child: const Text('Sign in'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroCopy extends StatelessWidget {
+  final bool wide;
+  const _HeroCopy({required this.wide});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const WorldHintRow(),
+        const SizedBox(height: 18),
+        Text(
+          'Mandarin, past questions,\nand Rope Pull.',
+          style: text.displayLarge?.copyWith(
+            fontSize: wide ? 48 : 34,
+            height: 1.06,
+            letterSpacing: -1.2,
+          ),
+        ),
+        const SizedBox(height: 16),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Text(
+            'Students practise on their own phone or computer. '
+            'Teachers set the work and follow the class.',
+            style: text.bodyLarge?.copyWith(
+              fontSize: 17,
+              height: 1.55,
+              color: AppColors.inkSoft,
+            ),
+          ),
+        ),
+        const SizedBox(height: 26),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            FilledButton.icon(
+              onPressed: () => context.go('${AppRoutes.auth}?tab=signup'),
+              icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+              label: const Text('Create account'),
+            ),
+            if (!wide)
+              OutlinedButton(
+                onPressed: () => context.go(AppRoutes.auth),
+                child: const Text('Sign in'),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroArt extends StatelessWidget {
+  final bool tall;
+
+  const _HeroArt({required this.tall});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(17),
+      child: AspectRatio(
+        aspectRatio: tall ? 1080 / 950 : 1080 / 950,
+        child: ColoredBox(
+          color: const Color(0xFFF7F4EC),
+          child: Lottie.asset(
+            'assets/Student.json',
+            fit: BoxFit.contain,
+            repeat: true,
+            animate: !MediaQuery.disableAnimationsOf(context),
           ),
         ),
       ),
@@ -97,404 +195,183 @@ class LandingScreen extends ConsumerWidget {
   }
 }
 
-class _Brand extends StatelessWidget {
-  const _Brand();
+class _WorldDirectory extends ConsumerWidget {
+  const _WorldDirectory();
+
   @override
-  Widget build(BuildContext context) {
-    final showHeaderSignIn = MediaQuery.sizeOf(context).width >= 560;
-    return Row(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final worlds = [
+      (
+        'assets/illustrations/world-mandarin.png',
+        'Language',
+        'Mandarin Foundation',
+        'Thirty sequenced lessons. Listen, practise, then unlock the next one.',
+        AppColors.worldLanguage,
+        0,
+      ),
+      (
+        'assets/illustrations/world-exams.png',
+        'Exams',
+        'Nigerian past questions',
+        'UTME, WASSCE, NECO, and Post-UTME. Check your answer, then read the solution.',
+        AppColors.worldExams,
+        1,
+      ),
+      (
+        'assets/rope_pull/environment/campus-court.png',
+        'Play',
+        'Rope Pull',
+        'A live tug-of-war. Each team gets its own question. The rope sits in the middle.',
+        AppColors.worldPlay,
+        2,
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
-          child: KidversityBrandMark(compact: false, showLabel: true),
+        const PageIntro(
+          eyebrow: 'Choose a world',
+          title: 'Open a door. Come back to the others.',
+          body: 'Start wherever you need to today. Progress stays with you.',
         ),
-        if (showHeaderSignIn)
-          TextButton(
-            onPressed: () => context.go(AppRoutes.auth),
-            child: const Text('Sign in'),
+        const SizedBox(height: 18),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cards = [
+              for (final world in worlds)
+                WorldTile(
+                  asset: world.$1,
+                  label: world.$2,
+                  title: world.$3,
+                  body: world.$4,
+                  color: world.$5,
+                  onTap: () => openLandingFeature(context, ref, world.$6),
+                ),
+            ];
+            if (constraints.maxWidth < 900) {
+              return Column(
+                children: [
+                  for (var i = 0; i < cards.length; i++) ...[
+                    cards[i],
+                    if (i != cards.length - 1) const SizedBox(height: 12),
+                  ],
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < cards.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 14),
+                  Expanded(child: cards[i]),
+                ],
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 14),
+        LabsEntryCard(
+          featured: true,
+          onTap: () => enterRoleSpace(
+            context,
+            ref,
+            UserRole.student,
+            AppRoutes.studentLabs,
           ),
+        ),
       ],
     );
   }
 }
 
-class _Hero extends StatelessWidget {
-  final TextTheme text;
-  final bool wide;
-  final int? publishedCount;
+class _Proof extends StatelessWidget {
+  const _Proof();
 
-  const _Hero({
-    required this.text,
-    required this.wide,
-    required this.publishedCount,
+  @override
+  Widget build(BuildContext context) {
+    const points = [
+      (
+        Icons.groups_rounded,
+        'A teacher sees the class',
+        'Share a class code. Assignments, progress, and live quizzes stay with that group.',
+      ),
+      (
+        Icons.flag_rounded,
+        'A learner always has a next step',
+        'Home shows the lesson to continue, the paper to retry, or the world to open.',
+      ),
+      (
+        Icons.lightbulb_outline_rounded,
+        'Answers are explained',
+        'Past questions mark the option you chose, then show why it was right or wrong.',
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const PageIntro(
+          eyebrow: 'Built for a real class',
+          title: 'What schools actually need.',
+        ),
+        const SizedBox(height: 16),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cards = [
+              for (final point in points)
+                _ProofCard(icon: point.$1, title: point.$2, body: point.$3),
+            ];
+            if (constraints.maxWidth < 860) {
+              return Column(
+                children: [
+                  for (var i = 0; i < cards.length; i++) ...[
+                    cards[i],
+                    if (i != cards.length - 1) const SizedBox(height: 12),
+                  ],
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < cards.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 14),
+                  Expanded(child: cards[i]),
+                ],
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _ProofCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String body;
+
+  const _ProofCard({
+    required this.icon,
+    required this.title,
+    required this.body,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Pill(
-          label: 'Mandarin Foundation · Ages 7–12',
-          icon: Icons.translate_rounded,
-          color: AppColors.cinnabar,
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'Mandarin starts here.',
-          style: text.displayLarge?.copyWith(
-            color: AppColors.cinnabar,
-            fontSize: wide ? 56 : 36,
-            height: 1.05,
-          ),
-        ),
-        Text(
-          'One clear path. Human-reviewed.',
-          style: text.displayMedium?.copyWith(
-            fontSize: wide ? 34 : 24,
-            color: AppColors.ink,
-          ),
-        ),
-        const SizedBox(height: 18),
-        Text(
-          'Build a real beginner foundation through 30 sequenced lessons. Every Chinese word, '
-          'Pinyin line, meaning, activity, and audio prompt is carefully checked.',
-          style: text.bodyLarge?.copyWith(fontSize: 16.5),
-        ),
-        const SizedBox(height: 24),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            const Pill(
-              label: '30-lesson course',
-              icon: Icons.route_rounded,
-              color: AppColors.cinnabar,
-            ),
-            Pill(
-              label: publishedCount == null
-                  ? 'Checking availability'
-                  : publishedCount == 0
-                  ? 'Lessons publish after review'
-                  : '$publishedCount lessons available',
-              icon: Icons.verified_rounded,
-              color: AppColors.jade,
-            ),
-            const Pill(
-              label: 'Listen & practise',
-              icon: Icons.volume_up_rounded,
-              color: AppColors.gold,
-            ),
-            const Pill(
-              label: 'Class progress',
-              icon: Icons.insights_rounded,
-              color: AppColors.accentBlue,
-            ),
-          ],
-        ),
-        const SizedBox(height: 28),
-        _AuthCallouts(wide: wide),
-      ],
-    );
-  }
-}
-
-class _AuthCallouts extends ConsumerWidget {
-  final bool wide;
-  const _AuthCallouts({required this.wide});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
-    final buttons = [
-      FilledButton.icon(
-        onPressed: () => context.go(AppRoutes.auth),
-        icon: const Icon(Icons.login_rounded, size: 20),
-        label: const Text('Sign in'),
-        style: FilledButton.styleFrom(
-          minimumSize: wide ? null : const Size(double.infinity, 50),
-          padding: EdgeInsets.symmetric(
-            horizontal: wide ? 28 : 22,
-            vertical: 16,
-          ),
-        ),
-      ),
-      OutlinedButton.icon(
-        onPressed: () => context.go('${AppRoutes.auth}?tab=signup'),
-        icon: const Icon(Icons.person_add_rounded, size: 20),
-        label: const Text('Create account'),
-        style: OutlinedButton.styleFrom(
-          minimumSize: wide ? null : const Size(double.infinity, 50),
-          padding: EdgeInsets.symmetric(
-            horizontal: wide ? 24 : 18,
-            vertical: 16,
-          ),
-        ),
-      ),
-    ];
-    return Column(
-      crossAxisAlignment: wide
-          ? CrossAxisAlignment.start
-          : CrossAxisAlignment.stretch,
-      children: [
-        if (wide)
-          Wrap(spacing: 12, runSpacing: 12, children: buttons)
-        else ...[
-          buttons[0],
-          const SizedBox(height: 10),
-          buttons[1],
-        ],
-        const SizedBox(height: 12),
-        Text(
-          'Choose a learner or teacher account when you register.',
-          style: text.bodyMedium?.copyWith(
-            color: AppColors.muted,
-            fontSize: 13,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _HeroVisual extends StatelessWidget {
-  const _HeroVisual();
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return SizedBox(
-      height: 360,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
+    return LiftCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Transform.rotate(
-            angle: -0.03,
-            child: GlassCard(
-              frosted: true,
-              padding: const EdgeInsets.all(20),
-              shadow: AppTheme.softShadow,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Pill(
-                        label: 'MANDARIN',
-                        icon: Icons.translate_rounded,
-                        color: AppColors.secondary,
-                      ),
-                      const Spacer(),
-                      Text(
-                        'Slide 1 / 8',
-                        style: text.bodyMedium?.copyWith(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    height: 150,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppColors.secondary.withValues(alpha: 0.18),
-                          AppColors.primary.withValues(alpha: 0.1),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      '妈妈',
-                      style: TextStyle(
-                        fontSize: 64,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text('妈妈 — māma', style: text.titleLarge),
-                  Text(
-                    '"mum" • tap play to hear it',
-                    style: text.bodyMedium?.copyWith(fontSize: 13),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: const BoxDecoration(
-                          gradient: AppColors.sunsetGradient,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow_rounded,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: const LinearProgressIndicator(
-                                value: 0.42,
-                                minHeight: 7,
-                                backgroundColor: AppColors.line,
-                                valueColor: AlwaysStoppedAnimation(
-                                  AppColors.secondary,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              '0:07 / 0:16',
-                              style: text.bodyMedium?.copyWith(fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+          SoftIcon(icon: icon, size: 42),
+          const SizedBox(height: 14),
+          Text(title, style: text.titleMedium),
+          const SizedBox(height: 6),
+          Text(body, style: text.bodyMedium),
         ],
       ),
-    );
-  }
-}
-
-class _FeatureGrid extends ConsumerWidget {
-  const _FeatureGrid();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final items = [
-      (
-        Icons.route_rounded,
-        'Sequenced Foundation',
-        'Three modules guide complete beginners through 30 lessons.',
-        AppColors.cinnabar,
-      ),
-      (
-        Icons.headphones_rounded,
-        'Clear Mandarin Audio',
-        'Listen to every word and phrase as you learn.',
-        AppColors.jade,
-      ),
-      (
-        Icons.fact_check_rounded,
-        'Carefully Reviewed',
-        'Chinese, Pinyin, meanings, and activities are checked for accuracy.',
-        AppColors.gold,
-      ),
-      (
-        Icons.insights_rounded,
-        'Visible Class Progress',
-        'Teachers see each learner’s exact place on the course path.',
-        AppColors.accentBlue,
-      ),
-    ];
-    return LayoutBuilder(
-      builder: (context, c) {
-        final compact = c.maxWidth <= 560;
-        final cross = c.maxWidth > 900
-            ? 4
-            : compact
-            ? 1
-            : 2;
-        if (compact) {
-          return Column(
-            children: [
-              for (int i = 0; i < items.length; i++) ...[
-                FadeInUp(
-                  delay: Duration(milliseconds: 400 + i * 80),
-                  child: GlassCard(
-                    frosted: true,
-                    onTap: () => openLandingFeature(context, ref, i),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SoftIcon(icon: items[i].$1, color: items[i].$4, size: 40),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                items[i].$2,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.titleMedium?.copyWith(fontSize: 15),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                items[i].$3,
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (i != items.length - 1) const SizedBox(height: 10),
-              ],
-            ],
-          );
-        }
-        return GridView.count(
-          crossAxisCount: cross,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: cross == 2 ? 1.35 : 1.12,
-          children: [
-            for (int i = 0; i < items.length; i++)
-              FadeInUp(
-                delay: Duration(milliseconds: 400 + i * 80),
-                child: GlassCard(
-                  frosted: true,
-                  onTap: () => openLandingFeature(context, ref, i),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SoftIcon(icon: items[i].$1, color: items[i].$4),
-                      const SizedBox(height: 12),
-                      Text(
-                        items[i].$2,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleMedium?.copyWith(fontSize: 15),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        items[i].$3,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(fontSize: 12.5),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
     );
   }
 }

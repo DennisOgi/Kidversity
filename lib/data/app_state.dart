@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../models/live_test_models.dart';
 import '../models/mandarin_content.dart';
 import '../models/models.dart';
+import '../models/class_board_models.dart';
 import '../models/user_preferences.dart';
+import '../services/class_board_service.dart';
 import '../services/live_test_service.dart';
 import '../services/mandarin_experience_builder.dart';
 import '../services/foundation_review_service.dart';
@@ -57,12 +59,19 @@ final foundationReviewQueueProvider =
 final foundationClassProgressProvider =
     FutureProvider.autoDispose<List<FoundationStudentProgress>>((ref) async {
       ref.watch(authControllerProvider);
+      final course = await ref.watch(mandarinCourseProvider.future);
       final result = await FoundationProgressService.instance
-          .fetchClassProgress();
+          .fetchClassProgress(course: course);
       if (result.isFailure) {
         throw StateError(result.error ?? 'Could not load class progress');
       }
       return result.data!;
+    });
+
+final foundationClassDashboardProvider =
+    FutureProvider.autoDispose<FoundationClassDashboard>((ref) async {
+      final students = await ref.watch(foundationClassProgressProvider.future);
+      return FoundationProgressService.instance.buildDashboard(students);
     });
 
 final foundationCompletedLessonIdsProvider =
@@ -108,6 +117,18 @@ final userPreferencesProvider = FutureProvider<UserPreferences>((ref) async {
   if (!SupabaseService.instance.isInitialized) return const UserPreferences();
   final result = await SupabaseService.instance.fetchUserPreferences();
   return result.data ?? const UserPreferences();
+});
+
+final classBoardProvider = FutureProvider.autoDispose<ClassBoardSnapshot>((
+  ref,
+) async {
+  ref.watch(authControllerProvider);
+  ref.watch(userPreferencesProvider);
+  final result = await ClassBoardService.instance.fetchBoard();
+  if (result.isFailure) {
+    throw StateError(result.error ?? 'Could not load the class board.');
+  }
+  return result.data!;
 });
 
 final teacherRecentTestsProvider = FutureProvider.autoDispose<List<LiveTest>>((

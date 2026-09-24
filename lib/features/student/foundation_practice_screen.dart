@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/app_state.dart';
 import '../../models/mandarin_content.dart';
+import '../../router/navigation.dart';
 import '../../services/mandarin_audio_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
+import '../../widgets/surfaces.dart';
 
 class FoundationPracticeScreen extends ConsumerWidget {
   const FoundationPracticeScreen({super.key});
@@ -45,13 +48,48 @@ class FoundationPracticeScreen extends ConsumerWidget {
         const <String>{};
     return ShellScrollView(
       children: [
-        Text('Daily review', style: Theme.of(context).textTheme.headlineSmall),
+        const PageIntro(
+          eyebrow: 'Practice',
+          title: 'Pick up a short session',
+          body:
+              'Past questions, a lab, mental maths, or a few Mandarin words you have already unlocked.',
+        ),
+        const SizedBox(height: 18),
+        _PracticeDoor(
+          icon: Icons.menu_book_rounded,
+          color: AppColors.worldExams,
+          title: 'Nigerian past questions',
+          body: 'UTME, WASSCE, NECO, Post-UTME, and university screening.',
+          onTap: () => context.push(AppRoutes.studentExams),
+        ),
+        const SizedBox(height: 12),
+        _PracticeDoor(
+          icon: Icons.science_rounded,
+          color: AppColors.accentTeal,
+          title: 'Labs',
+          body:
+              'Physics, chemistry, biology, maths, the water cycle, and how government works.',
+          onTap: () => context.go(AppRoutes.studentLabs),
+        ),
+        const SizedBox(height: 12),
+        _PracticeDoor(
+          icon: Icons.calculate_rounded,
+          color: AppColors.worldLanguage,
+          title: 'Mental maths',
+          body: 'Twenty levels across number, fractions, money, measure, and algebra.',
+          onTap: () => context.go(AppRoutes.studentMaths),
+        ),
+        const SizedBox(height: 26),
+        Text(
+          'Mandarin word review',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 6),
         Text(
           'Eight unlocked words: half older, half newer. Listen, then pick the meaning.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 14),
         course.when(
           loading: () => const LoadingIndicator(message: 'Loading your words…'),
           error: (error, _) => ErrorDisplay(
@@ -329,6 +367,61 @@ class _SessionResult extends StatelessWidget {
         const SizedBox(height: 18),
         FilledButton(onPressed: onAgain, child: const Text('Practise again')),
       ],
+    );
+  }
+}
+
+class _PracticeDoor extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String body;
+  final VoidCallback onTap;
+
+  const _PracticeDoor({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.body,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return LiftCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(16),
+      hoverBorder: color,
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: text.titleMedium),
+                const SizedBox(height: 2),
+                Text(
+                  body,
+                  style: text.bodyMedium?.copyWith(color: AppColors.inkSoft),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded, color: color),
+        ],
+      ),
     );
   }
 }

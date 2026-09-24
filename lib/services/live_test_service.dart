@@ -38,9 +38,15 @@ class LiveTestService {
           .from('classes')
           .select('id')
           .eq('teacher_id', user.id)
+          .order('created_at')
           .limit(1)
           .maybeSingle();
       final classId = classRow?['id'] as String?;
+      if (classId == null) {
+        return app_errors.Result.failure(
+          'Open Class and share your class code before you go live.',
+        );
+      }
 
       final testRow = await client
           .from('live_tests')
@@ -57,15 +63,22 @@ class LiveTestService {
           .single();
 
       final testId = testRow['id'] as String;
-      for (var i = 0; i < questions.length; i++) {
-        final q = questions[i];
-        await client.from('live_test_questions').insert({
-          'test_id': testId,
-          'order_index': i,
-          'prompt': q.prompt,
-          'options': q.options.map((o) => o.toJson()).toList(),
-          'points': 1,
-        });
+      if (questions.isNotEmpty) {
+        try {
+          await client.from('live_test_questions').insert([
+            for (var i = 0; i < questions.length; i++)
+              {
+                'test_id': testId,
+                'order_index': i,
+                'prompt': questions[i].prompt,
+                'options': questions[i].options.map((o) => o.toJson()).toList(),
+                'points': 1,
+              },
+          ]);
+        } catch (e) {
+          await client.from('live_tests').delete().eq('id', testId);
+          rethrow;
+        }
       }
 
       return fetchTest(testId);
@@ -114,11 +127,10 @@ class LiveTestService {
           .select()
           .eq('id', testId)
           .single();
-      final qRows = await client
-          .from('live_test_questions')
-          .select()
-          .eq('test_id', testId)
-          .order('order_index');
+      final qRows = await client.rpc(
+        'live_questions_for_caller',
+        params: {'p_test_id': testId},
+      );
 
       final questions = (qRows as List)
           .map(

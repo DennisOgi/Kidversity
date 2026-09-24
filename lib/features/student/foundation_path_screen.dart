@@ -26,7 +26,7 @@ class FoundationPathScreen extends ConsumerWidget {
 
     return course.when(
       loading: () => const Center(
-        child: LoadingIndicator(message: 'Opening your Mandarin path…'),
+        child: LoadingIndicator(message: 'Opening your learning home…'),
       ),
       error: (error, _) => ErrorDisplay(
         message: 'The course path could not be loaded.',
@@ -142,6 +142,27 @@ class _WelcomeHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: const SizedBox(
+            height: 132,
+            width: double.infinity,
+            child: WarmAssetImage(
+              'assets/illustrations/world-mandarin.png',
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'MANDARIN FOUNDATION',
+          style: text.labelLarge?.copyWith(
+            color: AppColors.primary,
+            letterSpacing: 1.1,
+          ),
+        ),
+        const SizedBox(height: 4),
         Text(
           greeting,
           style: text.headlineSmall?.copyWith(fontSize: 26, height: 1.1),
@@ -149,10 +170,10 @@ class _WelcomeHeader extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           next == null
-              ? 'You have finished the Mandarin Foundation path.'
+              ? 'Thirty lessons complete. Practice keeps the words warm.'
               : next!.sequence == 1
-              ? 'Start Lesson 1. Each lesson unlocks the next one.'
-              : 'You are on Lesson ${next!.sequence} of $total.',
+              ? 'Thirty sequenced lessons. Listen, practise, then unlock the next one.'
+              : 'Lesson ${next!.sequence} of $total is open.',
           style: text.bodyLarge?.copyWith(color: AppColors.inkSoft),
         ),
         const SizedBox(height: 14),
@@ -167,7 +188,7 @@ class _WelcomeHeader extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '$done of $total lessons complete',
+          '$done of $total Mandarin lessons complete',
           style: text.labelLarge?.copyWith(color: AppColors.muted),
         ),
       ],
@@ -276,7 +297,7 @@ class _HowItWorks extends StatelessWidget {
         'Warm-up recycles yesterday, last week, and earlier',
       ),
       (Icons.record_voice_over_rounded, 'Say it out loud before the quiz'),
-      (Icons.school_outlined, 'Daily review keeps the path warm'),
+      (Icons.sports_esports_outlined, 'Rope Pull turns review into a team tug'),
     ];
     return Wrap(
       spacing: 8,
@@ -356,9 +377,14 @@ class _ModuleSectionState extends State<_ModuleSection> {
             borderRadius: BorderRadius.circular(18),
             child: Stack(
               children: [
-                AspectRatio(
-                  aspectRatio: 2.4,
-                  child: WarmAssetImage(_coverPath),
+                SizedBox(
+                  height: 148,
+                  width: double.infinity,
+                  child: WarmAssetImage(
+                    _coverPath,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                  ),
                 ),
                 Positioned.fill(
                   child: DecoratedBox(

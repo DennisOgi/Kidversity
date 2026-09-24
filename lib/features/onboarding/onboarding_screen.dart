@@ -145,16 +145,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final text = Theme.of(context).textTheme;
     final wide = MediaQuery.sizeOf(context).width > 900;
     final stepTitles = [
-      ('Welcome to the path', 'What should your Mandarin guide call you?'),
+      ('Welcome to Kidversity', 'What should we call you?'),
       (
         'Choose your companion',
         'Pick the character that will travel with you.',
       ),
       ('Choose your space', 'Your role shapes the experience you see next.'),
-      (
-        'How a lesson works',
-        'You will see this same pattern in every Foundation lesson.',
-      ),
+      switch (_role) {
+        UserRole.teacher => (
+          'Your class workspace',
+          'Invite learners, set the work, and run a quiz you write yourself.',
+        ),
+        UserRole.reviewer => (
+          'How review works',
+          'Lessons stay unpublished until you check the audio, the wording, and the quest.',
+        ),
+        _ => (
+          'How learning works here',
+          'Mandarin lessons, exam topics, labs, mental maths, and Rope Pull.',
+        ),
+      },
     ];
 
     final setupCard = ConstrainedBox(
@@ -177,11 +187,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     borderRadius: BorderRadius.circular(13),
                   ),
                   child: const Text(
-                    '学',
+                    'KV',
                     style: TextStyle(
                       color: AppColors.paper,
-                      fontSize: 21,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
@@ -191,7 +202,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'MANDARIN FOUNDATION',
+                        'KIDVERSITY',
                         style: TextStyle(
                           color: AppColors.cinnabar,
                           fontSize: 10,
@@ -340,45 +351,8 @@ class _OnboardingBackdrop extends StatelessWidget {
   const _OnboardingBackdrop({required this.child});
 
   @override
-  Widget build(BuildContext context) => Stack(
-    fit: StackFit.expand,
-    children: [
-      const DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFFAF3), AppColors.paper, Color(0xFFE8F0EB)],
-          ),
-        ),
-      ),
-      Positioned(
-        left: -120,
-        top: -100,
-        child: Container(
-          width: 360,
-          height: 360,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.cinnabar.withValues(alpha: 0.07),
-          ),
-        ),
-      ),
-      Positioned(
-        right: -90,
-        bottom: -120,
-        child: Container(
-          width: 330,
-          height: 330,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.jade.withValues(alpha: 0.08),
-          ),
-        ),
-      ),
-      child,
-    ],
-  );
+  Widget build(BuildContext context) =>
+      ColoredBox(color: AppColors.paper, child: child);
 }
 
 class _OnboardingPreview extends StatelessWidget {
@@ -406,7 +380,7 @@ class _OnboardingPreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '你好，WELCOME',
+            'WELCOME',
             style: TextStyle(
               color: AppColors.cinnabar,
               fontWeight: FontWeight.w900,
@@ -416,7 +390,7 @@ class _OnboardingPreview extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            'Your first Mandarin\njourney starts here.',
+            'Many paths.\nOne curious home.',
             style: Theme.of(context).textTheme.displayMedium?.copyWith(
               color: AppColors.ink,
               fontSize: 44,
@@ -425,8 +399,8 @@ class _OnboardingPreview extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'A focused 30-lesson course with clear audio, playful practice, '
-            'and carefully reviewed Mandarin.',
+            'Students practise Mandarin, past questions, labs, and mental maths, '
+            'and play Rope Pull. Teachers set the work and can run a live quiz they write themselves.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: AppColors.inkSoft,
               height: 1.55,
@@ -478,7 +452,14 @@ class _OnboardingPreview extends StatelessWidget {
                             ? 'Your companion is ready.'
                             : step == 2
                             ? 'We’ll open the right workspace.'
-                            : 'Then the Path shows one lesson at a time.',
+                            : switch (role) {
+                                UserRole.teacher =>
+                                  'Class, assignments, a quiz you write, and progress.',
+                                UserRole.reviewer =>
+                                  'The review queue is ready.',
+                                _ =>
+                                  'Path, Practice, Play, labs, and maths are open.',
+                              },
                         style: TextStyle(
                           color: AppColors.paper.withValues(alpha: 0.76),
                         ),
@@ -496,19 +477,29 @@ class _OnboardingPreview extends StatelessWidget {
             runSpacing: 10,
             children: [
               Pill(
-                label: 'Approved Mandarin',
-                icon: Icons.verified_rounded,
-                color: AppColors.jade,
-              ),
-              Pill(
-                label: '30 lessons',
-                icon: Icons.route_rounded,
+                label: 'Mandarin path',
+                icon: Icons.translate_rounded,
                 color: AppColors.cinnabar,
               ),
               Pill(
-                label: 'Audio + quests',
-                icon: Icons.volume_up_rounded,
-                color: AppColors.gold,
+                label: 'Exam practice',
+                icon: Icons.menu_book_rounded,
+                color: Color(0xFF1B7A4E),
+              ),
+              Pill(
+                label: 'Labs',
+                icon: Icons.science_rounded,
+                color: Color(0xFF0F766E),
+              ),
+              Pill(
+                label: 'Mental maths',
+                icon: Icons.calculate_rounded,
+                color: Color(0xFF6751B5),
+              ),
+              Pill(
+                label: 'Rope Pull',
+                icon: Icons.sports_esports_rounded,
+                color: Color(0xFF916015),
               ),
             ],
           ),
@@ -643,42 +634,69 @@ class _HowItWorksStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final student = role != UserRole.teacher && role != UserRole.reviewer;
-    final items = student
-        ? const [
-            (
-              Icons.replay_rounded,
-              '1. Warm-up words you already know',
-              'From Lesson 2, each lesson pulls earlier words from yesterday, a few lessons back, and further back — so they stick.',
-            ),
-            (
-              Icons.volume_up_rounded,
-              '2. Look, listen, then say it',
-              'Learn today’s words with audio, then cover the English and say them out loud.',
-            ),
-            (
-              Icons.menu_book_rounded,
-              '3. Idea, conversation, practice, quest',
-              'See the pattern, hear a dialogue, practise, then finish the quest to unlock the next lesson.',
-            ),
-          ]
-        : const [
-            (
-              Icons.groups_rounded,
-              'Class',
-              'Share a class code so learners can join you.',
-            ),
-            (
-              Icons.route_rounded,
-              'Progress',
-              'See which Foundation lessons each learner has finished.',
-            ),
-            (
-              Icons.bolt_rounded,
-              'Live',
-              'Start a short timed quiz when the class is together.',
-            ),
-          ];
+    final items = switch (role) {
+      UserRole.teacher => const [
+        (
+          Icons.groups_rounded,
+          'Class',
+          'Share your class code so learners can join you.',
+        ),
+        (
+          Icons.assignment_rounded,
+          'Assign',
+          'Set a Mandarin lesson, an exam topic, or a mental-maths level.',
+        ),
+        (
+          Icons.bolt_rounded,
+          'Live quiz',
+          'Write as many questions as you want. Students answer on their own screens, and you see each option fill in while the quiz is open.',
+        ),
+        (
+          Icons.route_rounded,
+          'Progress',
+          'See who is moving through Mandarin, and who needs you next.',
+        ),
+      ],
+      UserRole.reviewer => const [
+        (
+          Icons.fact_check_rounded,
+          'Review queue',
+          'New Mandarin lessons wait here before students can open them.',
+        ),
+        (
+          Icons.volume_up_rounded,
+          'Check the lesson',
+          'Listen to the audio, read the wording, and try the quest.',
+        ),
+        (
+          Icons.published_with_changes_rounded,
+          'Approve or send it back',
+          'Approved lessons join the path. Anything that needs a fix goes back to be corrected.',
+        ),
+      ],
+      _ => const [
+        (
+          Icons.translate_rounded,
+          'Mandarin path',
+          'Each lesson warms up words you already know, then you look, listen, and finish the quest to unlock the next one.',
+        ),
+        (
+          Icons.menu_book_rounded,
+          'Exam topics',
+          'Work through Biology, Chemistry, Physics, and Government in short topics, and practise past questions when you want a full paper.',
+        ),
+        (
+          Icons.science_rounded,
+          'Labs and mental maths',
+          'Labs are experiments you can change and watch. Mental maths is twenty levels, from number facts up to simple algebra.',
+        ),
+        (
+          Icons.sports_esports_rounded,
+          'Rope Pull and word review',
+          'Play is its own place: Indigo and Teal pull on words, past questions, or maths. Practice keeps a short daily review of Mandarin words you have unlocked.',
+        ),
+      ],
+    };
 
     return Column(
       children: [
@@ -747,7 +765,7 @@ class _RoleStep extends StatelessWidget {
         _RoleCard(
           emoji: '🧒',
           title: "I'm a Student",
-          subtitle: 'Follow the Mandarin path, practise & earn badges',
+          subtitle: 'Mandarin, exams, labs, maths, and Rope Pull',
           gradient: AppColors.brandGradient,
           selected: selected == UserRole.student,
           onTap: () => onSelect(UserRole.student),
@@ -756,7 +774,7 @@ class _RoleStep extends StatelessWidget {
         _RoleCard(
           emoji: '🧑‍🏫',
           title: "I'm a Teacher or Parent",
-          subtitle: 'Coach a class and follow Foundation progress',
+          subtitle: 'Set work, follow the class, and run a live quiz',
           gradient: AppColors.sunsetGradient,
           selected: selected == UserRole.teacher,
           onTap: () => onSelect(UserRole.teacher),
