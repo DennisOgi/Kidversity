@@ -79,6 +79,14 @@ class Env {
 
   static bool get hasSdashApi => sdashAccessToken.trim().isNotEmpty;
 
+  /// Shown when the exam bank key is missing. Developers get the fix;
+  /// everyone else gets a plain explanation.
+  static String get sdashMissingMessage => isDevelopment
+      ? 'Past questions need SDASH_ACCESS_TOKEN in your .env file. '
+            'Add it, then stop and run the app again.'
+      : 'Past questions are switched off on this build. '
+            'The site owner needs to add the exam bank key and redeploy.';
+
   static bool get isDevelopment => environment == 'development';
   static bool get isProduction => environment == 'production';
   static bool get isStaging => environment == 'staging';

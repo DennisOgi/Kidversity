@@ -148,12 +148,9 @@ class _PastQuestionsHubScreenState
             onPressed: () => popOrGo(context, AppRoutes.studentPath),
           ),
         ),
-        body: const Padding(
-          padding: EdgeInsets.all(24),
-          child: ErrorDisplay(
-            message:
-                'Add SDASH_ACCESS_TOKEN to your .env file, then hot-restart the app.',
-          ),
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: ErrorDisplay(message: Env.sdashMissingMessage),
         ),
       );
     }

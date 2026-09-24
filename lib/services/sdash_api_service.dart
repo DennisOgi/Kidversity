@@ -29,9 +29,7 @@ class SdashApiService {
     bool forceRefresh = false,
   }) async {
     if (!Env.hasSdashApi) {
-      return app_errors.Result.failure(
-        'Past questions are not configured yet. Add SDASH_ACCESS_TOKEN to .env.',
-      );
+      return app_errors.Result.failure(Env.sdashMissingMessage);
     }
 
     try {
@@ -87,9 +85,7 @@ class SdashApiService {
     String? university,
   }) async {
     if (!Env.hasSdashApi) {
-      return app_errors.Result.failure(
-        'Past questions are not configured yet. Add SDASH_ACCESS_TOKEN to .env.',
-      );
+      return app_errors.Result.failure(Env.sdashMissingMessage);
     }
 
     try {

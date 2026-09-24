@@ -128,7 +128,7 @@ class _HeroCopy extends StatelessWidget {
         const WorldHintRow(),
         const SizedBox(height: 18),
         Text(
-          'Mandarin, past questions,\nand Rope Pull.',
+          'Mandarin, past questions,\nand experiments.',
           style: text.displayLarge?.copyWith(
             fontSize: wide ? 48 : 34,
             height: 1.06,
