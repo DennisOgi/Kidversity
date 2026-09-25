@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -6,13 +7,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/env.dart';
 import '../core/error_handler.dart' as app_errors;
 import '../models/past_questions_models.dart';
+import 'exam_bank_service.dart';
 
 class SdashApiService {
   SdashApiService._();
   static final instance = SdashApiService._();
 
-  static const _catalogCacheKey = 'sdash_catalog_v1';
-  static const _catalogCachedAtKey = 'sdash_catalog_cached_at_v1';
+  static const _catalogCacheKey = 'sdash_catalog_v2';
+  static const _catalogCachedAtKey = 'sdash_catalog_cached_at_v2';
   static const _cacheTtl = Duration(hours: 24);
 
   Uri _uri(String path, [Map<String, String>? query]) {
@@ -28,16 +30,42 @@ class SdashApiService {
   Future<app_errors.Result<PastQuestionsCatalog>> fetchCatalog({
     bool forceRefresh = false,
   }) async {
-    if (!Env.hasSdashApi) {
-      return app_errors.Result.failure(Env.sdashMissingMessage);
+    if (!forceRefresh) {
+      final bank = await ExamBankService.instance.readCatalog();
+      if (bank != null && bank.exams.isNotEmpty) {
+        if (Env.hasSdashApi) {
+          unawaited(_refreshLiveCatalog());
+        }
+        return app_errors.Result.success(bank);
+      }
+      final cached = await _readCachedCatalog();
+      if (cached != null) return app_errors.Result.success(cached);
     }
 
-    try {
-      if (!forceRefresh) {
-        final cached = await _readCachedCatalog();
-        if (cached != null) return app_errors.Result.success(cached);
+    if (Env.hasSdashApi) {
+      final live = await _fetchLiveCatalog();
+      if (live.isSuccess && live.data != null) {
+        return live;
       }
+      final bank = await ExamBankService.instance.readCatalog();
+      if (bank != null && bank.exams.isNotEmpty) {
+        return app_errors.Result.success(bank);
+      }
+    } else {
+      final bank = await ExamBankService.instance.readCatalog();
+      if (bank != null && bank.exams.isNotEmpty) {
+        return app_errors.Result.success(bank);
+      }
+    }
+    return app_errors.Result.success(ExamBankService.fallbackCatalog);
+  }
 
+  Future<void> _refreshLiveCatalog() async {
+    await _fetchLiveCatalog();
+  }
+
+  Future<app_errors.Result<PastQuestionsCatalog>> _fetchLiveCatalog() async {
+    try {
       final examsFuture = _getList('/v1/exams');
       final subjectsFuture = _getList('/v1/subjects');
       final yearsFuture = _getList('/v1/years');
@@ -66,6 +94,7 @@ class SdashApiService {
       );
 
       await _writeCachedCatalog(catalog);
+      unawaited(ExamBankService.instance.saveCatalog(catalog));
       return app_errors.Result.success(catalog);
     } catch (error, stack) {
       await app_errors.ErrorHandler.reportError(
@@ -84,10 +113,86 @@ class SdashApiService {
     int? year,
     String? university,
   }) async {
-    if (!Env.hasSdashApi) {
-      return app_errors.Result.failure(Env.sdashMissingMessage);
+    final wanted = limit.clamp(1, 50);
+    final pinnedYear =
+        year ??
+        await ExamBankService.instance.pickYear(
+          examSlug: examSlug,
+          subjectSlug: subjectSlug,
+          university: university,
+        ) ??
+        (ExamBankService.fallbackCatalog.years.isEmpty
+            ? null
+            : ExamBankService.fallbackCatalog.years.first);
+    if (pinnedYear == null) {
+      return app_errors.Result.failure(
+        'Pick a year so this session stays on one paper.',
+      );
     }
 
+    final cached = await ExamBankService.instance.draw(
+      examSlug: examSlug,
+      subjectSlug: subjectSlug,
+      limit: wanted,
+      year: pinnedYear,
+      university: university,
+    );
+    final cachedPaper = _keepPaper(cached, year: pinnedYear);
+    if (cachedPaper.length >= wanted) {
+      return app_errors.Result.success(cachedPaper);
+    }
+
+    if (Env.hasSdashApi) {
+      final live = await _fetchLiveQuestions(
+        examSlug: examSlug,
+        subjectSlug: subjectSlug,
+        limit: wanted,
+        year: pinnedYear,
+        university: university,
+      );
+      if (live.isSuccess && live.data != null) {
+        final paper = _keepPaper(live.data!, year: pinnedYear);
+        if (paper.isNotEmpty) {
+          unawaited(
+            ExamBankService.instance.upsert(
+              paper,
+              examSlug: examSlug,
+              subjectSlug: subjectSlug,
+            ),
+          );
+          return app_errors.Result.success(paper);
+        }
+      }
+      if (cachedPaper.isNotEmpty) {
+        return app_errors.Result.success(cachedPaper);
+      }
+      if (live.isFailure) return live;
+      return app_errors.Result.failure(
+        'No $pinnedYear questions matched that exam and subject. Try another year.',
+      );
+    }
+
+    if (cachedPaper.isNotEmpty) {
+      return app_errors.Result.success(cachedPaper);
+    }
+    return app_errors.Result.failure(Env.sdashMissingMessage);
+  }
+
+  List<PastQuestion> _keepPaper(List<PastQuestion> questions, {required int year}) {
+    final wanted = year.toString();
+    return [
+      for (final question in questions)
+        if (question.examYear == wanted) question,
+    ];
+  }
+
+  Future<app_errors.Result<List<PastQuestion>>> _fetchLiveQuestions({
+    required String examSlug,
+    required String subjectSlug,
+    required int limit,
+    int? year,
+    String? university,
+  }) async {
     try {
       final query = <String, String>{
         'type': examSlug,

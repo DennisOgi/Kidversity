@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../config/env.dart';
 import '../../data/records_providers.dart';
 import '../../models/past_questions_models.dart';
 import '../../router/navigation.dart';
@@ -67,11 +66,8 @@ class _PastQuestionsHubScreenState
       'government',
     ]) {
       for (final subject in subjects) {
-        if (subject.slug == slug && !subject.isSandboxLocked) return subject;
+        if (subject.slug == slug) return subject;
       }
-    }
-    for (final subject in subjects) {
-      if (!subject.isSandboxLocked) return subject;
     }
     return subjects.first;
   }
@@ -87,7 +83,6 @@ class _PastQuestionsHubScreenState
   }
 
   void _ensureDefaults(PastQuestionsCatalog data) {
-    if (_exam != null && _subject != null) return;
     PastExamType? exam = _exam;
     if (exam == null && data.exams.isNotEmpty) {
       exam = data.exams.cast<PastExamType?>().firstWhere(
@@ -97,12 +92,14 @@ class _PastQuestionsHubScreenState
     }
     final scoped = exam?.subjectsFor(data.subjects) ?? data.subjects;
     final subject = _subject ?? _pickDefaultSubject(scoped);
-    if (exam == _exam && subject == _subject) return;
+    final year = _year ?? (data.years.isEmpty ? null : data.years.first);
+    if (exam == _exam && subject == _subject && year == _year) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       setState(() {
         _exam ??= exam;
         _subject ??= subject;
+        _year ??= year;
       });
     });
   }
@@ -112,12 +109,6 @@ class _PastQuestionsHubScreenState
     final subject = _subject;
     if (exam == null || subject == null) {
       context.showErrorSnackbar('Pick an exam type and a subject to begin.');
-      return;
-    }
-    if (subject.isSandboxLocked) {
-      context.showErrorSnackbar(
-        '${subject.name} is unavailable on the current content plan.',
-      );
       return;
     }
     setState(() => _starting = true);
@@ -138,23 +129,6 @@ class _PastQuestionsHubScreenState
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    if (!Env.hasSdashApi) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Past questions'),
-          leading: IconButton(
-            tooltip: 'Home',
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => popOrGo(context, AppRoutes.studentPath),
-          ),
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(24),
-          child: ErrorDisplay(message: Env.sdashMissingMessage),
-        ),
-      );
-    }
-
     final catalog = ref.watch(pastQuestionsCatalogProvider);
     return Scaffold(
       backgroundColor: AppColors.paper,
@@ -187,158 +161,65 @@ class _PastQuestionsHubScreenState
           final exam = _exam;
           final showUniversity = exam?.isUniversityFamily ?? false;
           final subjects = exam?.subjectsFor(data.subjects) ?? data.subjects;
-          final setup = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Choose exam', style: text.titleMedium),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final item in data.exams)
-                    _ExamChip(
-                      exam: item,
-                      selected: _exam?.slug == item.slug,
-                      onTap: () => _selectExam(item, data.subjects),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 22),
-              Text('Choose subject', style: text.titleMedium),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final subject in subjects)
-                    ChoiceChip(
-                      label: Text(
-                        subject.isSandboxLocked
-                            ? '${subject.name} · unavailable'
-                            : subject.name,
-                      ),
-                      selected: _subject?.slug == subject.slug,
-                      onSelected: subject.isSandboxLocked
-                          ? (_) => context.showErrorSnackbar(
-                              '${subject.name} is unavailable on the current content plan.',
-                            )
-                          : (_) => setState(() => _subject = subject),
-                      selectedColor: AppColors.primary,
-                      labelStyle: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: subject.isSandboxLocked
-                            ? AppColors.muted
-                            : _subject?.slug == subject.slug
-                            ? Colors.white
-                            : AppColors.ink,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 22),
-              Text('Year', style: text.titleMedium),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<int?>(
-                // ignore: deprecated_member_use
-                value: _year,
-                decoration: const InputDecoration(
-                  filled: true,
-                  fillColor: AppColors.surface,
-                ),
-                items: [
-                  const DropdownMenuItem<int?>(
-                    value: null,
-                    child: Text('Any year'),
-                  ),
-                  for (final year in data.years)
-                    DropdownMenuItem(value: year, child: Text('$year')),
-                ],
-                onChanged: (value) => setState(() => _year = value),
-              ),
-              if (showUniversity) ...[
-                const SizedBox(height: 16),
-                Text('University', style: text.titleMedium),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _universityCtrl,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: const InputDecoration(
-                    hintText: 'e.g. unilag, oau, ui',
-                    filled: true,
-                    fillColor: AppColors.surface,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 22),
-              Text('Session length', style: text.titleMedium),
-              const SizedBox(height: 10),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: 2.6,
-                children: [
-                  for (final mode in PastPracticeMode.values)
-                    _ModeCard(
-                      mode: mode,
-                      selected: _mode == mode,
-                      onTap: () => setState(() => _mode = mode),
-                    ),
-                ],
-              ),
-            ],
-          );
-          final summary = _SessionSummary(
-            exam: exam,
-            subject: _subject,
-            year: _year,
-            mode: _mode,
-            starting: _starting,
-            onStart: _starting ? null : _start,
-          );
+          final families = <String, List<PastSubject>>{};
+          for (final subject in subjects) {
+            families.putIfAbsent(subject.family, () => []).add(subject);
+          }
+          final recentYears = data.years.take(10).toList();
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
               const PageIntro(
                 eyebrow: 'Exam studio',
-                title: 'Pick a paper. Start when you are ready.',
+                title: 'Pick a paper',
                 body:
-                    'Answers and worked solutions appear after each question. Timed mock waits until you submit. Biology, Chemistry, Physics, and Government also have topic ladders.',
+                    'Choose an exam, a subject, and a year. The session stays on that paper. English and Mathematics are included.',
               ),
-              const SizedBox(height: 16),
-              LiftCard(
-                padding: EdgeInsets.zero,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(17),
-                  child: const SizedBox(
-                    height: 132,
-                    width: double.infinity,
-                    child: WarmAssetImage(
-                      'assets/illustrations/world-exams.png',
-                      alignment: Alignment.center,
-                    ),
-                  ),
-                ),
+              const SizedBox(height: 18),
+              Text('Exam', style: text.titleMedium),
+              const SizedBox(height: 10),
+              _ExamPicker(
+                exams: data.exams,
+                selected: _exam,
+                onSelect: (item) => _selectExam(item, data.subjects),
               ),
               const SizedBox(height: 22),
               LayoutBuilder(
                 builder: (context, constraints) {
-                  if (constraints.maxWidth < 860) {
+                  final paper = _PaperBuilder(
+                    families: families,
+                    selected: _subject,
+                    onSelect: (subject) => setState(() => _subject = subject),
+                    years: data.years,
+                    recentYears: recentYears,
+                    year: _year,
+                    onYear: (year) => setState(() => _year = year),
+                    showUniversity: showUniversity,
+                    university: _universityCtrl,
+                    mode: _mode,
+                    onMode: (mode) => setState(() => _mode = mode),
+                  );
+                  final summary = _SessionSummary(
+                    exam: exam,
+                    subject: _subject,
+                    year: _year,
+                    mode: _mode,
+                    starting: _starting,
+                    onStart: _starting ? null : _start,
+                  );
+                  if (constraints.maxWidth < 920) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [setup, const SizedBox(height: 20), summary],
+                      children: [paper, const SizedBox(height: 16), summary],
                     );
                   }
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(flex: 3, child: setup),
-                      const SizedBox(width: 20),
-                      Expanded(flex: 2, child: summary),
+                      Expanded(flex: 3, child: paper),
+                      const SizedBox(width: 18),
+                      SizedBox(width: 320, child: summary),
                     ],
                   );
                 },
@@ -346,7 +227,7 @@ class _PastQuestionsHubScreenState
               if (exam != null &&
                   _subject != null &&
                   topicsForSubject(_subject!.slug).isNotEmpty) ...[
-                const SizedBox(height: 28),
+                const SizedBox(height: 32),
                 _TopicLadder(
                   exam: exam,
                   subject: _subject!,
@@ -366,12 +247,50 @@ class _PastQuestionsHubScreenState
   }
 }
 
-class _ExamChip extends StatelessWidget {
+class _ExamPicker extends StatelessWidget {
+  final List<PastExamType> exams;
+  final PastExamType? selected;
+  final ValueChanged<PastExamType> onSelect;
+
+  const _ExamPicker({
+    required this.exams,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 720;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final exam in exams)
+              SizedBox(
+                width: wide
+                    ? (constraints.maxWidth - 40) / 5
+                    : (constraints.maxWidth - 10) / 2,
+                child: _ExamCard(
+                  exam: exam,
+                  selected: selected?.slug == exam.slug,
+                  onTap: () => onSelect(exam),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ExamCard extends StatelessWidget {
   final PastExamType exam;
   final bool selected;
   final VoidCallback onTap;
 
-  const _ExamChip({
+  const _ExamCard({
     required this.exam,
     required this.selected,
     required this.onTap,
@@ -379,28 +298,178 @@ class _ExamChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    final text = Theme.of(context).textTheme;
+    return LiftCard(
+      onTap: onTap,
       color: selected ? AppColors.primary : AppColors.surface,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected ? AppColors.primary : AppColors.controlBorder,
-            ),
-          ),
-          child: Text(
+      hoverBorder: AppColors.primary,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
             exam.shortLabel,
-            style: TextStyle(
+            style: text.titleMedium?.copyWith(
               color: selected ? Colors.white : AppColors.ink,
-              fontWeight: FontWeight.w700,
             ),
           ),
-        ),
+          const SizedBox(height: 4),
+          Text(
+            exam.blurb,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: text.bodySmall?.copyWith(
+              color: selected ? Colors.white70 : AppColors.inkSoft,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaperBuilder extends StatelessWidget {
+  final Map<String, List<PastSubject>> families;
+  final PastSubject? selected;
+  final ValueChanged<PastSubject> onSelect;
+  final List<int> years;
+  final List<int> recentYears;
+  final int? year;
+  final ValueChanged<int?> onYear;
+  final bool showUniversity;
+  final TextEditingController university;
+  final PastPracticeMode mode;
+  final ValueChanged<PastPracticeMode> onMode;
+
+  const _PaperBuilder({
+    required this.families,
+    required this.selected,
+    required this.onSelect,
+    required this.years,
+    required this.recentYears,
+    required this.year,
+    required this.onYear,
+    required this.showUniversity,
+    required this.university,
+    required this.mode,
+    required this.onMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return LiftCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Subject', style: text.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Every subject on the paper is available.',
+            style: text.bodySmall?.copyWith(color: AppColors.inkSoft),
+          ),
+          const SizedBox(height: 14),
+          for (final family in families.entries) ...[
+            Text(
+              family.key,
+              style: text.labelLarge?.copyWith(color: AppColors.worldExams),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final subject in family.value)
+                  ChoiceChip(
+                    label: Text(subject.name),
+                    selected: selected?.slug == subject.slug,
+                    onSelected: (_) => onSelect(subject),
+                    selectedColor: AppColors.primary,
+                    labelStyle: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: selected?.slug == subject.slug
+                          ? Colors.white
+                          : AppColors.ink,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+          Text('Year', style: text.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Pick any year. The session stays on that year only.',
+            style: text.bodySmall?.copyWith(color: AppColors.inkSoft),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final item in recentYears)
+                ChoiceChip(
+                  label: Text('$item'),
+                  selected: year == item,
+                  onSelected: (_) => onYear(item),
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: year == item ? Colors.white : AppColors.ink,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<int>(
+            // ignore: deprecated_member_use
+            value: year != null && years.contains(year) ? year : years.first,
+            decoration: const InputDecoration(
+              labelText: 'All years',
+              filled: true,
+              fillColor: AppColors.paper,
+            ),
+            items: [
+              for (final item in years)
+                DropdownMenuItem(value: item, child: Text('$item')),
+            ],
+            onChanged: onYear,
+          ),
+          if (showUniversity) ...[
+            const SizedBox(height: 16),
+            Text('University', style: text.titleMedium),
+            const SizedBox(height: 8),
+            TextField(
+              controller: university,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                hintText: 'e.g. unilag, oau, ui',
+                filled: true,
+                fillColor: AppColors.paper,
+              ),
+            ),
+          ],
+          const SizedBox(height: 22),
+          Text('How long', style: text.titleMedium),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final item in PastPracticeMode.values)
+                SizedBox(
+                  width: 168,
+                  child: _ModeCard(
+                    mode: item,
+                    selected: mode == item,
+                    onTap: () => onMode(item),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -426,42 +495,36 @@ class _SessionSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    String line(String label, String value) => '$label  $value';
+    final paper = [
+      exam?.shortLabel,
+      subject?.name,
+      if (year != null) '$year',
+    ].whereType<String>().join(' · ');
     return LiftCard(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
+      hoverBorder: AppColors.worldExams,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('This session', style: text.titleLarge),
-          const SizedBox(height: 12),
+          const Eyebrow('Your paper', color: AppColors.worldExams),
+          const SizedBox(height: 8),
           Text(
-            line('Exam', exam?.shortLabel ?? 'Choose an exam'),
-            style: text.bodyLarge,
+            paper.isEmpty ? 'Choose an exam and a subject' : paper,
+            style: text.titleLarge,
           ),
           const SizedBox(height: 6),
           Text(
-            line('Subject', subject?.name ?? 'Choose a subject'),
-            style: text.bodyLarge,
+            exam?.blurb ?? 'The session will stay on the paper you pick.',
+            style: text.bodyMedium?.copyWith(color: AppColors.inkSoft),
           ),
-          const SizedBox(height: 6),
-          Text(
-            line('Year', year?.toString() ?? 'Any year'),
-            style: text.bodyLarge,
-          ),
-          const SizedBox(height: 6),
-          Text(line('Questions', '${mode.limit}'), style: text.bodyLarge),
-          if (mode.timeLimit != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              line('Time', '${mode.timeLimit!.inMinutes} minutes'),
-              style: text.bodyLarge,
+          const SizedBox(height: 16),
+          _SummaryRow(label: 'Questions', value: '${mode.limit}'),
+          _SummaryRow(label: 'Style', value: mode.title),
+          if (mode.timeLimit != null)
+            _SummaryRow(
+              label: 'Time',
+              value: '${mode.timeLimit!.inMinutes} minutes',
             ),
-            const SizedBox(height: 6),
-            Text(
-              'No answers shown until you submit, like the real paper.',
-              style: text.bodySmall?.copyWith(color: AppColors.inkSoft),
-            ),
-          ],
           const SizedBox(height: 18),
           GradientButton(
             label: starting ? 'Loading…' : 'Start practice',
@@ -469,6 +532,33 @@ class _SessionSummary extends StatelessWidget {
             expand: true,
             onTap: onStart,
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _SummaryRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 88,
+            child: Text(
+              label,
+              style: text.bodyMedium?.copyWith(color: AppColors.inkSoft),
+            ),
+          ),
+          Expanded(child: Text(value, style: text.titleSmall)),
         ],
       ),
     );
@@ -488,52 +578,30 @@ class _ModeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: selected ? AppColors.primary : AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? AppColors.primary : AppColors.line,
-              width: selected ? 0 : 1,
+    final text = Theme.of(context).textTheme;
+    return LiftCard(
+      onTap: onTap,
+      color: selected ? AppColors.primarySoft : AppColors.paper,
+      hoverBorder: AppColors.primary,
+      borderColor: selected ? AppColors.primary : AppColors.line,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            mode.title,
+            style: text.titleSmall?.copyWith(
+              color: selected ? AppColors.primary : AppColors.ink,
             ),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.28),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                mode.title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontSize: 14,
-                  color: selected ? Colors.white : AppColors.ink,
-                ),
-              ),
-              Text(
-                mode.subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: selected ? Colors.white70 : AppColors.inkSoft,
-                ),
-              ),
-            ],
+          const SizedBox(height: 4),
+          Text(
+            mode.subtitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: text.bodySmall?.copyWith(color: AppColors.inkSoft),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -711,47 +779,44 @@ class _TopicCard extends StatelessWidget {
     final ready = count >= examTopicMinimum;
     return SizedBox(
       width: 280,
-      child: Material(
-        color: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: AppColors.line),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(child: Text(topic.title, style: text.titleMedium)),
-                  if (cleared)
-                    Text(
-                      'Cleared',
-                      style: text.labelLarge?.copyWith(
-                        color: AppColors.success,
-                      ),
+      child: LiftCard(
+        padding: const EdgeInsets.all(16),
+        hoverBorder: ready ? AppColors.worldExams : AppColors.line,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(child: Text(topic.title, style: text.titleMedium)),
+                if (cleared)
+                  Text(
+                    'Cleared',
+                    style: text.labelLarge?.copyWith(
+                      color: AppColors.success,
                     ),
-                ],
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              topic.detail,
+              style: text.bodyMedium?.copyWith(color: AppColors.inkSoft),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              ready
+                  ? '$count questions ready in this paper'
+                  : 'Not enough questions in this paper yet',
+              style: text.bodySmall?.copyWith(
+                color: ready ? AppColors.worldExams : AppColors.muted,
               ),
-              const SizedBox(height: 4),
-              Text(topic.detail, style: text.bodyMedium),
-              const SizedBox(height: 8),
-              Text(
-                ready
-                    ? '$count questions ready'
-                    : 'Not enough questions in this paper yet',
-                style: text.bodySmall?.copyWith(
-                  color: ready ? AppColors.inkSoft : AppColors.muted,
-                ),
-              ),
-              const SizedBox(height: 10),
-              FilledButton(
-                onPressed: ready ? onStart : null,
-                child: const Text('Revise topic'),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: ready ? onStart : null,
+              child: const Text('Revise topic'),
+            ),
+          ],
         ),
       ),
     );

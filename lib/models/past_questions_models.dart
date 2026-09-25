@@ -15,12 +15,16 @@ class PastExamType {
     slug: json['slug'] as String? ?? '',
   );
 
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'slug': slug};
+
   String get shortLabel {
     final upper = name.toUpperCase();
     if (upper.contains('WASSCE')) return 'WASSCE';
     if (upper.contains('NECO')) return 'NECO';
     if (upper == 'UTME' || upper.contains('JAMB')) return 'UTME';
-    if (upper.contains('POST')) return 'Post-UTME';
+    if (upper.contains('POST')) {
+      return name.trim().isEmpty ? 'Post-UTME' : name.trim();
+    }
     if (upper.contains('UNIVERSITY')) return 'University';
     return name;
   }
@@ -49,92 +53,8 @@ class PastExamType {
 
   bool get isSsceFamily => slug == 'wassce' || slug == 'neco';
 
-  /// Subject slugs that belong with this exam family.
-  /// Sdash `/subjects` returns one flat list; we scope the UI so University
-  /// does not look like a secondary-school subject wall.
-  Set<String>? get subjectSlugAllowlist {
-    if (slug == 'utme') {
-      return const {
-        'english',
-        'mathematics',
-        'biology',
-        'chemistry',
-        'physics',
-        'government',
-        'economics',
-        'englishlit',
-        'geography',
-        'commerce',
-        'accounting',
-        'crk',
-        'irk',
-        'agriculture',
-        'computer',
-        'arabic',
-        'hausa',
-        'igbo',
-        'yoruba',
-        'history',
-      };
-    }
-    if (isSsceFamily) {
-      return const {
-        'english',
-        'mathematics',
-        'biology',
-        'chemistry',
-        'physics',
-        'government',
-        'economics',
-        'englishlit',
-        'geography',
-        'commerce',
-        'accounting',
-        'crk',
-        'irk',
-        'agriculture',
-        'computer',
-        'civiledu',
-        'fineart',
-        'homeeconomics',
-        'insurance',
-        'music',
-        'arabic',
-        'hausa',
-        'igbo',
-        'yoruba',
-        'history',
-        'currentaffairs',
-      };
-    }
-    if (isUniversityFamily) {
-      return const {
-        'english',
-        'mathematics',
-        'biology',
-        'chemistry',
-        'physics',
-        'government',
-        'economics',
-        'currentaffairs',
-        'englishlit',
-        'accounting',
-        'commerce',
-        'geography',
-        'crk',
-        'irk',
-        'computer',
-      };
-    }
-    return null;
-  }
-
-  List<PastSubject> subjectsFor(List<PastSubject> all) {
-    final allow = subjectSlugAllowlist;
-    if (allow == null) return all;
-    final filtered = all.where((s) => allow.contains(s.slug)).toList();
-    return filtered.isEmpty ? all : filtered;
-  }
+  /// Paid Sdash plans expose the full subject list for every exam type.
+  List<PastSubject> subjectsFor(List<PastSubject> all) => all;
 }
 
 class PastSubject {
@@ -150,8 +70,36 @@ class PastSubject {
     slug: json['slug'] as String? ?? '',
   );
 
-  /// Subjects blocked on Sdash Sandbox (free) plans — needs a paid upgrade.
-  bool get isSandboxLocked => slug == 'english' || slug == 'mathematics';
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'slug': slug};
+
+  /// Kept so older call sites compile. The paid Sdash plan unlocks every subject.
+  bool get isSandboxLocked => false;
+
+  String get family => switch (slug) {
+    'biology' ||
+    'chemistry' ||
+    'physics' ||
+    'mathematics' ||
+    'agriculture' ||
+    'computer' ||
+    'geology' => 'Science',
+    'geography' ||
+    'government' ||
+    'economics' ||
+    'history' ||
+    'currentaffairs' ||
+    'civiledu' ||
+    'crk' ||
+    'irk' => 'Social science',
+    'accounting' || 'commerce' || 'insurance' => 'Commercial',
+    'english' ||
+    'englishlit' ||
+    'arabic' ||
+    'hausa' ||
+    'igbo' ||
+    'yoruba' => 'Languages',
+    _ => 'Creative',
+  };
 }
 
 class PastQuestionOption {

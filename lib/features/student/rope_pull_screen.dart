@@ -232,11 +232,8 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
       'government',
     ]) {
       for (final subject in subjects) {
-        if (subject.slug == slug && !subject.isSandboxLocked) return subject;
+        if (subject.slug == slug) return subject;
       }
-    }
-    for (final subject in subjects) {
-      if (!subject.isSandboxLocked) return subject;
     }
     return subjects.isEmpty ? null : subjects.first;
   }
@@ -267,12 +264,6 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
     final subject = _subject;
     if (exam == null || subject == null) {
       context.showErrorSnackbar('Pick an exam and a subject first.');
-      return;
-    }
-    if (subject.isSandboxLocked) {
-      context.showErrorSnackbar(
-        '${subject.name} is unavailable on the current content plan.',
-      );
       return;
     }
     setState(() => _busy = true);
@@ -665,11 +656,7 @@ class _ExamMatchPicker extends StatelessWidget {
                   for (final item in subjects)
                     DropdownMenuItem(
                       value: item.slug,
-                      child: Text(
-                        item.isSandboxLocked
-                            ? '${item.name} · unavailable'
-                            : item.name,
-                      ),
+                      child: Text(item.name),
                     ),
                 ],
                 onChanged: (slug) {

@@ -453,6 +453,12 @@ entrypoint = "./functions/health/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/health/*.html" ]
 
+[functions.exam-bank]
+enabled = true
+verify_jwt = true
+import_map = "./functions/exam-bank/deno.json"
+entrypoint = "./functions/exam-bank/index.ts"
+
 [functions.class-access]
 enabled = true
 verify_jwt = true

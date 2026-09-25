@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kidversity/models/models.dart';
 import 'package:kidversity/models/past_questions_models.dart';
 import 'package:kidversity/router/navigation.dart';
+import 'package:kidversity/services/exam_bank_service.dart';
 
 void main() {
   test('student exam routes stay protected in the student space', () {
@@ -25,7 +26,7 @@ void main() {
     expect(cases[1].shortLabel, 'WASSCE');
     expect(cases[2].shortLabel, 'NECO');
     expect(cases[3].shortLabel, 'Post-UTME');
-    expect(cases[4].shortLabel, 'Post-UTME');
+    expect(cases[4].shortLabel, 'Post-UTME AAUA');
     expect(cases[5].shortLabel, 'University');
     expect(cases[0].blurb, contains('UTME'));
     expect(cases[4].blurb, isNotEmpty);
@@ -78,10 +79,25 @@ void main() {
     expect(config.headline, 'UTME · Biology · 2021');
   });
 
-  test('sandbox-locked subjects are English and Mathematics only', () {
+  test('subjects sit in a paper family for the exam studio', () {
+    expect(
+      const PastSubject(id: 1, name: 'Biology', slug: 'biology').family,
+      'Science',
+    );
+    expect(
+      const PastSubject(id: 2, name: 'English', slug: 'english').family,
+      'Languages',
+    );
+    expect(
+      const PastSubject(id: 3, name: 'Accounting', slug: 'accounting').family,
+      'Commercial',
+    );
+  });
+
+  test('paid plan unlocks English, Mathematics, and every listed subject', () {
     expect(
       const PastSubject(id: 1, name: 'English', slug: 'english').isSandboxLocked,
-      isTrue,
+      isFalse,
     );
     expect(
       const PastSubject(
@@ -89,15 +105,8 @@ void main() {
         name: 'Mathematics',
         slug: 'mathematics',
       ).isSandboxLocked,
-      isTrue,
-    );
-    expect(
-      const PastSubject(id: 3, name: 'Biology', slug: 'biology').isSandboxLocked,
       isFalse,
     );
-  });
-
-  test('university exams hide SSCE-only subjects', () {
     const university = PastExamType(
       id: 9,
       name: 'University',
@@ -106,12 +115,60 @@ void main() {
     const subjects = [
       PastSubject(id: 1, name: 'Biology', slug: 'biology'),
       PastSubject(id: 2, name: 'Home Economics', slug: 'homeeconomics'),
-      PastSubject(id: 3, name: 'Civic Education', slug: 'civiledu'),
-      PastSubject(id: 4, name: 'Current Affairs', slug: 'currentaffairs'),
-      PastSubject(id: 5, name: 'Fine Art', slug: 'fineart'),
+      PastSubject(id: 3, name: 'Geology', slug: 'geology'),
+      PastSubject(id: 4, name: 'English', slug: 'english'),
     ];
-    final scoped = university.subjectsFor(subjects);
-    expect(scoped.map((s) => s.slug), ['biology', 'currentaffairs']);
-    expect(university.isUniversityFamily, isTrue);
+    expect(
+      university.subjectsFor(subjects).map((s) => s.slug),
+      ['biology', 'homeeconomics', 'geology', 'english'],
+    );
+  });
+
+  test('a practice paper keeps one exam year only', () {
+    final mixed = [
+      PastQuestion.fromJson({
+        'id': 1,
+        'question': '2022 item',
+        'option': {'a': 'A', 'b': 'B'},
+        'answer': 'a',
+        'examtype': 'UTME',
+        'examyear': '2022',
+      }),
+      PastQuestion.fromJson({
+        'id': 2,
+        'question': '2018 item',
+        'option': {'a': 'A', 'b': 'B'},
+        'answer': 'a',
+        'examtype': 'UTME',
+        'examyear': '2018',
+      }),
+    ];
+    expect(
+      mixed.where((question) => question.examYear == '2022').map((q) => q.id),
+      [1],
+    );
+  });
+
+  test('fallback catalog lists every Sdash exam and subject', () {
+    expect(
+      ExamBankService.fallbackCatalog.exams.map((exam) => exam.slug),
+      containsAll(['utme', 'wassce', 'neco', 'post-utme', 'university']),
+    );
+    expect(ExamBankService.fallbackCatalog.subjects, hasLength(27));
+    expect(
+      ExamBankService.fallbackCatalog.subjects.map((subject) => subject.slug),
+      containsAll(['english', 'mathematics', 'geology']),
+    );
+  });
+
+  test('Post-UTME variants keep their own chip label', () {
+    expect(
+      const PastExamType(
+        id: 5,
+        name: 'Post-UTME AAUA',
+        slug: 'post-utme-aaua',
+      ).shortLabel,
+      'Post-UTME AAUA',
+    );
   });
 }

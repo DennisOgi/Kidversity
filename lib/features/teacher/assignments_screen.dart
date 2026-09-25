@@ -16,6 +16,7 @@ import '../../widgets/surfaces.dart';
 import '../student/exam_topics.dart';
 import '../student/maths_bank.dart';
 import '../student/past_questions_hub_screen.dart';
+import 'exam_bank_card.dart';
 
 class AssignmentsScreen extends ConsumerWidget {
   const AssignmentsScreen({super.key});
@@ -88,6 +89,8 @@ class AssignmentsScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 20),
+                    const ExamBankCard(),
                     const SizedBox(height: 20),
                     const _AssignmentList(),
                   ],
@@ -471,13 +474,11 @@ class _NewAssignmentDialogState extends ConsumerState<_NewAssignmentDialog> {
         .when(
           loading: () => const LinearProgressIndicator(minHeight: 3),
           error: (_, _) => const Text(
-            'The exam catalogue is unavailable. Check the Sdash key in .env.',
+            'The exam catalogue could not be loaded. Try again in a moment.',
           ),
           data: (catalog) {
             final subjects =
-                (_exam?.subjectsFor(catalog.subjects) ?? catalog.subjects)
-                    .where((s) => !s.isSandboxLocked)
-                    .toList();
+                _exam?.subjectsFor(catalog.subjects) ?? catalog.subjects;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -573,7 +574,7 @@ class _NewAssignmentDialogState extends ConsumerState<_NewAssignmentDialog> {
                         items: [
                           const DropdownMenuItem<int?>(
                             value: null,
-                            child: Text('Any year'),
+                            child: Text('One paper (newest first)'),
                           ),
                           for (final year in catalog.years)
                             DropdownMenuItem(value: year, child: Text('$year')),
