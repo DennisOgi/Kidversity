@@ -11,6 +11,8 @@ import '../services/live_test_service.dart';
 import '../services/mandarin_experience_builder.dart';
 import '../services/foundation_review_service.dart';
 import '../services/foundation_progress_service.dart';
+import '../models/school_models.dart';
+import '../services/school_service.dart';
 import '../services/supabase_service.dart';
 import 'auth_state.dart';
 import 'mandarin_content_repository.dart';
@@ -104,10 +106,19 @@ final teacherClassInfoProvider =
       return result.data;
     });
 
+/// School the signed-in person is looking at. Null uses their first school.
+final selectedSchoolIdProvider = StateProvider<String?>((ref) => null);
+
+/// Class the teacher is looking at inside a school. Null uses their latest class.
+final selectedClassIdProvider = StateProvider<String?>((ref) => null);
+
 final rosterProvider = FutureProvider<List<StudentPerformance>>((ref) async {
   ref.watch(authControllerProvider);
+  final classId = ref.watch(selectedClassIdProvider);
   if (!SupabaseService.instance.isInitialized) return const [];
-  final result = await SupabaseService.instance.fetchClassRoster();
+  final result = await SupabaseService.instance.fetchClassRoster(
+    classId: classId,
+  );
   if (result.isSuccess) return result.data!;
   throw StateError(result.error ?? 'Could not load the class roster.');
 });
@@ -124,11 +135,25 @@ final classBoardProvider = FutureProvider.autoDispose<ClassBoardSnapshot>((
 ) async {
   ref.watch(authControllerProvider);
   ref.watch(userPreferencesProvider);
-  final result = await ClassBoardService.instance.fetchBoard();
+  final classId = ref.watch(selectedClassIdProvider);
+  final result = await ClassBoardService.instance.fetchBoard(classId: classId);
   if (result.isFailure) {
     throw StateError(result.error ?? 'Could not load the class board.');
   }
   return result.data!;
+});
+
+final schoolOverviewProvider = FutureProvider.autoDispose<SchoolOverview>((
+  ref,
+) async {
+  ref.watch(authControllerProvider);
+  final schoolId = ref.watch(selectedSchoolIdProvider);
+  if (!SupabaseService.instance.isInitialized) return SchoolOverview.empty;
+  final result = await SchoolService.instance.fetchOverview(schoolId: schoolId);
+  if (result.isFailure) {
+    throw StateError(result.error ?? 'Could not load the school.');
+  }
+  return result.data ?? SchoolOverview.empty;
 });
 
 final teacherRecentTestsProvider = FutureProvider.autoDispose<List<LiveTest>>((

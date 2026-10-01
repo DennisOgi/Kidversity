@@ -188,6 +188,7 @@ class _PastQuestionsHubScreenState
               LayoutBuilder(
                 builder: (context, constraints) {
                   final paper = _PaperBuilder(
+                    exam: exam,
                     families: families,
                     selected: _subject,
                     onSelect: (subject) => setState(() => _subject = subject),
@@ -330,6 +331,7 @@ class _ExamCard extends StatelessWidget {
 }
 
 class _PaperBuilder extends StatelessWidget {
+  final PastExamType? exam;
   final Map<String, List<PastSubject>> families;
   final PastSubject? selected;
   final ValueChanged<PastSubject> onSelect;
@@ -343,6 +345,7 @@ class _PaperBuilder extends StatelessWidget {
   final ValueChanged<PastPracticeMode> onMode;
 
   const _PaperBuilder({
+    required this.exam,
     required this.families,
     required this.selected,
     required this.onSelect,
@@ -359,6 +362,7 @@ class _PaperBuilder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final chosen = exam;
     return LiftCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -367,7 +371,11 @@ class _PaperBuilder extends StatelessWidget {
           Text('Subject', style: text.titleMedium),
           const SizedBox(height: 4),
           Text(
-            'Every subject on the paper is available.',
+            chosen == null
+                ? 'Subjects change with the exam you pick.'
+                : chosen.isUniversityFamily
+                ? 'Screening subjects only — not the full SSCE list.'
+                : 'Subjects that belong on this paper.',
             style: text.bodySmall?.copyWith(color: AppColors.inkSoft),
           ),
           const SizedBox(height: 14),

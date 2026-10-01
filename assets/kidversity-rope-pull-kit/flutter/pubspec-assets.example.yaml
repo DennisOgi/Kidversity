@@ -1,0 +1,8 @@
+# MERGE into the existing Flutter section. Do not overwrite your pubspec.yaml.
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/rope_pull/environment/
+    - assets/rope_pull/characters/
+    - assets/rope_pull/audio/
+    - assets/rope_pull/ui/

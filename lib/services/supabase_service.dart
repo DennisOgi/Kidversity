@@ -245,12 +245,20 @@ class SupabaseService {
       if (existing != null) {
         return app_errors.Result.success(existing['id'] as String);
       }
+      final membership = await client
+          .from('school_members')
+          .select('school_id')
+          .eq('user_id', teacherId)
+          .limit(1)
+          .maybeSingle();
+      final schoolId = membership?['school_id'] as String?;
       final row = await client
           .from('classes')
           .insert({
             'name': className ?? 'My Class',
             'teacher_id': teacherId,
             'description': 'Your Kidversity class',
+            'school_id': ?schoolId,
           })
           .select('id')
           .single();
@@ -268,20 +276,42 @@ class SupabaseService {
   Future<app_errors.Result<({String id, String name, String code})>>
   fetchTeacherClassInfo() async {
     try {
-      final ensured = await ensureTeacherClass();
-      if (ensured.isFailure) {
-        return app_errors.Result.failure(ensured.error!);
-      }
       final teacherId = currentUser?.id;
       if (teacherId == null) {
         return app_errors.Result.failure('Not authenticated');
       }
-      final row = await client
+      var row = await client
           .from('classes')
           .select('id, name, join_code')
           .eq('teacher_id', teacherId)
+          .order('created_at')
           .limit(1)
-          .single();
+          .maybeSingle();
+      if (row == null) {
+        final membership = await client
+            .from('school_members')
+            .select('school_id')
+            .eq('user_id', teacherId)
+            .limit(1)
+            .maybeSingle();
+        if (membership != null) {
+          return app_errors.Result.failure('Create a class for your school.');
+        }
+        final ensured = await ensureTeacherClass();
+        if (ensured.isFailure) {
+          return app_errors.Result.failure(ensured.error!);
+        }
+        row = await client
+            .from('classes')
+            .select('id, name, join_code')
+            .eq('teacher_id', teacherId)
+            .order('created_at')
+            .limit(1)
+            .maybeSingle();
+      }
+      if (row == null) {
+        return app_errors.Result.failure('Could not load your class code.');
+      }
       var code = row['join_code'] as String?;
       if (code == null || code.isEmpty) {
         final regenerated = await regenerateClassCode(row['id'] as String);
@@ -360,16 +390,21 @@ class SupabaseService {
     }
   }
 
-  Future<app_errors.Result<List<StudentPerformance>>> fetchClassRoster() async {
+  Future<app_errors.Result<List<StudentPerformance>>> fetchClassRoster({
+    String? classId,
+  }) async {
     try {
       final teacherId = currentUser?.id;
       if (teacherId == null) {
         return app_errors.Result.failure('Not authenticated');
       }
-      final classRow = await client
+      final classQuery = client
           .from('classes')
           .select('id')
-          .eq('teacher_id', teacherId)
+          .eq('teacher_id', teacherId);
+      final classRow = await (classId == null || classId.isEmpty
+              ? classQuery
+              : classQuery.eq('id', classId))
           .limit(1)
           .maybeSingle();
       if (classRow == null) return app_errors.Result.success(const []);

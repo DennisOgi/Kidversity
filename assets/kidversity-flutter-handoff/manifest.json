@@ -1,0 +1,171 @@
+{
+  "package": "Kidversity Flutter redesign",
+  "version": "1.0",
+  "files": [
+    {
+      "path": "AI_IDE_START_HERE.md",
+      "bytes": 2879,
+      "sha256": "a8583d96b3d521df688decb0d9aa9851c4beca41e2872688e58d002893933a46"
+    },
+    {
+      "path": "ASSET_GUIDE.md",
+      "bytes": 4357,
+      "sha256": "1b9e94c42a2671c72a5d2f1738b60f6ede94d1bf5be9603b56bc2cb456e98ad5"
+    },
+    {
+      "path": "GENERATION_NOTES.md",
+      "bytes": 5089,
+      "sha256": "6043e327c8fb7a8bfc38e897325eabeedc4792b50d56196a6a02e4191e35c61d"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1629,
+      "sha256": "2be594c3bb4c6e6150b0956fc9febafa746f2356479d3b91d72a731f85660ec7"
+    },
+    {
+      "path": "REDESIGN_SPEC.md",
+      "bytes": 23804,
+      "sha256": "c241f8a5ee9d2e88c964b360fe464ce70ac5faa0a769f2e7ca980b9e812914e5"
+    },
+    {
+      "path": "VALIDATION.md",
+      "bytes": 658,
+      "sha256": "5ff26974cf7fa102ff1d58ba6719a2351e5e6ae7f7442d5d883df475cbf759ed"
+    },
+    {
+      "path": "asset-gallery.html",
+      "bytes": 3781,
+      "sha256": "9e4f2da3ba2e0c212034a38b6a362211870a6603da8a42e3efc2c57ae85378bb"
+    },
+    {
+      "path": "assets/brand/app-icon-192.png",
+      "bytes": 2460,
+      "sha256": "02aa8ca591043066472323c0135c39cdd2169dca8cf4041f88f960c195028ff2"
+    },
+    {
+      "path": "assets/brand/app-icon-32.png",
+      "bytes": 392,
+      "sha256": "60548199609f3fc0a1edfb8f9aa02848eca4376cb91961debb2fe8a332e1fc46"
+    },
+    {
+      "path": "assets/brand/app-icon-512.png",
+      "bytes": 10130,
+      "sha256": "ddec586cac3aa33f2ea7af4ddcb6e1b6404b811ccee9342d6c0de41c36ba824e"
+    },
+    {
+      "path": "assets/brand/app-icon.svg",
+      "bytes": 333,
+      "sha256": "713b723b7fbbb4aab8236fba00d92a7743b9e70438147704d7a4bc3d147b0f74"
+    },
+    {
+      "path": "assets/brand/brand-lockup.svg",
+      "bytes": 414,
+      "sha256": "389b59d9d929966cd5038385b4e6180ac727c557fe9af10f6f3810af30e7f7a1"
+    },
+    {
+      "path": "assets/brand/mark-indigo.png",
+      "bytes": 4147,
+      "sha256": "8caca0827371c4c72aad3ff8564bbffc7eea2872c353c2929457be237e5430a3"
+    },
+    {
+      "path": "assets/brand/mark-indigo.svg",
+      "bytes": 300,
+      "sha256": "a58381201525207961fa45e2f9ad4cf605fb138cb79445e9f7c17a008aa9cda1"
+    },
+    {
+      "path": "assets/brand/mark-ink.png",
+      "bytes": 4091,
+      "sha256": "9dce7ce70f05a50335862482008cfaa8a90b55a200196be707cd42caf71f7975"
+    },
+    {
+      "path": "assets/brand/mark-ink.svg",
+      "bytes": 300,
+      "sha256": "6945a660698b06ecaa431db89141272ef7de90109ab56dec0bb744de4739c32e"
+    },
+    {
+      "path": "assets/brand/mark-white.png",
+      "bytes": 3243,
+      "sha256": "c520746f826f5c4e233f686da557a82c46c4f768364c1843cd49a681477411e2"
+    },
+    {
+      "path": "assets/brand/mark-white.svg",
+      "bytes": 300,
+      "sha256": "24c7da218a8872723622bd218512638fb814264d676a1f336194dfe5eacbc0b3"
+    },
+    {
+      "path": "assets/illustrations/hero-open-doors.png",
+      "bytes": 1451333,
+      "sha256": "2023d73c5b9516ce4508cee2be161887d7caf5c5251f22f7718d11b695623a0a"
+    },
+    {
+      "path": "assets/illustrations/world-exams.png",
+      "bytes": 1836297,
+      "sha256": "8ac484413aa6246de24679e2a684afcd326f326dcfdb80d945c13ee351fb58b5"
+    },
+    {
+      "path": "assets/illustrations/world-mandarin.png",
+      "bytes": 1545293,
+      "sha256": "931edd873fd8fa4968237e65f2884ba4a7dc7a6f68c0a81e45808d7616935fff"
+    },
+    {
+      "path": "assets/illustrations/world-play.png",
+      "bytes": 1789506,
+      "sha256": "0a145287963dd1fbfda688cf3a86dc53ded689a2320626ec264434ea49734954"
+    },
+    {
+      "path": "flutter/INTEGRATION.md",
+      "bytes": 2275,
+      "sha256": "19f767dd0484e558e48ac4b79f1c6daedd96ccc704507378a0ad7879f34eb7b5"
+    },
+    {
+      "path": "flutter/kidversity_assets.dart",
+      "bytes": 360,
+      "sha256": "d63d05337c6f170f36472e90e61db57002cddb4fb93421b9644967312eeb17a0"
+    },
+    {
+      "path": "flutter/kidversity_brand.dart",
+      "bytes": 2125,
+      "sha256": "f2b346c1e07033bb425f7b2390479b7ff7528d726b3828bde9dae473898f60fb"
+    },
+    {
+      "path": "flutter/kidversity_theme.dart",
+      "bytes": 5243,
+      "sha256": "c1df0fe3eb3bc90cb1653bf4e20648491f3ddb9a49aa603572140fe9679a8105"
+    },
+    {
+      "path": "flutter/pubspec-assets.example.yaml",
+      "bytes": 386,
+      "sha256": "6dd63c4ddae8a70d67ed25a1e4c5861bc94a234cccba0e1720ffecc3f41f4bd0"
+    },
+    {
+      "path": "flutter/responsive_content.dart",
+      "bytes": 1420,
+      "sha256": "04edced93f11470afbd580e8824134d157533d8816db7c5fb951d110b197eb09"
+    },
+    {
+      "path": "flutter/world_entry.dart",
+      "bytes": 2928,
+      "sha256": "c1eb6ffe18037ca265fd069fd38a4a5b20651f5ce5b34416bedef90d1a359215"
+    },
+    {
+      "path": "references/exploratory/READ_ME_FIRST.md",
+      "bytes": 378,
+      "sha256": "23eacc615321fbf8e728c536b91fb1cb0efab0e8dba1a5d731dc10530a1769e2"
+    },
+    {
+      "path": "references/exploratory/desktop-home-earlier.png",
+      "bytes": 1424287,
+      "sha256": "d62f21b930699c373adf66535b8934833696fd9bc43108d71a4e734a61f67df4"
+    },
+    {
+      "path": "references/exploratory/mobile-home-earlier.png",
+      "bytes": 1283661,
+      "sha256": "bf6e09adee6ca7310aae5ce18d7748d37c63c759207eb1ad5e651bf12276f097"
+    },
+    {
+      "path": "tokens.json",
+      "bytes": 1133,
+      "sha256": "8b9414200666491c379e05d117df3fa1a323564329edc6ef32c2c73b3cbb14b4"
+    }
+  ]
+}

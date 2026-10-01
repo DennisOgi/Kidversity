@@ -1,0 +1,175 @@
+{
+  "version": "1.0",
+  "stage": {
+    "width": 1200,
+    "height": 600,
+    "ropeY": 340,
+    "gripX": [
+      255,
+      395,
+      805,
+      945
+    ],
+    "positionRange": [
+      -1,
+      1
+    ],
+    "displacementScale": 90,
+    "spriteCanvasExtent": 340
+  },
+  "assets": [
+    {
+      "path": "assets/rope_pull/audio/correct.wav",
+      "bytes": 19092,
+      "sha256": "fd272a6bce3dceeb3147d686a7d33908f9cb311bd209eaf86b20124c7d3f4e56",
+      "type": "original-synthesized-cue",
+      "sampleRate": 44100,
+      "channels": 1,
+      "durationSeconds": 0.216
+    },
+    {
+      "path": "assets/rope_pull/audio/countdown.wav",
+      "bytes": 11332,
+      "sha256": "d3d431612fe761b8f48236942c1b860290a1a142cf99de5700f51ccecf5e3e8a",
+      "type": "original-synthesized-cue",
+      "sampleRate": 44100,
+      "channels": 1,
+      "durationSeconds": 0.128
+    },
+    {
+      "path": "assets/rope_pull/audio/incorrect.wav",
+      "bytes": 21738,
+      "sha256": "17ed5aa7131fc3728f2cf94933ed63545ebed670dcb101b60b6d5006715e81e5",
+      "type": "original-synthesized-cue",
+      "sampleRate": 44100,
+      "channels": 1,
+      "durationSeconds": 0.246
+    },
+    {
+      "path": "assets/rope_pull/audio/start.wav",
+      "bytes": 29498,
+      "sha256": "2b9225ef416cd71e671383dbdb347ddb1875f3a1c430d3b0f00c3af81a3daffb",
+      "type": "original-synthesized-cue",
+      "sampleRate": 44100,
+      "channels": 1,
+      "durationSeconds": 0.334
+    },
+    {
+      "path": "assets/rope_pull/audio/win.wav",
+      "bytes": 62836,
+      "sha256": "c83f9ae9f54ddf836ef02283b05750a5b354ae2372ed86e6a4ca442c59e7bff9",
+      "type": "original-synthesized-cue",
+      "sampleRate": 44100,
+      "channels": 1,
+      "durationSeconds": 0.712
+    },
+    {
+      "path": "assets/rope_pull/characters/indigo-captain.png",
+      "bytes": 589603,
+      "sha256": "1b45b68ca4cea625a5827c3bb4aedafba7dd49a3100473c82056d647f6daf163",
+      "width": 1254,
+      "height": 1254,
+      "type": "static-cutout",
+      "gripNormalized": [
+        0.712,
+        0.421
+      ],
+      "feetYApprox": 0.915,
+      "facing": "right",
+      "mirrorForRightTeam": true,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/rope_pull/characters/indigo-partner.png",
+      "bytes": 474112,
+      "sha256": "e67f077ac591cae655ea59f6048b81285451d4847fca3a13024034cdd4880979",
+      "width": 1254,
+      "height": 1254,
+      "type": "static-cutout",
+      "gripNormalized": [
+        0.712,
+        0.392
+      ],
+      "feetYApprox": 0.915,
+      "facing": "right",
+      "mirrorForRightTeam": true,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/rope_pull/characters/teal-captain.png",
+      "bytes": 637048,
+      "sha256": "6f737415009032714beab3744c78d4dcac864ea809db87481dc67dc7679f56eb",
+      "width": 1254,
+      "height": 1254,
+      "type": "static-cutout",
+      "gripNormalized": [
+        0.756,
+        0.39
+      ],
+      "feetYApprox": 0.915,
+      "facing": "right",
+      "mirrorForRightTeam": true,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/rope_pull/characters/teal-partner.png",
+      "bytes": 602640,
+      "sha256": "162be166cd28033590896141bb46cb1a7562337f884b34a70f8d19d2efd362aa",
+      "width": 1254,
+      "height": 1254,
+      "type": "static-cutout",
+      "gripNormalized": [
+        0.744,
+        0.411
+      ],
+      "feetYApprox": 0.915,
+      "facing": "right",
+      "mirrorForRightTeam": true,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/rope_pull/environment/campus-court.png",
+      "bytes": 1837458,
+      "sha256": "372bad259d06cd73cc3e669ce608f31d4f6cdb7b09efd70b24e729e0ac4281e1",
+      "width": 1536,
+      "height": 1024,
+      "type": "flattened-opaque-environment"
+    },
+    {
+      "path": "assets/rope_pull/ui/centre-ribbon.svg",
+      "bytes": 162,
+      "sha256": "1bc0a4c2a53e9d34ba211a6225dd5a527984c6038e2b422d469886e80b917c78",
+      "type": "vector-ui-source"
+    },
+    {
+      "path": "assets/rope_pull/ui/dust-puff.svg",
+      "bytes": 259,
+      "sha256": "85d569e3dd7fd18964054e3bf37db7c91085a87df467577610bf82babad611b5",
+      "type": "vector-ui-source"
+    },
+    {
+      "path": "assets/rope_pull/ui/feedback-correct.svg",
+      "bytes": 236,
+      "sha256": "f6b01122514c0afc97828a87b399cef971e216c2c14a509b234082ee60264b0e",
+      "type": "vector-ui-source"
+    },
+    {
+      "path": "assets/rope_pull/ui/feedback-retry.svg",
+      "bytes": 206,
+      "sha256": "4e765cc67fb179e8295fa1f9ab600c6fa5b0a21297f71544ffbbff3f0563a967",
+      "type": "vector-ui-source"
+    },
+    {
+      "path": "assets/rope_pull/ui/team-indigo.svg",
+      "bytes": 168,
+      "sha256": "e01629c4aa33a44ef920ed536f3d4bb65e493c2fccbf8e6e3154e9ee83061e9f",
+      "type": "vector-ui-source"
+    },
+    {
+      "path": "assets/rope_pull/ui/team-teal.svg",
+      "bytes": 145,
+      "sha256": "1da8ab98b4a12b9707435833b2f55671cbe2cf9d59892613c4cf416aa719870c",
+      "type": "vector-ui-source"
+    }
+  ]
+}

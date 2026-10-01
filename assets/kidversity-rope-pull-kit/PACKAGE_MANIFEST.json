@@ -1,0 +1,181 @@
+{
+  "name": "Kidversity Rope Pull Kit",
+  "version": "1.0",
+  "files": [
+    {
+      "path": "AI_IDE_PROMPT.md",
+      "bytes": 2644,
+      "sha256": "eea38da46f5ba60bd6bb217bab2cc5866ebf9b67c8f307369cfa7759db9dfc8a"
+    },
+    {
+      "path": "ANIMATION_SPEC.md",
+      "bytes": 3499,
+      "sha256": "a76d1e367a57caf3119d3d19cd0c457a20314afb6ef4f1f296cd84516112c5ca"
+    },
+    {
+      "path": "ASSET_MANIFEST.json",
+      "bytes": 4964,
+      "sha256": "1284b9ea993944d90cc11ece5f3baf52120aaa6fe539f19ec91bf5b6ef17ff5b"
+    },
+    {
+      "path": "GAME_UI_SPEC.md",
+      "bytes": 7338,
+      "sha256": "a91d84f4885b8bb6c3a39816506d97db4b24a78693346879adb9699e03238acf"
+    },
+    {
+      "path": "GENERATION_PROMPTS.md",
+      "bytes": 7459,
+      "sha256": "f295a92447be73d97dcf14517fb068e696ceaefb533272b4e1e2d6c9bdd3b64d"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2617,
+      "sha256": "efca8930a648e43092ca571da1b98e081953fdcf381c007c4d1aaa5dfc80664e"
+    },
+    {
+      "path": "STATE_CONTRACT.md",
+      "bytes": 2728,
+      "sha256": "31038648b7b0d67e91afb727f3f9ec07877a357ccde220edd7efe824af017073"
+    },
+    {
+      "path": "VALIDATION.md",
+      "bytes": 1531,
+      "sha256": "b5e90191d909f748ef2accb9ec41e722f36bad5e4e6a9fd58b8ad473fc0c3690"
+    },
+    {
+      "path": "assets/rope_pull/audio/correct.wav",
+      "bytes": 19092,
+      "sha256": "fd272a6bce3dceeb3147d686a7d33908f9cb311bd209eaf86b20124c7d3f4e56"
+    },
+    {
+      "path": "assets/rope_pull/audio/countdown.wav",
+      "bytes": 11332,
+      "sha256": "d3d431612fe761b8f48236942c1b860290a1a142cf99de5700f51ccecf5e3e8a"
+    },
+    {
+      "path": "assets/rope_pull/audio/incorrect.wav",
+      "bytes": 21738,
+      "sha256": "17ed5aa7131fc3728f2cf94933ed63545ebed670dcb101b60b6d5006715e81e5"
+    },
+    {
+      "path": "assets/rope_pull/audio/start.wav",
+      "bytes": 29498,
+      "sha256": "2b9225ef416cd71e671383dbdb347ddb1875f3a1c430d3b0f00c3af81a3daffb"
+    },
+    {
+      "path": "assets/rope_pull/audio/win.wav",
+      "bytes": 62836,
+      "sha256": "c83f9ae9f54ddf836ef02283b05750a5b354ae2372ed86e6a4ca442c59e7bff9"
+    },
+    {
+      "path": "assets/rope_pull/characters/indigo-captain.png",
+      "bytes": 589603,
+      "sha256": "1b45b68ca4cea625a5827c3bb4aedafba7dd49a3100473c82056d647f6daf163"
+    },
+    {
+      "path": "assets/rope_pull/characters/indigo-partner.png",
+      "bytes": 474112,
+      "sha256": "e67f077ac591cae655ea59f6048b81285451d4847fca3a13024034cdd4880979"
+    },
+    {
+      "path": "assets/rope_pull/characters/teal-captain.png",
+      "bytes": 637048,
+      "sha256": "6f737415009032714beab3744c78d4dcac864ea809db87481dc67dc7679f56eb"
+    },
+    {
+      "path": "assets/rope_pull/characters/teal-partner.png",
+      "bytes": 602640,
+      "sha256": "162be166cd28033590896141bb46cb1a7562337f884b34a70f8d19d2efd362aa"
+    },
+    {
+      "path": "assets/rope_pull/environment/campus-court.png",
+      "bytes": 1837458,
+      "sha256": "372bad259d06cd73cc3e669ce608f31d4f6cdb7b09efd70b24e729e0ac4281e1"
+    },
+    {
+      "path": "assets/rope_pull/ui/centre-ribbon.svg",
+      "bytes": 162,
+      "sha256": "1bc0a4c2a53e9d34ba211a6225dd5a527984c6038e2b422d469886e80b917c78"
+    },
+    {
+      "path": "assets/rope_pull/ui/dust-puff.svg",
+      "bytes": 259,
+      "sha256": "85d569e3dd7fd18964054e3bf37db7c91085a87df467577610bf82babad611b5"
+    },
+    {
+      "path": "assets/rope_pull/ui/feedback-correct.svg",
+      "bytes": 236,
+      "sha256": "f6b01122514c0afc97828a87b399cef971e216c2c14a509b234082ee60264b0e"
+    },
+    {
+      "path": "assets/rope_pull/ui/feedback-retry.svg",
+      "bytes": 206,
+      "sha256": "4e765cc67fb179e8295fa1f9ab600c6fa5b0a21297f71544ffbbff3f0563a967"
+    },
+    {
+      "path": "assets/rope_pull/ui/team-indigo.svg",
+      "bytes": 168,
+      "sha256": "e01629c4aa33a44ef920ed536f3d4bb65e493c2fccbf8e6e3154e9ee83061e9f"
+    },
+    {
+      "path": "assets/rope_pull/ui/team-teal.svg",
+      "bytes": 145,
+      "sha256": "1da8ab98b4a12b9707435833b2f55671cbe2cf9d59892613c4cf416aa719870c"
+    },
+    {
+      "path": "flutter/INTEGRATION.md",
+      "bytes": 1899,
+      "sha256": "8a9de3a29e0a74a666ba5ce7bc46248c242377a03dfdf0a83fc019b6395e59f5"
+    },
+    {
+      "path": "flutter/main.example.dart",
+      "bytes": 379,
+      "sha256": "00f7c2d01e418fb2d840c435ab830795e43db070349b26796b7f5c2987e1115e"
+    },
+    {
+      "path": "flutter/pubspec-assets.example.yaml",
+      "bytes": 255,
+      "sha256": "f21d60a389f54431efa6cc4a7647be1780f7a342c612088d6df311578d2d2a6c"
+    },
+    {
+      "path": "flutter/rope_arena.dart",
+      "bytes": 15914,
+      "sha256": "0468976ac9bc74bfe5816136f79df3ba347cbbc3c1dbc862c34290c8346473c2"
+    },
+    {
+      "path": "flutter/rope_pull_demo.dart",
+      "bytes": 8467,
+      "sha256": "e272fa43fc70479bd311c1ae4ab0d2535315b4d7a537f9a89bb577fdc3a01a01"
+    },
+    {
+      "path": "preview/arena-poster.png",
+      "bytes": 953751,
+      "sha256": "f5020921561d499f9a5ac0a90030326274a83c255b96a03ad0516afaee8bea03"
+    },
+    {
+      "path": "preview/game.js",
+      "bytes": 7602,
+      "sha256": "d669613a1b56cc42caf57fc559838c69be3578827266fc9ba339b32950760b7e"
+    },
+    {
+      "path": "preview/index.html",
+      "bytes": 3312,
+      "sha256": "2183045c28b753da9086ad27ae647568719ac4a7638be74f28c9e68a72101884"
+    },
+    {
+      "path": "preview/motion-preview.mp4",
+      "bytes": 1326932,
+      "sha256": "84fca48b2b71da5e76461365bd4adc5c2657cb905354add8bc2e69eeb1229656"
+    },
+    {
+      "path": "preview/scene.js",
+      "bytes": 4799,
+      "sha256": "96622917ed56bdea93d08b4b34dee7e50eef794f5c9e479691dc920ee63b9b9e"
+    },
+    {
+      "path": "preview/style.css",
+      "bytes": 4828,
+      "sha256": "64802af21698ebfd6f6128bfa8a587b6b2c5281006d9514ec714c9c0fa6a22a2"
+    }
+  ]
+}

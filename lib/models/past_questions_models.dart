@@ -53,8 +53,93 @@ class PastExamType {
 
   bool get isSsceFamily => slug == 'wassce' || slug == 'neco';
 
-  /// Paid Sdash plans expose the full subject list for every exam type.
-  List<PastSubject> subjectsFor(List<PastSubject> all) => all;
+  /// Sdash returns one flat subject list. University screening is a
+  /// short paper, so it must not look like a full SSCE wall.
+  Set<String>? get subjectSlugAllowlist {
+    if (slug == 'utme') {
+      return const {
+        'english',
+        'mathematics',
+        'biology',
+        'chemistry',
+        'physics',
+        'government',
+        'economics',
+        'englishlit',
+        'geography',
+        'commerce',
+        'accounting',
+        'crk',
+        'irk',
+        'agriculture',
+        'computer',
+        'arabic',
+        'hausa',
+        'igbo',
+        'yoruba',
+        'history',
+        'geology',
+      };
+    }
+    if (isSsceFamily) {
+      return const {
+        'english',
+        'mathematics',
+        'biology',
+        'chemistry',
+        'physics',
+        'government',
+        'economics',
+        'englishlit',
+        'geography',
+        'commerce',
+        'accounting',
+        'crk',
+        'irk',
+        'agriculture',
+        'computer',
+        'civiledu',
+        'fineart',
+        'homeeconomics',
+        'insurance',
+        'music',
+        'arabic',
+        'hausa',
+        'igbo',
+        'yoruba',
+        'history',
+        'currentaffairs',
+        'geology',
+      };
+    }
+    if (isUniversityFamily) {
+      return const {
+        'english',
+        'mathematics',
+        'biology',
+        'chemistry',
+        'physics',
+        'government',
+        'economics',
+        'currentaffairs',
+        'englishlit',
+        'accounting',
+        'commerce',
+        'geography',
+        'crk',
+        'irk',
+        'computer',
+      };
+    }
+    return null;
+  }
+
+  List<PastSubject> subjectsFor(List<PastSubject> all) {
+    final allow = subjectSlugAllowlist;
+    if (allow == null) return all;
+    final filtered = all.where((subject) => allow.contains(subject.slug)).toList();
+    return filtered.isEmpty ? all : filtered;
+  }
 }
 
 class PastSubject {

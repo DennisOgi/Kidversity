@@ -10,13 +10,20 @@ class ClassBoardService {
   ClassBoardService._();
   static final instance = ClassBoardService._();
 
-  Future<app_errors.Result<ClassBoardSnapshot>> fetchBoard() async {
+  Future<app_errors.Result<ClassBoardSnapshot>> fetchBoard({
+    String? classId,
+  }) async {
     try {
       final service = SupabaseService.instance;
       if (!service.isInitialized || service.currentUser == null) {
         return app_errors.Result.failure('Sign in to see the class board.');
       }
-      final raw = await service.client.rpc('fetch_class_board');
+      final raw = classId == null || classId.isEmpty
+          ? await service.client.rpc('fetch_class_board')
+          : await service.client.rpc(
+              'fetch_class_board',
+              params: {'p_class_id': classId},
+            );
       final map = switch (raw) {
         final Map value => Map<String, dynamic>.from(value),
         final String value => Map<String, dynamic>.from(

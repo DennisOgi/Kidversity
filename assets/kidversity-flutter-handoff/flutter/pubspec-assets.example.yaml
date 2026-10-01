@@ -1,0 +1,9 @@
+# Merge into the existing flutter: section; do not replace pubspec.yaml.
+# Dart starters use google_fonts. Reuse the project's compatible dependency.
+# No SDK/package version is prescribed by this design pack.
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/brand/
+    - assets/illustrations/
+# Font binaries are not included. Configure font bundling separately if needed.

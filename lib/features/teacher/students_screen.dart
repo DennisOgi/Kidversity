@@ -9,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/class_board_card.dart';
 import '../../widgets/common.dart';
+import 'school_home.dart';
 import '../../widgets/empty_panel.dart';
 import '../../widgets/error_boundary.dart';
 
@@ -17,6 +18,21 @@ class StudentsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final schoolAsync = ref.watch(schoolOverviewProvider);
+    final school = schoolAsync.asData?.value;
+    if (schoolAsync.isLoading) {
+      return const ShellScrollView(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: LoadingIndicator(message: 'Opening your class…'),
+          ),
+        ],
+      );
+    }
+    if (school != null && school.hasSchool && school.canManageClasses) {
+      return const SchoolHome();
+    }
     final rosterAsync = ref.watch(rosterProvider);
     final roster =
         rosterAsync.whenOrNull(data: (d) => d) ?? const <StudentPerformance>[];

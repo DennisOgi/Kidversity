@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "sdashapi": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@sdashapis/mcp-server"
+      ],
+      "env": {
+        "SDASHAPI_ACCESS_TOKEN": "sdash_2a2da0d6980441d7903f0e8b5bd3a16f3aebba78",
+        "SDASHAPI_BASE_URL": "https://www.sdashapi.com/api/v1"
+      }
+    }
+  }
+}

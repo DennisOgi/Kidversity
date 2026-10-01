@@ -94,7 +94,7 @@ void main() {
     );
   });
 
-  test('paid plan unlocks English, Mathematics, and every listed subject', () {
+  test('English and Mathematics stay open on the paid plan', () {
     expect(
       const PastSubject(id: 1, name: 'English', slug: 'english').isSandboxLocked,
       isFalse,
@@ -115,12 +115,13 @@ void main() {
     const subjects = [
       PastSubject(id: 1, name: 'Biology', slug: 'biology'),
       PastSubject(id: 2, name: 'Home Economics', slug: 'homeeconomics'),
-      PastSubject(id: 3, name: 'Geology', slug: 'geology'),
+      PastSubject(id: 3, name: 'Fine Art', slug: 'fineart'),
       PastSubject(id: 4, name: 'English', slug: 'english'),
+      PastSubject(id: 5, name: 'Current Affairs', slug: 'currentaffairs'),
     ];
     expect(
       university.subjectsFor(subjects).map((s) => s.slug),
-      ['biology', 'homeeconomics', 'geology', 'english'],
+      ['biology', 'english', 'currentaffairs'],
     );
   });
 

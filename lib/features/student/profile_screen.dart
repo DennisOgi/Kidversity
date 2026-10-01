@@ -8,6 +8,7 @@ import '../../theme/app_colors.dart';
 import '../../models/user_preferences.dart';
 import '../../router/navigation.dart';
 import '../../services/supabase_service.dart';
+import '../teacher/school_home.dart';
 import '../../widgets/class_board_card.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
@@ -122,6 +123,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 22),
+        const SchoolStudentRank(),
         const _ClassBoardSection(),
         const SizedBox(height: 22),
         const JoinClassCard(),
