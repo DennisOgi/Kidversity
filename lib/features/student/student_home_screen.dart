@@ -37,12 +37,13 @@ class StudentHomeScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _LiveQuizBanner(),
+                const StudentLiveQuizBanner(),
                 PageIntro(
                   eyebrow: 'Your learning home',
                   title: greeting,
                   body: 'Pick up where you left off, or open a world.',
                 ),
+                const _SchoolPlace(),
                 const SizedBox(height: 18),
                 const _TeacherWork(),
                 course.when(
@@ -74,27 +75,44 @@ class StudentHomeScreen extends ConsumerWidget {
   }
 }
 
-class _LiveQuizBanner extends ConsumerWidget {
-  const _LiveQuizBanner();
+class _SchoolPlace extends ConsumerWidget {
+  const _SchoolPlace();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ref
-        .watch(activeLiveTestProvider)
-        .when(
-          data: (test) {
-            if (test == null || !test.isActive) return const SizedBox.shrink();
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: LiveTestAlertBanner(
-                test: test,
-                onJoin: () => context.go(AppRoutes.studentLiveTest(test.id)),
+    final school = ref.watch(schoolOverviewProvider).asData?.value;
+    if (school == null || !school.hasSchool) return const SizedBox.shrink();
+    final text = Theme.of(context).textTheme;
+    final myClass = school.classes.firstOrNull;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 6),
+      child: GlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            const SoftIcon(icon: Icons.school_rounded, size: 42),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    school.schoolName ?? 'Your school',
+                    style: text.titleMedium,
+                  ),
+                  Text(
+                    myClass == null
+                        ? 'Your school will place you in a class.'
+                        : myClass.name,
+                    style: text.bodyMedium,
+                  ),
+                ],
               ),
-            );
-          },
-          loading: () => const SizedBox.shrink(),
-          error: (_, _) => const SizedBox.shrink(),
-        );
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

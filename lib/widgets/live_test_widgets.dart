@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../data/app_state.dart';
 import '../models/live_test_models.dart';
+import '../router/navigation.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
@@ -553,6 +557,29 @@ class QuestionProgressDots extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Home, Practice, and Path all surface an in-progress class quiz the same way.
+class StudentLiveQuizBanner extends ConsumerWidget {
+  const StudentLiveQuizBanner({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(activeLiveTestProvider).when(
+      data: (test) {
+        if (test == null || !test.isActive) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: LiveTestAlertBanner(
+            test: test,
+            onJoin: () => context.go(AppRoutes.studentLiveTest(test.id)),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }

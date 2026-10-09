@@ -10,6 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
+import '../../widgets/live_test_widgets.dart';
 import '../../widgets/surfaces.dart';
 
 class FoundationPracticeScreen extends ConsumerWidget {
@@ -47,68 +48,83 @@ class FoundationPracticeScreen extends ConsumerWidget {
             .whenOrNull(data: (ids) => ids) ??
         const <String>{};
     return ShellScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
       children: [
-        const PageIntro(
-          eyebrow: 'Practice',
-          title: 'Pick up a short session',
-          body:
-              'Past questions, a lab, mental maths, or a few Mandarin words you have already unlocked.',
-        ),
-        const SizedBox(height: 18),
-        _PracticeDoor(
-          icon: Icons.menu_book_rounded,
-          color: AppColors.worldExams,
-          title: 'Nigerian past questions',
-          body: 'UTME, WASSCE, NECO, Post-UTME, and university screening.',
-          onTap: () => context.push(AppRoutes.studentExams),
-        ),
-        const SizedBox(height: 12),
-        _PracticeDoor(
-          icon: Icons.science_rounded,
-          color: AppColors.accentTeal,
-          title: 'Labs',
-          body:
-              'Physics, chemistry, biology, maths, the water cycle, and how government works.',
-          onTap: () => context.go(AppRoutes.studentLabs),
-        ),
-        const SizedBox(height: 12),
-        _PracticeDoor(
-          icon: Icons.calculate_rounded,
-          color: AppColors.worldLanguage,
-          title: 'Mental maths',
-          body: 'Twenty levels across number, fractions, money, measure, and algebra.',
-          onTap: () => context.go(AppRoutes.studentMaths),
-        ),
-        const SizedBox(height: 26),
-        Text(
-          'Mandarin word review',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Eight unlocked words: half older, half newer. Listen, then pick the meaning.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 14),
-        course.when(
-          loading: () => const LoadingIndicator(message: 'Loading your words…'),
-          error: (error, _) => ErrorDisplay(
-            message: 'Practice could not be loaded.',
-            error: error,
-            onRetry: () => ref.invalidate(mandarinCourseProvider),
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1080),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const StudentLiveQuizBanner(),
+                const PageIntro(
+                  eyebrow: 'Practice',
+                  title: 'Pick up a short session',
+                  body:
+                      'Past questions, a lab, mental maths, or a few Mandarin words you have already unlocked.',
+                ),
+                const SizedBox(height: 18),
+                _PracticeDoor(
+                  icon: Icons.menu_book_rounded,
+                  color: AppColors.worldExams,
+                  title: 'Nigerian past questions',
+                  body:
+                      'UTME, WASSCE, NECO, Post-UTME, and university screening.',
+                  onTap: () => context.push(AppRoutes.studentExams),
+                ),
+                const SizedBox(height: 12),
+                _PracticeDoor(
+                  icon: Icons.science_rounded,
+                  color: AppColors.accentTeal,
+                  title: 'Labs',
+                  body:
+                      'Physics, chemistry, biology, maths, the water cycle, and how government works.',
+                  onTap: () => context.go(AppRoutes.studentLabs),
+                ),
+                const SizedBox(height: 12),
+                _PracticeDoor(
+                  icon: Icons.calculate_rounded,
+                  color: AppColors.worldLanguage,
+                  title: 'Mental maths',
+                  body:
+                      'Twenty levels across number, fractions, money, measure, and algebra.',
+                  onTap: () => context.go(AppRoutes.studentMaths),
+                ),
+                const SizedBox(height: 26),
+                Text(
+                  'Mandarin word review',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Eight unlocked words: half older, half newer. Listen, then pick the meaning.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 14),
+                course.when(
+                  loading: () =>
+                      const LoadingIndicator(message: 'Loading your words…'),
+                  error: (error, _) => ErrorDisplay(
+                    message: 'Practice could not be loaded.',
+                    error: error,
+                    onRetry: () => ref.invalidate(mandarinCourseProvider),
+                  ),
+                  data: (value) {
+                    final words = _unlockedWords(value, completedLessonIds);
+                    if (words.isEmpty) {
+                      return const Text(
+                        'Finish Lesson 1 to unlock your first review words.',
+                      );
+                    }
+                    return _DailyReviewSession(
+                      key: ValueKey(words.map((word) => word.id).join('|')),
+                      words: words,
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-          data: (value) {
-            final words = _unlockedWords(value, completedLessonIds);
-            if (words.isEmpty) {
-              return const Text(
-                'Finish Lesson 1 to unlock your first review words.',
-              );
-            }
-            return _DailyReviewSession(
-              key: ValueKey(words.map((word) => word.id).join('|')),
-              words: words,
-            );
-          },
         ),
       ],
     );

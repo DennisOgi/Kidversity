@@ -12,6 +12,7 @@ import '../teacher/school_home.dart';
 import '../../widgets/class_board_card.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
+import '../../widgets/surfaces.dart';
 import 'join_class.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -25,6 +26,13 @@ class ProfileScreen extends ConsumerWidget {
         ? auth.displayName
         : 'Mandarin learner';
     final avatar = auth.avatarEmoji.isNotEmpty ? auth.avatarEmoji : '🦊';
+    final school = ref.watch(schoolOverviewProvider).asData?.value;
+    final placedClass = school?.classes.firstOrNull;
+    final schoolLine = school == null || !school.hasSchool
+        ? 'Kidversity learner'
+        : placedClass == null
+        ? '${school.schoolName} · waiting for a class'
+        : '${school.schoolName} · ${placedClass.name}';
 
     Future<void> deleteAccount() async {
       final confirmed = await showDialog<bool>(
@@ -62,9 +70,20 @@ class ProfileScreen extends ConsumerWidget {
     }
 
     return ShellScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
       children: [
-        Text('My profile', style: text.headlineSmall),
-        const SizedBox(height: 8),
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1080),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+        const PageIntro(
+          eyebrow: 'Me',
+          title: 'Your place at school',
+          body: 'Class, progress, and how Kidversity feels to use.',
+        ),
+        const SizedBox(height: 18),
         GlassCard(
           gradient: AppColors.brandGradient,
           padding: const EdgeInsets.all(22),
@@ -85,8 +104,8 @@ class ProfileScreen extends ConsumerWidget {
                 displayName,
                 style: text.headlineSmall?.copyWith(color: Colors.white),
               ),
-              Text(
-                'Kidversity learner',
+                Text(
+                schoolLine,
                 style: text.bodyMedium?.copyWith(
                   color: Colors.white.withValues(alpha: 0.9),
                 ),
@@ -126,7 +145,7 @@ class ProfileScreen extends ConsumerWidget {
         const SchoolStudentRank(),
         const _ClassBoardSection(),
         const SizedBox(height: 22),
-        const JoinClassCard(),
+        const _ClassMembershipCard(),
         const SizedBox(height: 22),
         const SectionHeader(title: 'Settings'),
         const _SettingsSection(),
@@ -153,8 +172,47 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ],
         ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
+  }
+}
+
+class _ClassMembershipCard extends ConsumerWidget {
+  const _ClassMembershipCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final school = ref.watch(schoolOverviewProvider).asData?.value;
+    if (school != null && school.hasSchool) {
+      final placed = school.classes.firstOrNull;
+      if (placed != null) return const SizedBox.shrink();
+      final text = Theme.of(context).textTheme;
+      return GlassCard(
+        child: Row(
+          children: [
+            const SoftIcon(icon: Icons.hourglass_top_rounded, size: 38),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Waiting for a class', style: text.titleMedium),
+                  Text(
+                    '${school.schoolName} will place you. You do not need a class code.',
+                    style: text.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return const JoinClassCard();
   }
 }
 
@@ -168,6 +226,12 @@ class _FoundationProfileProgress extends ConsumerWidget {
             .watch(foundationCompletedLessonIdsProvider)
             .whenOrNull(data: (value) => value.length) ??
         0;
+    final total =
+        ref.watch(mandarinCourseProvider).whenOrNull(
+          data: (course) => course.lessons.length,
+        ) ??
+        30;
+    final safeTotal = total == 0 ? 1 : total;
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,12 +241,12 @@ class _FoundationProfileProgress extends ConsumerWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
-          Text('$completed of 30 lessons complete'),
+          Text('$completed of $total lessons complete'),
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: completed / 30,
+              value: (completed / safeTotal).clamp(0, 1),
               minHeight: 9,
               backgroundColor: AppColors.backgroundAlt,
               color: AppColors.jade,

@@ -60,8 +60,8 @@ class SchoolService {
           id: map['id'] as String? ?? '',
           name: map['name'] as String? ?? name.trim(),
           joinCode: map['join_code'] as String?,
-          teacherId: SupabaseService.instance.currentUser?.id ?? '',
-          teacherName: 'You',
+          teacherId: map['teacher_id'] as String? ?? '',
+          teacherName: 'Unassigned',
           memberCount: 0,
         ),
       );
@@ -111,6 +111,121 @@ class SchoolService {
         context: 'add_school_teacher',
       );
       return app_errors.Result.failure('Could not add that teacher.');
+    }
+  }
+
+  Future<app_errors.Result<String>> assignTeacherToClass({
+    required String classId,
+    required String email,
+  }) async {
+    try {
+      final raw = await SupabaseService.instance.client.rpc(
+        'assign_class_teacher',
+        params: {'p_class_id': classId, 'p_email': email.trim()},
+      );
+      final map = _asMap(raw);
+      return app_errors.Result.success(
+        map['display_name'] as String? ?? email.trim(),
+      );
+    } on PostgrestException catch (error, stack) {
+      await app_errors.ErrorHandler.reportError(
+        error,
+        stack,
+        context: 'assign_class_teacher',
+      );
+      return app_errors.Result.failure(_message(error));
+    } catch (error, stack) {
+      await app_errors.ErrorHandler.reportError(
+        error,
+        stack,
+        context: 'assign_class_teacher',
+      );
+      return app_errors.Result.failure('Could not assign that teacher.');
+    }
+  }
+
+  Future<app_errors.Result<String>> assignStudentToClass({
+    required String classId,
+    required String email,
+  }) async {
+    try {
+      final raw = await SupabaseService.instance.client.rpc(
+        'assign_class_student',
+        params: {'p_class_id': classId, 'p_email': email.trim()},
+      );
+      final map = _asMap(raw);
+      return app_errors.Result.success(
+        map['display_name'] as String? ?? email.trim(),
+      );
+    } on PostgrestException catch (error, stack) {
+      await app_errors.ErrorHandler.reportError(
+        error,
+        stack,
+        context: 'assign_class_student',
+      );
+      return app_errors.Result.failure(_message(error));
+    } catch (error, stack) {
+      await app_errors.ErrorHandler.reportError(
+        error,
+        stack,
+        context: 'assign_class_student',
+      );
+      return app_errors.Result.failure('Could not add that student.');
+    }
+  }
+
+  Future<app_errors.Result<SchoolDirectory>> fetchDirectory({
+    String? schoolId,
+  }) async {
+    try {
+      final raw = schoolId == null || schoolId.isEmpty
+          ? await SupabaseService.instance.client.rpc('fetch_school_directory')
+          : await SupabaseService.instance.client.rpc(
+              'fetch_school_directory',
+              params: {'p_school_id': schoolId},
+            );
+      return app_errors.Result.success(SchoolDirectory.fromJson(_asMap(raw)));
+    } on PostgrestException catch (error, stack) {
+      await app_errors.ErrorHandler.reportError(
+        error,
+        stack,
+        context: 'fetch_school_directory',
+      );
+      return app_errors.Result.failure('Could not load the school list.');
+    } catch (error, stack) {
+      await app_errors.ErrorHandler.reportError(
+        error,
+        stack,
+        context: 'fetch_school_directory',
+      );
+      return app_errors.Result.failure('Could not load the school list.');
+    }
+  }
+
+  Future<app_errors.Result<void>> removeStudentFromClass({
+    required String classId,
+    required String userId,
+  }) async {
+    try {
+      await SupabaseService.instance.client.rpc(
+        'remove_class_student',
+        params: {'p_class_id': classId, 'p_user_id': userId},
+      );
+      return app_errors.Result.success(null);
+    } on PostgrestException catch (error, stack) {
+      await app_errors.ErrorHandler.reportError(
+        error,
+        stack,
+        context: 'remove_class_student',
+      );
+      return app_errors.Result.failure(_message(error));
+    } catch (error, stack) {
+      await app_errors.ErrorHandler.reportError(
+        error,
+        stack,
+        context: 'remove_class_student',
+      );
+      return app_errors.Result.failure('Could not remove that student.');
     }
   }
 

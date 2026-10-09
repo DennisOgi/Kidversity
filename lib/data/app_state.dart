@@ -2,12 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import '../models/live_test_models.dart';
+import '../models/rope_pull_models.dart';
 import '../models/mandarin_content.dart';
 import '../models/models.dart';
 import '../models/class_board_models.dart';
 import '../models/user_preferences.dart';
 import '../services/class_board_service.dart';
 import '../services/live_test_service.dart';
+import '../services/rope_pull_service.dart';
 import '../services/mandarin_experience_builder.dart';
 import '../services/foundation_review_service.dart';
 import '../services/foundation_progress_service.dart';
@@ -20,6 +22,12 @@ import 'mandarin_foundation_data.dart';
 
 /// Currently selected app persona. Drives which shell is shown.
 final roleProvider = StateProvider<UserRole?>((ref) => null);
+
+/// School the signed-in person is looking at. Null uses their first school.
+final selectedSchoolIdProvider = StateProvider<String?>((ref) => null);
+
+/// Class the teacher or admin is looking at. Null uses their latest class.
+final selectedClassIdProvider = StateProvider<String?>((ref) => null);
 
 final mandarinContentRepositoryProvider = Provider<MandarinContentRepository>(
   (ref) => const HybridMandarinContentRepository(),
@@ -62,8 +70,9 @@ final foundationClassProgressProvider =
     FutureProvider.autoDispose<List<FoundationStudentProgress>>((ref) async {
       ref.watch(authControllerProvider);
       final course = await ref.watch(mandarinCourseProvider.future);
+      final classId = ref.watch(selectedClassIdProvider);
       final result = await FoundationProgressService.instance
-          .fetchClassProgress(course: course);
+          .fetchClassProgress(course: course, classId: classId);
       if (result.isFailure) {
         throw StateError(result.error ?? 'Could not load class progress');
       }
@@ -102,15 +111,14 @@ final teacherClassInfoProvider =
     ) async {
       ref.watch(authControllerProvider);
       if (!SupabaseService.instance.isInitialized) return null;
-      final result = await SupabaseService.instance.fetchTeacherClassInfo();
-      return result.data;
+      final classId = ref.watch(selectedClassIdProvider);
+      final result = await SupabaseService.instance.fetchTeacherClassInfo(
+        classId: classId,
+      );
+      final info = result.data;
+      if (info == null || info.id.isEmpty) return null;
+      return info;
     });
-
-/// School the signed-in person is looking at. Null uses their first school.
-final selectedSchoolIdProvider = StateProvider<String?>((ref) => null);
-
-/// Class the teacher is looking at inside a school. Null uses their latest class.
-final selectedClassIdProvider = StateProvider<String?>((ref) => null);
 
 final rosterProvider = FutureProvider<List<StudentPerformance>>((ref) async {
   ref.watch(authControllerProvider);
@@ -143,6 +151,18 @@ final classBoardProvider = FutureProvider.autoDispose<ClassBoardSnapshot>((
   return result.data!;
 });
 
+final schoolDirectoryProvider = FutureProvider.autoDispose<SchoolDirectory>((
+  ref,
+) async {
+  ref.watch(authControllerProvider);
+  final schoolId = ref.watch(selectedSchoolIdProvider);
+  if (!SupabaseService.instance.isInitialized) return SchoolDirectory.empty;
+  final result = await SchoolService.instance.fetchDirectory(
+    schoolId: schoolId,
+  );
+  return result.data ?? SchoolDirectory.empty;
+});
+
 final schoolOverviewProvider = FutureProvider.autoDispose<SchoolOverview>((
   ref,
 ) async {
@@ -164,6 +184,17 @@ final teacherRecentTestsProvider = FutureProvider.autoDispose<List<LiveTest>>((
   final result = await LiveTestService.instance.fetchTeacherRecentTests();
   return result.data ?? const [];
 });
+
+final ropePullSchoolPlayProvider =
+    FutureProvider.autoDispose<RopePullSchoolPlay>((ref) async {
+      ref.watch(authControllerProvider);
+      ref.watch(selectedSchoolIdProvider);
+      if (!SupabaseService.instance.isInitialized) {
+        return RopePullSchoolPlay.empty;
+      }
+      final result = await RopePullService.instance.fetchSchoolPlay();
+      return result.data ?? RopePullSchoolPlay.empty;
+    });
 
 /// Active live quiz for the current student (realtime).
 final activeLiveTestProvider = StreamProvider.autoDispose<LiveTest?>((ref) {

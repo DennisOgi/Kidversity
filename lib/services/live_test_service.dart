@@ -26,6 +26,7 @@ class LiveTestService {
     required String subject,
     required int durationSeconds,
     required List<({String prompt, List<LiveTestOption> options})> questions,
+    String? classId,
   }) async {
     try {
       final client = _client;
@@ -34,17 +35,20 @@ class LiveTestService {
         return app_errors.Result.failure('Sign in to create a live test.');
       }
 
-      final classRow = await client
-          .from('classes')
-          .select('id')
-          .eq('teacher_id', user.id)
-          .order('created_at')
-          .limit(1)
-          .maybeSingle();
-      final classId = classRow?['id'] as String?;
-      if (classId == null) {
+      var resolvedClassId = classId;
+      if (resolvedClassId == null || resolvedClassId.isEmpty) {
+        final classRow = await client
+            .from('classes')
+            .select('id')
+            .eq('teacher_id', user.id)
+            .order('created_at')
+            .limit(1)
+            .maybeSingle();
+        resolvedClassId = classRow?['id'] as String?;
+      }
+      if (resolvedClassId == null || resolvedClassId.isEmpty) {
         return app_errors.Result.failure(
-          'Open Class and share your class code before you go live.',
+          'Ask the school admin to assign you a class, then try again.',
         );
       }
 
@@ -52,7 +56,7 @@ class LiveTestService {
           .from('live_tests')
           .insert({
             'teacher_id': user.id,
-            'class_id': classId,
+            'class_id': resolvedClassId,
             'title': title,
             'subject': subject,
             'duration_seconds': durationSeconds,
@@ -97,6 +101,7 @@ class LiveTestService {
   Future<app_errors.Result<LiveTest>> createFromTemplate(
     LiveQuizTemplate template, {
     int durationSeconds = 300,
+    String? classId,
   }) {
     final questions = template.questions.map((q) {
       final options = q.$2.asMap().entries.map((e) {
@@ -114,6 +119,7 @@ class LiveTestService {
       subject: template.subject,
       durationSeconds: durationSeconds,
       questions: questions,
+      classId: classId,
     );
   }
 

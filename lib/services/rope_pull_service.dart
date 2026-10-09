@@ -77,6 +77,8 @@ class RopePullService {
     required bool hostPlays,
     required String displayName,
     required String avatar,
+    String? challengedUserId,
+    String? classId,
   }) {
     return _rpc('create_rope_pull_room', {
       'p_bank': bank.wire,
@@ -84,6 +86,9 @@ class RopePullService {
       'p_host_plays': hostPlays,
       'p_display_name': displayName,
       'p_avatar': avatar,
+      if (challengedUserId != null && challengedUserId.isNotEmpty)
+        'p_challenged_user_id': challengedUserId,
+      if (classId != null && classId.isNotEmpty) 'p_class_id': classId,
     });
   }
 
@@ -97,6 +102,47 @@ class RopePullService {
       'p_display_name': displayName,
       'p_avatar': avatar,
     });
+  }
+
+  Future<app_errors.Result<RopePullSnapshot>> joinRoomById({
+    required String roomId,
+    required String displayName,
+    required String avatar,
+  }) {
+    return _rpc('join_rope_pull_room_by_id', {
+      'p_room_id': roomId,
+      'p_display_name': displayName,
+      'p_avatar': avatar,
+    });
+  }
+
+  Future<app_errors.Result<RopePullSchoolPlay>> fetchSchoolPlay() async {
+    try {
+      final client = _client;
+      if (client == null || client.auth.currentUser == null) {
+        return app_errors.Result.success(RopePullSchoolPlay.empty);
+      }
+      final raw = await client.rpc('fetch_rope_pull_school_play');
+      final map = switch (raw) {
+        final Map value => Map<String, dynamic>.from(value),
+        _ => <String, dynamic>{},
+      };
+      return app_errors.Result.success(RopePullSchoolPlay.fromJson(map));
+    } on PostgrestException catch (error, stack) {
+      await app_errors.ErrorHandler.reportError(
+        error,
+        stack,
+        context: 'rope_pull.fetch_school_play',
+      );
+      return app_errors.Result.failure('Could not load your class.');
+    } catch (error, stack) {
+      await app_errors.ErrorHandler.reportError(
+        error,
+        stack,
+        context: 'rope_pull.fetch_school_play',
+      );
+      return app_errors.Result.failure('Could not load your class.');
+    }
   }
 
   Future<app_errors.Result<RopePullSnapshot>> startRoom(String roomId) {

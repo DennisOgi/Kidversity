@@ -380,9 +380,17 @@ class SupabaseAuthController extends ChangeNotifier {
     });
 
     if (selectedRole == UserRole.teacher) {
-      await SupabaseService.instance.ensureTeacherClass(
-        className: '$name\'s Class',
-      );
+      final school = await SupabaseService.instance.client
+          .from('school_members')
+          .select('school_id')
+          .eq('user_id', userId)
+          .limit(1)
+          .maybeSingle();
+      if (school == null) {
+        await SupabaseService.instance.ensureTeacherClass(
+          className: '$name\'s Class',
+        );
+      }
     }
 
     await client.auth.updateUser(

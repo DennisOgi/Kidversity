@@ -20,6 +20,12 @@ class FoundationProgressScreen extends ConsumerWidget {
     final course = ref.watch(mandarinCourseProvider);
     final dashboard = ref.watch(foundationClassDashboardProvider);
     final text = Theme.of(context).textTheme;
+    final className = ref
+        .watch(teacherClassInfoProvider)
+        .whenOrNull(data: (info) => info?.name);
+    final movementLine = className == null || className.isEmpty
+        ? 'Who moved, who struggled, and who needs a check-in in your class.'
+        : 'Who moved, who struggled, and who needs a check-in in $className.';
 
     return ShellScrollView(
       children: [
@@ -28,10 +34,7 @@ class FoundationProgressScreen extends ConsumerWidget {
           style: text.headlineSmall?.copyWith(fontSize: 26),
         ),
         const SizedBox(height: 6),
-        Text(
-          'Not just who opened the app — who moved, who struggled, and who needs you.',
-          style: text.bodyMedium,
-        ),
+        Text(movementLine, style: text.bodyMedium),
         const SizedBox(height: 22),
         course.when(
           loading: () => const LoadingIndicator(),
@@ -664,17 +667,20 @@ class _Chip extends StatelessWidget {
   }
 }
 
-class _NoStudents extends StatelessWidget {
+class _NoStudents extends ConsumerWidget {
   const _NoStudents();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final classInfo = ref.watch(teacherClassInfoProvider).asData?.value;
+    final waiting = classInfo == null;
     return EmptyPanel(
       icon: Icons.insights_rounded,
       color: AppColors.worldLanguage,
-      title: 'No movement to read yet',
-      body:
-          'Share the class code, then this page shows who is moving through Mandarin, who is stuck, and who needs you.',
+      title: waiting ? 'No class to read yet' : 'No movement to read yet',
+      body: waiting
+          ? 'The school admin assigns you a class. Then this page shows who is moving, stuck, or needs a check-in.'
+          : 'Add learners on Class. Then this page shows who is moving through Mandarin, who is stuck, and who needs you.',
       actionLabel: 'Open Class',
       onAction: () => context.go(AppRoutes.teacherHome),
     );

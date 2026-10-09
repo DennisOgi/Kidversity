@@ -8,6 +8,7 @@ import '../../router/navigation.dart';
 import '../../services/live_test_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
+import '../../widgets/empty_panel.dart';
 import '../../widgets/live_test_widgets.dart';
 import '../../widgets/surfaces.dart';
 
@@ -30,6 +31,7 @@ class _TeacherLiveHubScreenState extends ConsumerState<TeacherLiveHubScreen> {
       final result = await LiveTestService.instance.createFromTemplate(
         template,
         durationSeconds: _duration,
+        classId: ref.read(selectedClassIdProvider),
       );
 
       if (!mounted) return;
@@ -60,6 +62,21 @@ class _TeacherLiveHubScreenState extends ConsumerState<TeacherLiveHubScreen> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final roster = ref.watch(rosterProvider).whenOrNull(data: (d) => d) ?? [];
+    final classInfo = ref.watch(teacherClassInfoProvider).asData?.value;
+    if (classInfo == null) {
+      return ShellScrollView(
+        children: [
+          EmptyPanel(
+            icon: Icons.bolt_rounded,
+            title: 'Open your class first',
+            body:
+                'Live quizzes go to one class. The school admin assigns you a class, then you can start a check here.',
+            actionLabel: 'Go to Class',
+            onAction: () => context.go(AppRoutes.teacherHome),
+          ),
+        ],
+      );
+    }
 
     return ShellScrollView(
       children: [
@@ -84,7 +101,7 @@ class _TeacherLiveHubScreenState extends ConsumerState<TeacherLiveHubScreen> {
                 children: [
                   Text('Live Quiz', style: text.headlineSmall),
                   Text(
-                    'Write your own questions, or start a short ready-made check',
+                    'For ${classInfo.name}. Write your own questions, or start a short ready-made check.',
                     style: text.bodyMedium,
                   ),
                 ],

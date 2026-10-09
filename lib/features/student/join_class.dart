@@ -60,6 +60,7 @@ class _JoinClassDialogState extends ConsumerState<_JoinClassDialog> {
 
     ref.invalidate(activeLiveTestProvider);
     ref.invalidate(classBoardProvider);
+    ref.invalidate(schoolOverviewProvider);
     Navigator.of(context).pop();
     context.showSuccessSnackbar('You joined ${result.data}! 🎉');
   }

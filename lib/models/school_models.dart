@@ -15,15 +15,21 @@ class SchoolClassInfo {
     this.joinCode,
   });
 
-  factory SchoolClassInfo.fromJson(Map<String, dynamic> json) =>
-      SchoolClassInfo(
-        id: json['id'] as String? ?? '',
-        name: json['name'] as String? ?? 'Class',
-        joinCode: json['join_code'] as String?,
-        teacherId: json['teacher_id'] as String? ?? '',
-        teacherName: json['teacher_name'] as String? ?? 'Teacher',
-        memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
-      );
+  factory SchoolClassInfo.fromJson(Map<String, dynamic> json) {
+    final assigned = json['teacher_id'] as String? ?? '';
+    return SchoolClassInfo(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? 'Class',
+      joinCode: json['join_code'] as String?,
+      teacherId: assigned,
+      teacherName: assigned.isEmpty
+          ? 'Unassigned'
+          : json['teacher_name'] as String? ?? 'Teacher',
+      memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  bool get hasTeacher => teacherId.isNotEmpty;
 }
 
 class SchoolRankEntry {
@@ -64,6 +70,59 @@ class SchoolRankEntry {
         isYou: json['is_you'] as bool? ?? false,
         rank: (json['rank'] as num?)?.toInt() ?? 0,
       );
+}
+
+class SchoolPerson {
+  final String userId;
+  final String displayName;
+  final String email;
+  final String role;
+  final List<String> classIds;
+
+  const SchoolPerson({
+    required this.userId,
+    required this.displayName,
+    required this.email,
+    required this.role,
+    this.classIds = const [],
+  });
+
+  factory SchoolPerson.fromJson(Map<String, dynamic> json) => SchoolPerson(
+    userId: json['user_id'] as String? ?? '',
+    displayName: json['display_name'] as String? ?? 'Learner',
+    email: json['email'] as String? ?? '',
+    role: json['role'] as String? ?? 'student',
+    classIds: [
+      for (final id in json['class_ids'] as List? ?? const [])
+        id.toString(),
+    ],
+  );
+
+  bool inClass(String classId) => classIds.contains(classId);
+}
+
+class SchoolDirectory {
+  final List<SchoolPerson> teachers;
+  final List<SchoolPerson> students;
+
+  const SchoolDirectory({
+    this.teachers = const [],
+    this.students = const [],
+  });
+
+  factory SchoolDirectory.fromJson(Map<String, dynamic> json) =>
+      SchoolDirectory(
+        teachers: [
+          for (final item in json['teachers'] as List? ?? const [])
+            SchoolPerson.fromJson(Map<String, dynamic>.from(item as Map)),
+        ],
+        students: [
+          for (final item in json['students'] as List? ?? const [])
+            SchoolPerson.fromJson(Map<String, dynamic>.from(item as Map)),
+        ],
+      );
+
+  static const empty = SchoolDirectory();
 }
 
 class SchoolMembership {

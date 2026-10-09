@@ -46,6 +46,45 @@ void main() {
     expect(overview.you, isNull);
     expect(overview.memberships, hasLength(2));
     expect(overview.memberships.last.name, 'Another School');
+    expect(overview.classes.single.hasTeacher, isTrue);
+  });
+
+  test('a class without a teacher is unassigned', () {
+    final info = SchoolClassInfo.fromJson({
+      'id': 'c2',
+      'name': 'Year 5',
+      'join_code': 'XYZ890',
+      'teacher_id': null,
+      'teacher_name': 'Teacher',
+      'member_count': 0,
+    });
+    expect(info.hasTeacher, isFalse);
+    expect(info.teacherName, 'Unassigned');
+  });
+
+  test('school directory parses teachers and class membership', () {
+    final directory = SchoolDirectory.fromJson({
+      'teachers': [
+        {
+          'user_id': 't1',
+          'display_name': 'Ada',
+          'email': 'ada@school.org',
+          'role': 'teacher',
+          'class_ids': ['c1'],
+        },
+      ],
+      'students': [
+        {
+          'user_id': 's1',
+          'display_name': 'Zion',
+          'email': 'zion@school.org',
+          'role': 'student',
+          'class_ids': [],
+        },
+      ],
+    });
+    expect(directory.teachers.single.inClass('c1'), isTrue);
+    expect(directory.students.single.inClass('c1'), isFalse);
   });
 
   test('a student without a school gets an empty overview', () {

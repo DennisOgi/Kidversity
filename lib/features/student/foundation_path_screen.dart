@@ -57,7 +57,7 @@ class FoundationPathScreen extends ConsumerWidget {
         return ShellScrollView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
           children: [
-            const _ActiveLiveSection(),
+            const StudentLiveQuizBanner(),
             _WelcomeHeader(
               name: name,
               done: done,
@@ -94,30 +94,6 @@ class FoundationPathScreen extends ConsumerWidget {
       subtitle: module.subtitle,
       lessons: lessons,
     );
-  }
-}
-
-class _ActiveLiveSection extends ConsumerWidget {
-  const _ActiveLiveSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ref
-        .watch(activeLiveTestProvider)
-        .when(
-          data: (test) {
-            if (test == null || !test.isActive) return const SizedBox.shrink();
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: LiveTestAlertBanner(
-                test: test,
-                onJoin: () => context.go(AppRoutes.studentLiveTest(test.id)),
-              ),
-            );
-          },
-          loading: () => const SizedBox.shrink(),
-          error: (_, _) => const SizedBox.shrink(),
-        );
   }
 }
 

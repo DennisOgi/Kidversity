@@ -375,3 +375,96 @@ class RopePullSnapshot {
     return missed;
   }
 }
+
+class RopePullPlaymate {
+  final String userId;
+  final String displayName;
+  final String avatar;
+  final String role;
+  final String? className;
+  final bool sameClass;
+
+  const RopePullPlaymate({
+    required this.userId,
+    required this.displayName,
+    required this.avatar,
+    required this.role,
+    this.className,
+    this.sameClass = false,
+  });
+
+  factory RopePullPlaymate.fromJson(Map<String, dynamic> json) =>
+      RopePullPlaymate(
+        userId: json['user_id'] as String? ?? '',
+        displayName: json['display_name'] as String? ?? 'Learner',
+        avatar: json['avatar'] as String? ?? '🦊',
+        role: json['role'] as String? ?? 'student',
+        className: json['class_name'] as String?,
+        sameClass: json['same_class'] as bool? ?? false,
+      );
+}
+
+class RopePullSchoolMatch {
+  final String roomId;
+  final String hostName;
+  final String hostAvatar;
+  final String bank;
+  final String? className;
+  final int playerCount;
+  final bool challengedYou;
+
+  const RopePullSchoolMatch({
+    required this.roomId,
+    required this.hostName,
+    required this.hostAvatar,
+    required this.bank,
+    required this.playerCount,
+    this.className,
+    this.challengedYou = false,
+  });
+
+  factory RopePullSchoolMatch.fromJson(Map<String, dynamic> json) =>
+      RopePullSchoolMatch(
+        roomId: json['room_id'] as String? ?? '',
+        hostName: json['host_name'] as String? ?? 'Host',
+        hostAvatar: json['host_avatar'] as String? ?? '🦊',
+        bank: json['bank'] as String? ?? '',
+        className: json['class_name'] as String?,
+        playerCount: (json['player_count'] as num?)?.toInt() ?? 0,
+        challengedYou: json['challenged_you'] as bool? ?? false,
+      );
+
+  String get bankLabel => RopePullBankX.fromWire(bank).title;
+}
+
+class RopePullSchoolPlay {
+  final String? schoolName;
+  final String? className;
+  final List<RopePullPlaymate> playmates;
+  final List<RopePullSchoolMatch> matches;
+
+  const RopePullSchoolPlay({
+    this.schoolName,
+    this.className,
+    this.playmates = const [],
+    this.matches = const [],
+  });
+
+  factory RopePullSchoolPlay.fromJson(Map<String, dynamic> json) =>
+      RopePullSchoolPlay(
+        schoolName: json['school_name'] as String?,
+        className: json['class_name'] as String?,
+        playmates: [
+          for (final item in json['playmates'] as List? ?? const [])
+            RopePullPlaymate.fromJson(Map<String, dynamic>.from(item as Map)),
+        ],
+        matches: [
+          for (final item in json['matches'] as List? ?? const [])
+            RopePullSchoolMatch.fromJson(Map<String, dynamic>.from(item as Map)),
+        ],
+      );
+
+  bool get hasSchool => schoolName != null && schoolName!.isNotEmpty;
+
+  static const empty = RopePullSchoolPlay();
+}

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../data/app_state.dart';
 
 import '../../models/live_test_models.dart';
 import '../../router/navigation.dart';
@@ -9,15 +12,16 @@ import '../../widgets/common.dart';
 import '../../widgets/surfaces.dart';
 
 /// Teacher writes a live quiz of any length, then watches answers arrive.
-class TeacherLiveComposeScreen extends StatefulWidget {
+class TeacherLiveComposeScreen extends ConsumerStatefulWidget {
   const TeacherLiveComposeScreen({super.key});
 
   @override
-  State<TeacherLiveComposeScreen> createState() =>
+  ConsumerState<TeacherLiveComposeScreen> createState() =>
       _TeacherLiveComposeScreenState();
 }
 
-class _TeacherLiveComposeScreenState extends State<TeacherLiveComposeScreen> {
+class _TeacherLiveComposeScreenState
+    extends ConsumerState<TeacherLiveComposeScreen> {
   final _title = TextEditingController();
   final _subject = TextEditingController(text: 'General');
   final List<_DraftQuestion> _questions = [_DraftQuestion()];
@@ -108,6 +112,7 @@ class _TeacherLiveComposeScreenState extends State<TeacherLiveComposeScreen> {
         subject: subject,
         durationSeconds: _minutes * 60,
         questions: questions,
+        classId: ref.read(selectedClassIdProvider),
       );
       if (!mounted) return;
       if (created.isFailure || created.data == null) {

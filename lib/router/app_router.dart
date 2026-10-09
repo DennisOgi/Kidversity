@@ -74,7 +74,7 @@ const _teacherNav = [
     Icons.groups_rounded,
     'Class',
     '/teacher/class',
-    'Class code & roster',
+    'Teachers, classes, and learners',
   ),
   NavItem(
     Icons.insights_outlined,

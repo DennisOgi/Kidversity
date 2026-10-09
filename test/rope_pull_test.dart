@@ -11,6 +11,38 @@ import 'package:kidversity/services/rope_pull_questions.dart';
 import 'package:kidversity/widgets/rope_pull_arena.dart';
 
 void main() {
+  test('school play lists classmates without emails', () {
+    final play = RopePullSchoolPlay.fromJson({
+      'school_name': 'Pearls Garden',
+      'class_name': 'Year 4 Blue',
+      'playmates': [
+        {
+          'user_id': 'u1',
+          'display_name': 'Zion',
+          'avatar': '🦊',
+          'role': 'student',
+          'class_name': 'Year 4 Blue',
+          'same_class': true,
+        },
+      ],
+      'matches': [
+        {
+          'room_id': 'r1',
+          'host_name': 'Ada',
+          'host_avatar': '👩‍🏫',
+          'bank': 'maths',
+          'class_name': 'Year 4 Blue',
+          'player_count': 1,
+          'challenged_you': true,
+        },
+      ],
+    });
+    expect(play.hasSchool, isTrue);
+    expect(play.playmates.single.sameClass, isTrue);
+    expect(play.matches.single.challengedYou, isTrue);
+    expect(play.matches.single.bankLabel, 'Four operations');
+  });
+
   test('student play routes stay in the student space', () {
     expect(roleFromPath('/student/play'), UserRole.student);
     expect(isProtectedRoute('/student/rope/abc'), isTrue);

@@ -274,19 +274,26 @@ class SupabaseService {
   }
 
   Future<app_errors.Result<({String id, String name, String code})>>
-  fetchTeacherClassInfo() async {
+  fetchTeacherClassInfo({String? classId}) async {
     try {
       final teacherId = currentUser?.id;
       if (teacherId == null) {
         return app_errors.Result.failure('Not authenticated');
       }
-      var row = await client
-          .from('classes')
-          .select('id, name, join_code')
-          .eq('teacher_id', teacherId)
-          .order('created_at')
-          .limit(1)
-          .maybeSingle();
+      var row = classId != null && classId.isNotEmpty
+          ? await client
+                .from('classes')
+                .select('id, name, join_code')
+                .eq('id', classId)
+                .limit(1)
+                .maybeSingle()
+          : await client
+                .from('classes')
+                .select('id, name, join_code')
+                .eq('teacher_id', teacherId)
+                .order('created_at')
+                .limit(1)
+                .maybeSingle();
       if (row == null) {
         final membership = await client
             .from('school_members')
@@ -295,7 +302,11 @@ class SupabaseService {
             .limit(1)
             .maybeSingle();
         if (membership != null) {
-          return app_errors.Result.failure('Create a class for your school.');
+          return app_errors.Result.success((
+            id: '',
+            name: 'Waiting for a class',
+            code: '',
+          ));
         }
         final ensured = await ensureTeacherClass();
         if (ensured.isFailure) {
@@ -398,15 +409,19 @@ class SupabaseService {
       if (teacherId == null) {
         return app_errors.Result.failure('Not authenticated');
       }
-      final classQuery = client
-          .from('classes')
-          .select('id')
-          .eq('teacher_id', teacherId);
-      final classRow = await (classId == null || classId.isEmpty
-              ? classQuery
-              : classQuery.eq('id', classId))
-          .limit(1)
-          .maybeSingle();
+      final classRow = classId != null && classId.isNotEmpty
+          ? await client
+                .from('classes')
+                .select('id')
+                .eq('id', classId)
+                .limit(1)
+                .maybeSingle()
+          : await client
+                .from('classes')
+                .select('id')
+                .eq('teacher_id', teacherId)
+                .limit(1)
+                .maybeSingle();
       if (classRow == null) return app_errors.Result.success(const []);
 
       final memberRows = await client
@@ -438,6 +453,7 @@ class SupabaseService {
                   100;
         roster.add(
           StudentPerformance(
+            userId: userId,
             name: profile['display_name'] as String? ?? 'Student',
             avatarEmoji: profile['avatar_emoji'] as String? ?? '🦊',
             overallMastery: average,

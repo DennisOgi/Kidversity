@@ -8,6 +8,7 @@ class StudentPerformance {
   final String strength;
   final String growthArea;
   final List<double> weeklyActivity;
+  final String userId;
 
   const StudentPerformance({
     required this.name,
@@ -17,5 +18,6 @@ class StudentPerformance {
     required this.strength,
     required this.growthArea,
     required this.weeklyActivity,
+    this.userId = '',
   });
 }

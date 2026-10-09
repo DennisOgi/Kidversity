@@ -146,7 +146,7 @@ class FoundationProgressService {
   const FoundationProgressService._();
 
   Future<app_errors.Result<List<FoundationStudentProgress>>>
-  fetchClassProgress({MandarinCourse? course}) async {
+  fetchClassProgress({MandarinCourse? course, String? classId}) async {
     final service = SupabaseService.instance;
     if (!service.isInitialized) {
       return app_errors.Result.success(const []);
@@ -156,10 +156,12 @@ class FoundationProgressService {
       if (teacherId == null) {
         return app_errors.Result.failure('Not authenticated');
       }
-      final classes = await service.client
-          .from('classes')
-          .select('id')
-          .eq('teacher_id', teacherId);
+      final classes = classId != null && classId.isNotEmpty
+          ? await service.client.from('classes').select('id').eq('id', classId)
+          : await service.client
+                .from('classes')
+                .select('id')
+                .eq('teacher_id', teacherId);
       final classIds = (classes as List)
           .map((row) => (row as Map)['id'] as String)
           .toList();

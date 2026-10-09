@@ -8,6 +8,7 @@ import '../../data/records_providers.dart';
 import '../../services/learning_records_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
+import '../../widgets/surfaces.dart';
 import 'maths_bank.dart';
 
 const _prefsKey = 'kidversity_maths_levels';
@@ -121,49 +122,51 @@ class _MathsPathScreenState extends ConsumerState<MathsPathScreen> {
     return ShellScrollView(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
       children: [
-        Text(
-          'NUMBER TO MEASURE',
-          style: text.labelLarge?.copyWith(
-            color: AppColors.worldExams,
-            letterSpacing: 1.1,
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1080),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                PageIntro(
+                  eyebrow: 'Maths',
+                  title: 'Mental maths',
+                  body:
+                      'Twenty levels in five strands: number, fractions, data, measure, and a first step into algebra. $mathsSumsPerLevel sums each; ${mathsClearScore(mathsSumsPerLevel)} right clears a level.',
+                ),
+                const SizedBox(height: 18),
+                if (!_ready)
+                  const LinearProgressIndicator(minHeight: 3)
+                else
+                  for (final entry in _strandSections()) ...[
+                    if (entry.header != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+                        child: Text(
+                          entry.header!,
+                          style: text.labelLarge?.copyWith(
+                            color: AppColors.inkSoft,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (entry.level != null) ...[
+                      _LevelCard(
+                        level: entry.level!,
+                        done: _done.contains(entry.level!.sequence),
+                        open: _open(entry.level!),
+                        onTap: _open(entry.level!)
+                            ? () => setState(() => _level = entry.level)
+                            : null,
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                  ],
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 6),
-        Text('Mental maths', style: text.headlineSmall),
-        const SizedBox(height: 6),
-        Text(
-          'Twenty levels in five strands: number, fractions, data, measure, and a first step into algebra. ${mathsSumsPerLevel} sums each; ${mathsClearScore(mathsSumsPerLevel)} right clears a level. The same kinds of sums can run a Rope Pull for the class.',
-          style: text.bodyLarge?.copyWith(color: AppColors.inkSoft),
-        ),
-        const SizedBox(height: 18),
-        if (!_ready)
-          const LinearProgressIndicator(minHeight: 3)
-        else
-          for (final entry in _strandSections()) ...[
-            if (entry.header != null) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-                child: Text(
-                  entry.header!,
-                  style: text.labelLarge?.copyWith(
-                    color: AppColors.inkSoft,
-                    letterSpacing: 1.1,
-                  ),
-                ),
-              ),
-            ],
-            if (entry.level != null) ...[
-              _LevelCard(
-                level: entry.level!,
-                done: _done.contains(entry.level!.sequence),
-                open: _open(entry.level!),
-                onTap: _open(entry.level!)
-                    ? () => setState(() => _level = entry.level)
-                    : null,
-              ),
-              const SizedBox(height: 10),
-            ],
-          ],
       ],
     );
   }

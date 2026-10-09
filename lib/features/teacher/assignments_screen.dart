@@ -113,7 +113,7 @@ class _NeedsClass extends StatelessWidget {
       icon: Icons.groups_rounded,
       title: 'Open your class first',
       body:
-          'Assignments go to everyone who joins with your class code. Set that up on the Class tab, then come back here.',
+          'Assignments go to a class. The school admin creates the class and assigns it to you, then you can set work here.',
       actionLabel: 'Go to Class',
       onAction: () => context.go(AppRoutes.teacherHome),
     );

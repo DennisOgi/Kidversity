@@ -51,6 +51,7 @@ class RopePullHubScreen extends ConsumerStatefulWidget {
 class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
   final _code = TextEditingController();
   final _university = TextEditingController();
+  Timer? _schoolRefresh;
   bool _busy = false;
   bool _examMatch = false;
   bool _mathsMatch = false;
@@ -67,19 +68,30 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _schoolRefresh = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted) ref.invalidate(ropePullSchoolPlayProvider);
+    });
+  }
+
+  @override
   void dispose() {
+    _schoolRefresh?.cancel();
     _code.dispose();
     _university.dispose();
     super.dispose();
   }
 
-  Future<void> _create() async {
+  String? get _classId => ref.read(selectedClassIdProvider);
+
+  Future<void> _create({String? challengedUserId}) async {
     if (_examMatch) {
-      await _createExamMatch();
+      await _createExamMatch(challengedUserId: challengedUserId);
       return;
     }
     if (_mathsMatch) {
-      await _createMathsMatch();
+      await _createMathsMatch(challengedUserId: challengedUserId);
       return;
     }
     final course = ref.read(mandarinCourseProvider).whenOrNull(data: (c) => c);
@@ -110,6 +122,8 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
       hostPlays: widget.hostPlays,
       displayName: auth.displayName.isEmpty ? 'Host' : auth.displayName,
       avatar: auth.avatarEmoji.isEmpty ? '🦊' : auth.avatarEmoji,
+      challengedUserId: challengedUserId,
+      classId: _classId,
     );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -117,6 +131,7 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
       context.showErrorSnackbar(result.error ?? 'Could not open a room.');
       return;
     }
+    ref.invalidate(ropePullSchoolPlayProvider);
     final id = result.data!.room.id;
     context.go(
       widget.boardByDefault
@@ -144,10 +159,33 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
       context.showErrorSnackbar(result.error ?? 'Could not join.');
       return;
     }
+    ref.invalidate(ropePullSchoolPlayProvider);
     context.go(AppRoutes.studentRope(result.data!.room.id));
   }
 
-  Future<void> _createMathsMatch() async {
+  Future<void> _joinMatch(String roomId) async {
+    setState(() => _busy = true);
+    final auth = ref.read(authControllerProvider);
+    final result = await RopePullService.instance.joinRoomById(
+      roomId: roomId,
+      displayName: auth.displayName.isEmpty ? 'Learner' : auth.displayName,
+      avatar: auth.avatarEmoji.isEmpty ? '🦊' : auth.avatarEmoji,
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (result.isFailure || result.data == null) {
+      context.showErrorSnackbar(result.error ?? 'Could not join.');
+      return;
+    }
+    ref.invalidate(ropePullSchoolPlayProvider);
+    context.go(
+      widget.boardByDefault
+          ? AppRoutes.teacherRope(result.data!.room.id)
+          : AppRoutes.studentRope(result.data!.room.id),
+    );
+  }
+
+  Future<void> _createMathsMatch({String? challengedUserId}) async {
     setState(() => _busy = true);
     final questions = buildMathsRopeDeck(count: _deckLimit);
     debugPrint('[Kidversity] Rope Pull maths deck ${questions.length}');
@@ -162,6 +200,7 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
       questions: questions,
       displayName: auth.displayName.isEmpty ? 'Host' : auth.displayName,
       avatar: auth.avatarEmoji.isEmpty ? '🦊' : auth.avatarEmoji,
+      challengedUserId: challengedUserId,
     );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -169,6 +208,7 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
       context.showErrorSnackbar(_roomError(result.error));
       return;
     }
+    ref.invalidate(ropePullSchoolPlayProvider);
     final id = result.data!.room.id;
     context.go(
       widget.boardByDefault
@@ -182,6 +222,7 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
     required List<RopePullQuestion> questions,
     required String displayName,
     required String avatar,
+    String? challengedUserId,
   }) async {
     var useBank = bank;
     var deck = questions;
@@ -193,6 +234,8 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
         hostPlays: widget.hostPlays,
         displayName: displayName,
         avatar: avatar,
+        challengedUserId: challengedUserId,
+        classId: _classId,
       );
       final error = result.error ?? '';
       if (result.isSuccess) return result;
@@ -259,7 +302,7 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
     });
   }
 
-  Future<void> _createExamMatch() async {
+  Future<void> _createExamMatch({String? challengedUserId}) async {
     final exam = _exam;
     final subject = _subject;
     if (exam == null || subject == null) {
@@ -299,6 +342,7 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
       questions: questions,
       displayName: auth.displayName.isEmpty ? 'Host' : auth.displayName,
       avatar: auth.avatarEmoji.isEmpty ? '🦊' : auth.avatarEmoji,
+      challengedUserId: challengedUserId,
     );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -306,6 +350,7 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
       context.showErrorSnackbar(_roomError(result.error));
       return;
     }
+    ref.invalidate(ropePullSchoolPlayProvider);
     final id = result.data!.room.id;
     context.go(
       widget.boardByDefault
@@ -359,6 +404,11 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
               child: const Text('Join'),
             ),
           ],
+        ),
+        _SchoolPlayPanel(
+          busy: _busy,
+          onJoin: _joinMatch,
+          onChallenge: (userId) => _create(challengedUserId: userId),
         ),
         const SizedBox(height: 28),
         Text(
@@ -533,6 +583,176 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
           expand: true,
         ),
       ],
+    );
+  }
+}
+
+class _SchoolPlayPanel extends ConsumerStatefulWidget {
+  final bool busy;
+  final Future<void> Function(String roomId) onJoin;
+  final Future<void> Function(String userId) onChallenge;
+
+  const _SchoolPlayPanel({
+    required this.busy,
+    required this.onJoin,
+    required this.onChallenge,
+  });
+
+  @override
+  ConsumerState<_SchoolPlayPanel> createState() => _SchoolPlayPanelState();
+}
+
+class _SchoolPlayPanelState extends ConsumerState<_SchoolPlayPanel> {
+  final _search = TextEditingController();
+  bool _showAll = false;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final play = ref.watch(ropePullSchoolPlayProvider).asData?.value;
+    if (play == null || !play.hasSchool) return const SizedBox.shrink();
+    final needle = _search.text.trim().toLowerCase();
+    final mates = [
+      for (final person in play.playmates)
+        if (needle.isEmpty ||
+            person.displayName.toLowerCase().contains(needle) ||
+            (person.className ?? '').toLowerCase().contains(needle))
+          person,
+    ];
+    final shown = _showAll ? mates : mates.take(8).toList();
+    final place = [
+      play.schoolName!,
+      if (play.className != null && play.className!.isNotEmpty) play.className!,
+    ].join(' · ');
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Challenge your school',
+            style: ropePullText(size: 18, weight: FontWeight.w800),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Tap a name from $place. They see it on Play and join without a code.',
+            style: ropePullText(size: 14, color: AppColors.inkSoft),
+          ),
+          if (play.matches.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            for (final match in play.matches)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: GlassCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      Text(match.hostAvatar, style: const TextStyle(fontSize: 22)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              match.challengedYou
+                                  ? '${match.hostName} challenged you'
+                                  : '${match.hostName} is waiting',
+                              style: ropePullText(
+                                size: 15,
+                                weight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              [
+                                match.bankLabel,
+                                if (match.className != null) match.className!,
+                                '${match.playerCount} ready',
+                              ].join(' · '),
+                              style: ropePullText(
+                                size: 13,
+                                color: AppColors.inkSoft,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      FilledButton(
+                        onPressed: widget.busy
+                            ? null
+                            : () => widget.onJoin(match.roomId),
+                        child: const Text('Join'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+          if (play.playmates.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _search,
+              decoration: const InputDecoration(
+                hintText: 'Search classmates',
+                prefixIcon: Icon(Icons.search_rounded),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            if (shown.isEmpty)
+              Text(
+                'No match for that name.',
+                style: ropePullText(size: 14, color: AppColors.inkSoft),
+              )
+            else
+              GlassCard(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  children: [
+                    for (final person in shown)
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                        ),
+                        leading: Text(
+                          person.avatar,
+                          style: const TextStyle(fontSize: 22),
+                        ),
+                        title: Text(person.displayName),
+                        subtitle: Text(
+                          [
+                            if (person.sameClass) 'Your class',
+                            if (person.className != null && !person.sameClass)
+                              person.className!,
+                            if (person.role == 'teacher') 'Teacher',
+                          ].join(' · '),
+                        ),
+                        trailing: TextButton(
+                          onPressed: widget.busy
+                              ? null
+                              : () => widget.onChallenge(person.userId),
+                          child: const Text('Challenge'),
+                        ),
+                      ),
+                    if (!_showAll && mates.length > shown.length)
+                      TextButton(
+                        onPressed: () => setState(() => _showAll = true),
+                        child: Text('Show ${mates.length - shown.length} more'),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ],
+      ),
     );
   }
 }
