@@ -37,15 +37,16 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, private
 AS $$
+#variable_conflict use_column
 DECLARE
   v_class_id UUID;
   v_class_name TEXT;
   v_school_id UUID;
 BEGIN
-  SELECT id, name, school_id
+  SELECT c.id, c.name, c.school_id
   INTO v_class_id, v_class_name, v_school_id
-  FROM public.classes
-  WHERE join_code = upper(trim(p_code));
+  FROM public.classes c
+  WHERE c.join_code = upper(trim(p_code));
 
   IF v_class_id IS NULL THEN
     RAISE EXCEPTION 'INVALID_CODE';
@@ -59,12 +60,12 @@ BEGIN
       AND c.school_id = v_school_id
       AND cm.class_id <> v_class_id;
 
-    INSERT INTO public.school_members (school_id, user_id, role)
+    INSERT INTO public.school_members AS sm (school_id, user_id, role)
     VALUES (v_school_id, p_user_id, 'student')
     ON CONFLICT (school_id, user_id) DO NOTHING;
   END IF;
 
-  INSERT INTO public.class_members(class_id, user_id)
+  INSERT INTO public.class_members AS cm (class_id, user_id)
   VALUES (v_class_id, p_user_id)
   ON CONFLICT (class_id, user_id) DO NOTHING;
 

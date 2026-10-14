@@ -75,7 +75,7 @@ class SchoolHome extends ConsumerWidget {
                       title: overview.schoolName ?? 'School',
                       body: overview.isAdmin
                           ? 'Create a class, assign a teacher from people already on Kidversity, then let that teacher share a code with the class.'
-                          : 'Share your class code. Students open Me and join with it.',
+                          : 'Create your class, then share the code. Students open Me and join with it.',
                     ),
                     if (overview.memberships.length > 1) ...[
                       const SizedBox(height: 12),
@@ -83,7 +83,7 @@ class SchoolHome extends ConsumerWidget {
                     ],
                     const SizedBox(height: 18),
                     _StatRow(overview: overview),
-                    if (overview.isAdmin) ...[
+                    if (overview.canManageClasses) ...[
                       const SizedBox(height: 16),
                       Wrap(
                         spacing: 8,
@@ -94,15 +94,16 @@ class SchoolHome extends ConsumerWidget {
                             icon: const Icon(Icons.add_rounded),
                             label: const Text('New class'),
                           ),
-                          OutlinedButton.icon(
-                            onPressed: () => _addTeacher(
-                              context,
-                              ref,
-                              overview.schoolId,
+                          if (overview.isAdmin)
+                            OutlinedButton.icon(
+                              onPressed: () => _addTeacher(
+                                context,
+                                ref,
+                                overview.schoolId,
+                              ),
+                              icon: const Icon(Icons.person_add_alt_1_rounded),
+                              label: const Text('Add a teacher'),
                             ),
-                            icon: const Icon(Icons.person_add_alt_1_rounded),
-                            label: const Text('Add a teacher'),
-                          ),
                         ],
                       ),
                     ],
@@ -128,10 +129,10 @@ class SchoolHome extends ConsumerWidget {
                         icon: Icons.groups_rounded,
                         title: overview.isAdmin
                             ? 'No classes yet'
-                            : 'No class assigned yet',
+                            : 'No class yet',
                         body: overview.isAdmin
                             ? 'Create a class, assign a teacher from the people list, then they share a join code.'
-                            : 'When the school admin assigns you a class, share its code with your students.',
+                            : 'Tap New class. Then share the class code so students can join from Me.',
                       )
                     else
                       Wrap(
@@ -224,7 +225,12 @@ class SchoolHome extends ConsumerWidget {
     ref.invalidate(schoolDirectoryProvider);
     ref.invalidate(rosterProvider);
     ref.invalidate(classBoardProvider);
-    context.showSuccessSnackbar('${result.data?.name ?? 'Class'} is ready.');
+    final code = result.data?.joinCode?.trim();
+    context.showSuccessSnackbar(
+      code == null || code.isEmpty
+          ? '${result.data?.name ?? 'Class'} is ready.'
+          : '${result.data?.name ?? 'Class'} is ready. Share code $code with your students.',
+    );
   }
 
   Future<void> _addTeacher(
