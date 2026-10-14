@@ -37,8 +37,9 @@ flutter --version
 flutter config --enable-web --no-analytics
 flutter pub get
 
-echo "==> Building Flutter web release..."
+echo "==> Building Flutter web release (PWA offline-first)..."
 flutter build web --release \
+  --pwa-strategy=offline-first \
   --dart-define=SUPABASE_URL="${SUPABASE_URL}" \
   --dart-define=SUPABASE_PUBLISHABLE_KEY="${SUPABASE_CLIENT_KEY}" \
   --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-${SUPABASE_CLIENT_KEY}}" \

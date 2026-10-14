@@ -10,6 +10,7 @@ import '../../models/mandarin_content.dart';
 import '../../router/navigation.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
+import '../../widgets/dashboard_guide.dart';
 import '../../widgets/live_test_widgets.dart';
 import '../../widgets/labs_entry_card.dart';
 import '../../widgets/surfaces.dart';
@@ -43,6 +44,8 @@ class StudentHomeScreen extends ConsumerWidget {
                   title: greeting,
                   body: 'Pick up where you left off, or open a world.',
                 ),
+                const SizedBox(height: 16),
+                DashboardGuide.student(),
                 const _SchoolPlace(),
                 const SizedBox(height: 18),
                 const _TeacherWork(),

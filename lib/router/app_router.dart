@@ -74,7 +74,7 @@ const _teacherNav = [
     Icons.groups_rounded,
     'Class',
     '/teacher/class',
-    'Teachers, classes, and learners',
+    'Create a class and share the join code',
   ),
   NavItem(
     Icons.insights_outlined,

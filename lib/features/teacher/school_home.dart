@@ -9,6 +9,7 @@ import '../../services/supabase_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/dashboard_guide.dart';
 import '../../widgets/empty_panel.dart';
 import '../../widgets/error_boundary.dart';
 import '../../widgets/surfaces.dart';
@@ -77,6 +78,8 @@ class SchoolHome extends ConsumerWidget {
                           ? 'Create a class, assign a teacher from people already on Kidversity, then let that teacher share a code with the class.'
                           : 'Create your class, then share the code. Students open Me and join with it.',
                     ),
+                    const SizedBox(height: 16),
+                    DashboardGuide.teacher(),
                     if (overview.memberships.length > 1) ...[
                       const SizedBox(height: 12),
                       _SchoolSwitcher(overview: overview),
