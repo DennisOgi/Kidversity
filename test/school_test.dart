@@ -85,6 +85,25 @@ void main() {
     });
     expect(directory.teachers.single.inClass('c1'), isTrue);
     expect(directory.students.single.inClass('c1'), isFalse);
+    expect(directory.people, hasLength(2));
+  });
+
+  test('school directory prefers the people list from the server', () {
+    final directory = SchoolDirectory.fromJson({
+      'teachers': const [],
+      'students': const [],
+      'people': [
+        {
+          'user_id': 'a1',
+          'display_name': 'Pearl',
+          'email': 'admin@school.org',
+          'role': 'admin',
+          'class_ids': const [],
+        },
+      ],
+    });
+    expect(directory.people.single.role, 'admin');
+    expect(directory.people.single.email, 'admin@school.org');
   });
 
   test('a student without a school gets an empty overview', () {

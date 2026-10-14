@@ -134,6 +134,14 @@ class SupabaseService {
           'Sign in failed. Please check your credentials.',
         );
       }
+      // School Chromebooks often leave old tabs open. Those tabs keep
+      // refreshing tokens and fight the new session until Auth rate-limits
+      // and signs the student out. Drop every other session after login.
+      try {
+        await client.auth.signOut(scope: SignOutScope.others);
+      } catch (error) {
+        debugPrint('Could not clear other sessions after sign-in: $error');
+      }
       return app_errors.Result.success(user);
     } on AuthException catch (error) {
       return app_errors.Result.failure(_parseAuthError(error));
@@ -533,6 +541,11 @@ class SupabaseService {
     final message = raw.toLowerCase();
     if (message.contains('invalid login credentials')) {
       return 'Incorrect email or password.';
+    }
+    if (message.contains('rate limit') ||
+        message.contains('over_request_rate_limit') ||
+        error.statusCode == '429') {
+      return 'Too many sign-in attempts from this network. Wait a minute, then try again.';
     }
     if (message.contains('email not confirmed')) {
       return 'Sign in with the same email and password.';

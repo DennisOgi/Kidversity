@@ -12,8 +12,8 @@ import '../services/supabase_service.dart';
 /// Real auth backed by Supabase Auth + `user_profiles`.
 class SupabaseAuthController extends ChangeNotifier {
   static const _minimumSplashDuration = Duration(milliseconds: 900);
-  static const _bootstrapTimeout = Duration(seconds: 3);
-  static const _sessionRecoveryTimeout = Duration(seconds: 2);
+  static const _bootstrapTimeout = Duration(seconds: 8);
+  static const _sessionRecoveryTimeout = Duration(seconds: 5);
 
   bool isLoading = true;
   /// True only for the first launch settle. Sign-in uses [isLoading] without
@@ -33,6 +33,9 @@ class SupabaseAuthController extends ChangeNotifier {
   int minutesLearned = 0;
   String? lastError;
   StreamSubscription<AuthState>? _authSub;
+  Future<void>? _applyUserInFlight;
+  String? _applyUserId;
+  Timer? _signedOutGrace;
 
   SupabaseClient? get _client =>
       SupabaseService.instance.isInitialized ? Supabase.instance.client : null;
@@ -57,7 +60,15 @@ class SupabaseAuthController extends ChangeNotifier {
       await _settleSession(client).timeout(_bootstrapTimeout);
     } on TimeoutException {
       debugPrint('Auth bootstrap timed out; continuing as guest if needed');
-      if (!isAuthenticated) _resetSession(keepLoading: true);
+      final stillSignedIn =
+          _client?.auth.currentSession?.user != null ||
+          _client?.auth.currentUser != null;
+      if (!isAuthenticated && !stillSignedIn) {
+        _resetSession(keepLoading: true);
+      } else if (stillSignedIn && !isAuthenticated) {
+        // Slow school networks: session exists, profile apply lagged.
+        isAuthenticated = true;
+      }
     } finally {
       if (_authSub == null && _client != null) {
         _authSub = _client!.auth.onAuthStateChange.listen(_onAuthStateChange);
@@ -150,21 +161,68 @@ class SupabaseAuthController extends ChangeNotifier {
     if (user != null &&
         (state.event == AuthChangeEvent.signedIn ||
             state.event == AuthChangeEvent.initialSession ||
-            state.event == AuthChangeEvent.tokenRefreshed ||
             state.event == AuthChangeEvent.userUpdated)) {
+      _signedOutGrace?.cancel();
+      _signedOutGrace = null;
       await _applyUser(user);
-    } else if (state.event == AuthChangeEvent.signedOut) {
-      _resetSession(keepLoading: isBootstrapping);
+      if (!isBootstrapping) notifyListeners();
+      return;
     }
-    if (!isBootstrapping) notifyListeners();
+
+    // Token refresh must not reload the profile or notify listeners — that
+    // retriggers every auth-watched provider and multiplies Auth traffic on
+    // shared school networks until refresh hits 429 and GoTrue signs out.
+    if (user != null && state.event == AuthChangeEvent.tokenRefreshed) {
+      _signedOutGrace?.cancel();
+      _signedOutGrace = null;
+      isAuthenticated = true;
+      email = user.email ?? email;
+      return;
+    }
+
+    if (state.event == AuthChangeEvent.signedOut) {
+      // Brief grace: concurrent refresh races can emit signedOut while a
+      // newer session is already being written. Confirm before kicking UI.
+      _signedOutGrace?.cancel();
+      _signedOutGrace = Timer(const Duration(milliseconds: 400), () {
+        final stillHere = _client?.auth.currentSession?.user;
+        if (stillHere != null) {
+          debugPrint('Ignoring transient signedOut; session still present');
+          return;
+        }
+        _resetSession(keepLoading: isBootstrapping);
+        if (!isBootstrapping) notifyListeners();
+      });
+      return;
+    }
   }
 
   Future<void> _applyUser(User user) async {
-    isAuthenticated = true;
-    email = user.email ?? '';
-    displayName = user.userMetadata?['display_name'] as String? ?? displayName;
-    avatarEmoji = user.userMetadata?['avatar_emoji'] as String? ?? avatarEmoji;
-    await _loadProfile(user.id);
+    if (_applyUserInFlight != null && _applyUserId == user.id) {
+      await _applyUserInFlight;
+      return;
+    }
+
+    final future = () async {
+      isAuthenticated = true;
+      email = user.email ?? '';
+      displayName =
+          user.userMetadata?['display_name'] as String? ?? displayName;
+      avatarEmoji =
+          user.userMetadata?['avatar_emoji'] as String? ?? avatarEmoji;
+      await _loadProfile(user.id);
+    }();
+
+    _applyUserId = user.id;
+    _applyUserInFlight = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_applyUserInFlight, future)) {
+        _applyUserInFlight = null;
+        _applyUserId = null;
+      }
+    }
   }
 
   Future<void> _loadProfile(String userId) async {
@@ -452,6 +510,7 @@ class SupabaseAuthController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _signedOutGrace?.cancel();
     _authSub?.cancel();
     super.dispose();
   }

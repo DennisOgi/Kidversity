@@ -102,7 +102,7 @@ class _SchoolPlace extends ConsumerWidget {
                   ),
                   Text(
                     myClass == null
-                        ? 'Your school will place you in a class.'
+                        ? 'Ask your teacher for the class code, then join on Me.'
                         : myClass.name,
                     style: text.bodyMedium,
                   ),

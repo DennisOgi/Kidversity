@@ -8,14 +8,14 @@ import 'auth_state.dart';
 final myExamAttemptsProvider = FutureProvider.autoDispose<List<ExamAttempt>>((
   ref,
 ) {
-  ref.watch(authControllerProvider);
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
   return LearningRecordsService.instance.fetchAttempts(limit: 20);
 });
 
 final myMistakeGroupsProvider = FutureProvider.autoDispose<List<MistakeGroup>>((
   ref,
 ) async {
-  ref.watch(authControllerProvider);
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
   final mistakes = await LearningRecordsService.instance.fetchOpenMistakes();
   return groupMistakes(mistakes);
 });
@@ -23,7 +23,7 @@ final myMistakeGroupsProvider = FutureProvider.autoDispose<List<MistakeGroup>>((
 final myMathsResultsProvider = FutureProvider.autoDispose<List<MathsResult>>((
   ref,
 ) {
-  ref.watch(authControllerProvider);
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
   return LearningRecordsService.instance.fetchMaths();
 });
 
@@ -35,7 +35,7 @@ typedef StudentAssignments = ({
 final myAssignmentsProvider = FutureProvider.autoDispose<StudentAssignments>((
   ref,
 ) async {
-  ref.watch(authControllerProvider);
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
   final service = LearningRecordsService.instance;
   final results = await Future.wait([
     service.fetchMyAssignments(),
@@ -57,6 +57,6 @@ final classAssignmentsProvider =
 /// Null means the signed-in student's own report.
 final progressReportProvider = FutureProvider.autoDispose
     .family<ProgressReport, String?>((ref, userId) {
-      ref.watch(authControllerProvider);
+      ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
       return LearningRecordsService.instance.fetchReport(userId: userId);
     });

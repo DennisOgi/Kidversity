@@ -74,8 +74,8 @@ class SchoolHome extends ConsumerWidget {
                       eyebrow: overview.isAdmin ? 'School' : 'Your classes',
                       title: overview.schoolName ?? 'School',
                       body: overview.isAdmin
-                          ? 'Create classes, then assign teachers and students to them.'
-                          : 'Classes the school assigned to you.',
+                          ? 'Create a class, assign a teacher from people already on Kidversity, then let that teacher share a code with the class.'
+                          : 'Share your class code. Students open Me and join with it.',
                     ),
                     if (overview.memberships.length > 1) ...[
                       const SizedBox(height: 12),
@@ -109,11 +109,12 @@ class SchoolHome extends ConsumerWidget {
                     if (overview.isAdmin) ...[
                       const SizedBox(height: 28),
                       const SectionHeader(
-                        title: 'Teachers',
-                        subtitle: 'Staff at this school. Assign them a class next.',
+                        title: 'People at this school',
+                        subtitle:
+                            'Accounts already on Kidversity. Pick from here when you add a teacher or create a class.',
                       ),
                       const SizedBox(height: 12),
-                      const _TeacherStaffList(),
+                      const _OnboardedPeopleList(),
                     ],
                     const SizedBox(height: 28),
                     const SectionHeader(
@@ -129,8 +130,8 @@ class SchoolHome extends ConsumerWidget {
                             ? 'No classes yet'
                             : 'No class assigned yet',
                         body: overview.isAdmin
-                            ? 'Create a class, assign a teacher, then add students by email.'
-                            : 'When the school admin assigns you a class, it will show here with the students in it.',
+                            ? 'Create a class, assign a teacher from the people list, then they share a join code.'
+                            : 'When the school admin assigns you a class, share its code with your students.',
                       )
                     else
                       Wrap(
@@ -161,18 +162,20 @@ class SchoolHome extends ConsumerWidget {
                           ref,
                           selected!.id,
                         ),
-                        onAddStudent: () => _assignStudent(
-                          context,
-                          ref,
-                          selected!.id,
-                        ),
+                        onAddStudent: overview.isAdmin
+                            ? () => _assignStudent(
+                                context,
+                                ref,
+                                selected!.id,
+                              )
+                            : null,
                       ),
                     ],
                     if (overview.isAdmin || teachesSelected) ...[
                       const SizedBox(height: 22),
                       const SectionHeader(
                         title: 'Learners in this class',
-                        subtitle: 'Everyone the school placed here',
+                        subtitle: 'Students who joined with the class code',
                       ),
                       const SizedBox(height: 12),
                       _SelectedRoster(
@@ -229,12 +232,17 @@ class SchoolHome extends ConsumerWidget {
     WidgetRef ref,
     String? schoolId,
   ) async {
-    final email = await _ask(
+    final directory =
+        ref.read(schoolDirectoryProvider).asData?.value ??
+        SchoolDirectory.empty;
+    final candidates = directory.people
+        .where((person) => person.role != 'teacher' && person.role != 'admin')
+        .toList();
+    final email = await _pickPerson(
       context,
       title: 'Add a teacher',
-      hint: 'name@school.org',
-      action: 'Add',
-      keyboard: TextInputType.emailAddress,
+      people: candidates.isEmpty ? directory.people : candidates,
+      allowEmail: true,
     );
     if (email == null || email.isEmpty || !context.mounted) return;
     final result = await SchoolService.instance.addTeacher(
@@ -261,14 +269,35 @@ class SchoolHome extends ConsumerWidget {
     final directory =
         ref.read(schoolDirectoryProvider).asData?.value ??
         SchoolDirectory.empty;
+    final unique = <String, SchoolPerson>{};
+    for (final person in [...directory.teachers, ...directory.people]) {
+      if (person.email.isNotEmpty && person.role != 'admin') {
+        unique[person.email] = person;
+      }
+    }
     final picked = await _pickPerson(
       context,
       title: 'Assign a teacher',
-      people: directory.teachers,
+      people: unique.values.toList(),
       allowEmail: true,
     );
     final email = picked;
     if (email == null || email.isEmpty || !context.mounted) return;
+    final chosen = unique[email.trim().toLowerCase()] ??
+        unique[email.trim()];
+    if (chosen == null || chosen.role != 'teacher') {
+      final promoted = await SchoolService.instance.addTeacher(
+        email,
+        schoolId: ref.read(schoolOverviewProvider).asData?.value.schoolId,
+      );
+      if (!context.mounted) return;
+      if (promoted.isFailure) {
+        context.showErrorSnackbar(
+          promoted.error ?? 'Could not make them a teacher.',
+        );
+        return;
+      }
+    }
     final result = await SchoolService.instance.assignTeacherToClass(
       classId: classId,
       email: email,
@@ -291,13 +320,20 @@ class SchoolHome extends ConsumerWidget {
     final directory =
         ref.read(schoolDirectoryProvider).asData?.value ??
         SchoolDirectory.empty;
-    final available = directory.students
-        .where((person) => !person.inClass(classId))
-        .toList();
+    final available = [
+      ...directory.students,
+      ...directory.people.where((person) => person.role == 'student'),
+    ];
+    final unique = <String, SchoolPerson>{};
+    for (final person in available) {
+      if (person.email.isNotEmpty && !person.inClass(classId)) {
+        unique[person.email] = person;
+      }
+    }
     final picked = await _pickPerson(
       context,
-      title: 'Add a student',
-      people: available,
+      title: 'Place a student',
+      people: unique.values.toList(),
       allowEmail: true,
     );
     final email = picked;
@@ -551,8 +587,8 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-class _TeacherStaffList extends ConsumerWidget {
-  const _TeacherStaffList();
+class _OnboardedPeopleList extends ConsumerWidget {
+  const _OnboardedPeopleList();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -562,18 +598,21 @@ class _TeacherStaffList extends ConsumerWidget {
       loading: () => const LinearProgressIndicator(minHeight: 3),
       error: (_, _) => const SizedBox.shrink(),
       data: (value) {
-        if (value.teachers.isEmpty) {
+        final people = value.people.isEmpty
+            ? [...value.teachers, ...value.students]
+            : value.people;
+        if (people.isEmpty) {
           return const EmptyPanel(
             icon: Icons.person_outline_rounded,
-            title: 'No teachers yet',
+            title: 'No accounts yet',
             body:
-                'Add a teacher by email. They get the teacher dashboard, then you assign them a class.',
+                'When someone from the school signs in, they appear here. Pick them when you add a teacher.',
           );
         }
         return GlassCard(
           child: Column(
             children: [
-              for (final teacher in value.teachers)
+              for (final person in people.take(40))
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
@@ -582,18 +621,32 @@ class _TeacherStaffList extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(teacher.displayName, style: text.titleMedium),
-                            Text(teacher.email, style: text.bodyMedium),
+                            Text(person.displayName, style: text.titleMedium),
+                            Text(person.email, style: text.bodyMedium),
                           ],
                         ),
                       ),
                       Text(
-                        teacher.classIds.isEmpty
-                            ? 'No class'
-                            : '${teacher.classIds.length} class${teacher.classIds.length == 1 ? '' : 'es'}',
+                        person.role == 'admin'
+                            ? 'Admin'
+                            : person.role == 'teacher'
+                            ? (person.classIds.isEmpty
+                                ? 'Teacher · no class'
+                                : 'Teacher')
+                            : (person.classIds.isEmpty
+                                ? 'Student · no class'
+                                : 'Student'),
                         style: text.bodyMedium,
                       ),
                     ],
+                  ),
+                ),
+              if (people.length > 40)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '${people.length - 40} more people. Search when you add a teacher.',
+                    style: text.bodyMedium,
                   ),
                 ),
             ],
@@ -627,14 +680,25 @@ class _ClassTile extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
+            duration: const Duration(milliseconds: 160),
+            curve: const Cubic(0.23, 1, 0.32, 1),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppTheme.radiusLg),
               border: Border.all(
-                color: selected ? AppColors.primary : AppColors.line,
-                width: selected ? 1.6 : 1,
+                color: selected
+                    ? AppColors.primary.withValues(alpha: 0.45)
+                    : AppColors.ink.withValues(alpha: 0.08),
               ),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                  : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -666,14 +730,14 @@ class _SelectedClassPanel extends ConsumerWidget {
   final bool isAdmin;
   final bool teachesIt;
   final VoidCallback onAssignTeacher;
-  final VoidCallback onAddStudent;
+  final VoidCallback? onAddStudent;
 
   const _SelectedClassPanel({
     required this.schoolClass,
     required this.isAdmin,
     required this.teachesIt,
     required this.onAssignTeacher,
-    required this.onAddStudent,
+    this.onAddStudent,
   });
 
   @override
@@ -692,8 +756,8 @@ class _SelectedClassPanel extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             schoolClass.hasTeacher
-                ? '${schoolClass.teacherName} teaches this class.'
-                : 'Assign a teacher, then add students by email.',
+                ? '${schoolClass.teacherName} teaches this class. Students join with the code.'
+                : 'Assign a teacher. They share this code with the class.',
             style: text.bodyMedium?.copyWith(
               color: Colors.white.withValues(alpha: 0.92),
             ),
@@ -773,10 +837,11 @@ class _SelectedClassPanel extends ConsumerWidget {
                           : 'Assign teacher',
                     ),
                   ),
-                FilledButton.tonal(
-                  onPressed: onAddStudent,
-                  child: const Text('Add student'),
-                ),
+                if (isAdmin && onAddStudent != null)
+                  FilledButton.tonal(
+                    onPressed: onAddStudent,
+                    child: const Text('Place a student'),
+                  ),
               ],
             ),
           ],
@@ -793,6 +858,9 @@ class SchoolStudentRank extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final overview = ref.watch(schoolOverviewProvider).asData?.value;
     if (overview == null || !overview.hasSchool || overview.canManageClasses) {
+      return const SizedBox.shrink();
+    }
+    if (overview.entries.every((entry) => entry.weeklyXp == 0)) {
       return const SizedBox.shrink();
     }
     final text = Theme.of(context).textTheme;
@@ -892,12 +960,12 @@ class _SchoolRankList extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     if (overview == null) return const SizedBox.shrink();
     final shown = overview.entries.take(limit).toList();
-    if (shown.isEmpty) {
+    if (shown.isEmpty || shown.every((entry) => entry.weeklyXp == 0)) {
       return const EmptyPanel(
         icon: Icons.emoji_events_outlined,
         title: 'Ranking opens as students practise',
         body:
-            'Lessons this week come first, then correct exam answers and mental maths.',
+            'Everyone starts at zero. Lessons this week come first, then exam answers and mental maths.',
       );
     }
     return GlassCard(
@@ -987,7 +1055,7 @@ class _SelectedRoster extends ConsumerWidget {
             icon: Icons.person_add_alt_1_rounded,
             title: 'No learners in this class yet',
             body:
-                'Add students by name or email. They will appear here, then on Progress and Assign.',
+                'Share the class code. Students open Me, tap Join your class, and type it in.',
           );
         }
         return GlassCard(

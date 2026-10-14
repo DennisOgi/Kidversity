@@ -104,23 +104,36 @@ class SchoolPerson {
 class SchoolDirectory {
   final List<SchoolPerson> teachers;
   final List<SchoolPerson> students;
+  final List<SchoolPerson> people;
 
   const SchoolDirectory({
     this.teachers = const [],
     this.students = const [],
+    this.people = const [],
   });
 
-  factory SchoolDirectory.fromJson(Map<String, dynamic> json) =>
-      SchoolDirectory(
-        teachers: [
-          for (final item in json['teachers'] as List? ?? const [])
-            SchoolPerson.fromJson(Map<String, dynamic>.from(item as Map)),
-        ],
-        students: [
-          for (final item in json['students'] as List? ?? const [])
-            SchoolPerson.fromJson(Map<String, dynamic>.from(item as Map)),
-        ],
-      );
+  factory SchoolDirectory.fromJson(Map<String, dynamic> json) {
+    final teachers = [
+      for (final item in json['teachers'] as List? ?? const [])
+        SchoolPerson.fromJson(Map<String, dynamic>.from(item as Map)),
+    ];
+    final students = [
+      for (final item in json['students'] as List? ?? const [])
+        SchoolPerson.fromJson(Map<String, dynamic>.from(item as Map)),
+    ];
+    final peopleRaw = json['people'] as List? ?? const [];
+    final people = peopleRaw.isEmpty
+        ? [...teachers, ...students]
+        : [
+            for (final item in peopleRaw)
+              SchoolPerson.fromJson(Map<String, dynamic>.from(item as Map)),
+          ];
+    return SchoolDirectory(
+      teachers: teachers,
+      students: students,
+      people: people,
+    );
+  }
 
   static const empty = SchoolDirectory();
 }

@@ -58,7 +58,7 @@ final mandarinExperienceProvider =
 
 final foundationReviewQueueProvider =
     FutureProvider.autoDispose<List<FoundationReviewItem>>((ref) async {
-      ref.watch(authControllerProvider);
+      ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
       final result = await FoundationReviewService.instance.fetchQueue();
       if (result.isFailure) {
         throw StateError(result.error ?? 'Could not load review queue');
@@ -68,7 +68,7 @@ final foundationReviewQueueProvider =
 
 final foundationClassProgressProvider =
     FutureProvider.autoDispose<List<FoundationStudentProgress>>((ref) async {
-      ref.watch(authControllerProvider);
+      ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
       final course = await ref.watch(mandarinCourseProvider.future);
       final classId = ref.watch(selectedClassIdProvider);
       final result = await FoundationProgressService.instance
@@ -87,9 +87,10 @@ final foundationClassDashboardProvider =
 
 final foundationCompletedLessonIdsProvider =
     FutureProvider.autoDispose<Set<String>>((ref) async {
-      final auth = ref.watch(authControllerProvider);
+      final authenticated =
+          ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
       final service = SupabaseService.instance;
-      if (!service.isInitialized || !auth.isAuthenticated) return const {};
+      if (!service.isInitialized || !authenticated) return const {};
 
       final userId = service.currentUser?.id;
       if (userId == null) return const {};
@@ -109,7 +110,7 @@ final teacherClassInfoProvider =
     FutureProvider.autoDispose<({String id, String name, String code})?>((
       ref,
     ) async {
-      ref.watch(authControllerProvider);
+      ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
       if (!SupabaseService.instance.isInitialized) return null;
       final classId = ref.watch(selectedClassIdProvider);
       final result = await SupabaseService.instance.fetchTeacherClassInfo(
@@ -121,7 +122,7 @@ final teacherClassInfoProvider =
     });
 
 final rosterProvider = FutureProvider<List<StudentPerformance>>((ref) async {
-  ref.watch(authControllerProvider);
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
   final classId = ref.watch(selectedClassIdProvider);
   if (!SupabaseService.instance.isInitialized) return const [];
   final result = await SupabaseService.instance.fetchClassRoster(
@@ -132,7 +133,7 @@ final rosterProvider = FutureProvider<List<StudentPerformance>>((ref) async {
 });
 
 final userPreferencesProvider = FutureProvider<UserPreferences>((ref) async {
-  ref.watch(authControllerProvider);
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
   if (!SupabaseService.instance.isInitialized) return const UserPreferences();
   final result = await SupabaseService.instance.fetchUserPreferences();
   return result.data ?? const UserPreferences();
@@ -141,7 +142,7 @@ final userPreferencesProvider = FutureProvider<UserPreferences>((ref) async {
 final classBoardProvider = FutureProvider.autoDispose<ClassBoardSnapshot>((
   ref,
 ) async {
-  ref.watch(authControllerProvider);
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
   ref.watch(userPreferencesProvider);
   final classId = ref.watch(selectedClassIdProvider);
   final result = await ClassBoardService.instance.fetchBoard(classId: classId);
@@ -154,7 +155,7 @@ final classBoardProvider = FutureProvider.autoDispose<ClassBoardSnapshot>((
 final schoolDirectoryProvider = FutureProvider.autoDispose<SchoolDirectory>((
   ref,
 ) async {
-  ref.watch(authControllerProvider);
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
   final schoolId = ref.watch(selectedSchoolIdProvider);
   if (!SupabaseService.instance.isInitialized) return SchoolDirectory.empty;
   final result = await SchoolService.instance.fetchDirectory(
@@ -166,7 +167,7 @@ final schoolDirectoryProvider = FutureProvider.autoDispose<SchoolDirectory>((
 final schoolOverviewProvider = FutureProvider.autoDispose<SchoolOverview>((
   ref,
 ) async {
-  ref.watch(authControllerProvider);
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
   final schoolId = ref.watch(selectedSchoolIdProvider);
   if (!SupabaseService.instance.isInitialized) return SchoolOverview.empty;
   final result = await SchoolService.instance.fetchOverview(schoolId: schoolId);
@@ -179,7 +180,7 @@ final schoolOverviewProvider = FutureProvider.autoDispose<SchoolOverview>((
 final teacherRecentTestsProvider = FutureProvider.autoDispose<List<LiveTest>>((
   ref,
 ) async {
-  ref.watch(authControllerProvider);
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
   if (!SupabaseService.instance.isInitialized) return const [];
   final result = await LiveTestService.instance.fetchTeacherRecentTests();
   return result.data ?? const [];
@@ -187,7 +188,7 @@ final teacherRecentTestsProvider = FutureProvider.autoDispose<List<LiveTest>>((
 
 final ropePullSchoolPlayProvider =
     FutureProvider.autoDispose<RopePullSchoolPlay>((ref) async {
-      ref.watch(authControllerProvider);
+      ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
       ref.watch(selectedSchoolIdProvider);
       if (!SupabaseService.instance.isInitialized) {
         return RopePullSchoolPlay.empty;
@@ -198,7 +199,7 @@ final ropePullSchoolPlayProvider =
 
 /// Active live quiz for the current student (realtime).
 final activeLiveTestProvider = StreamProvider.autoDispose<LiveTest?>((ref) {
-  ref.watch(authControllerProvider);
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
   if (!SupabaseService.instance.isInitialized) {
     return Stream.value(null);
   }

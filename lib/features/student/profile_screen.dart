@@ -31,7 +31,7 @@ class ProfileScreen extends ConsumerWidget {
     final schoolLine = school == null || !school.hasSchool
         ? 'Kidversity learner'
         : placedClass == null
-        ? '${school.schoolName} · waiting for a class'
+        ? '${school.schoolName} · join with your teacher’s code'
         : '${school.schoolName} · ${placedClass.name}';
 
     Future<void> deleteAccount() async {
@@ -190,27 +190,6 @@ class _ClassMembershipCard extends ConsumerWidget {
     if (school != null && school.hasSchool) {
       final placed = school.classes.firstOrNull;
       if (placed != null) return const SizedBox.shrink();
-      final text = Theme.of(context).textTheme;
-      return GlassCard(
-        child: Row(
-          children: [
-            const SoftIcon(icon: Icons.hourglass_top_rounded, size: 38),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Waiting for a class', style: text.titleMedium),
-                  Text(
-                    '${school.schoolName} will place you. You do not need a class code.',
-                    style: text.bodyMedium,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
     }
     return const JoinClassCard();
   }
