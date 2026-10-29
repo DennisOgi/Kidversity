@@ -36,6 +36,13 @@ abstract final class AppRoutes {
   static const teacherAssign = '/teacher/assign';
   static const studentReport = '/student/report';
   static const reviewerHome = '/reviewer/queue';
+  static const adminHome = '/admin';
+  static const adminSchools = '/admin/schools';
+  static const adminUsers = '/admin/users';
+  static const adminPerformance = '/admin/performance';
+
+  static String adminUserPerformance(String userId) =>
+      '/admin/performance/$userId';
 
   static String teacherReport(String studentId) => '/teacher/report/$studentId';
 
@@ -52,7 +59,8 @@ abstract final class AppRoutes {
 bool isProtectedRoute(String path) =>
     path.startsWith('/student') ||
     path.startsWith('/teacher') ||
-    path.startsWith('/reviewer');
+    path.startsWith('/reviewer') ||
+    path.startsWith('/admin');
 
 String authWithRedirect(String destination) =>
     '${AppRoutes.auth}?redirect=${Uri.encodeComponent(destination)}';
@@ -65,6 +73,7 @@ UserRole? roleFromPath(String? path) {
   if (path.startsWith('/teacher')) return UserRole.teacher;
   if (path.startsWith('/student')) return UserRole.student;
   if (path.startsWith('/reviewer')) return UserRole.reviewer;
+  if (path.startsWith('/admin')) return UserRole.platformAdmin;
   return null;
 }
 
@@ -141,6 +150,11 @@ void continueAfterAuth(
   if (role == UserRole.reviewer) {
     ref.read(roleProvider.notifier).state = UserRole.reviewer;
     context.go(AppRoutes.reviewerHome);
+    return;
+  }
+  if (role == UserRole.platformAdmin) {
+    ref.read(roleProvider.notifier).state = UserRole.platformAdmin;
+    context.go(AppRoutes.adminHome);
     return;
   }
 

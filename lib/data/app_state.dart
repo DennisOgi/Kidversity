@@ -13,7 +13,9 @@ import '../services/rope_pull_service.dart';
 import '../services/mandarin_experience_builder.dart';
 import '../services/foundation_review_service.dart';
 import '../services/foundation_progress_service.dart';
+import '../models/admin_models.dart';
 import '../models/school_models.dart';
+import '../services/admin_service.dart';
 import '../services/school_service.dart';
 import '../services/supabase_service.dart';
 import 'auth_state.dart';
@@ -22,6 +24,11 @@ import 'mandarin_foundation_data.dart';
 
 /// Currently selected app persona. Drives which shell is shown.
 final roleProvider = StateProvider<UserRole?>((ref) => null);
+
+/// Filters for the platform admin Users screen.
+final adminUserRoleFilterProvider = StateProvider<String?>((ref) => null);
+final adminUserSearchProvider = StateProvider<String>((ref) => '');
+final adminSelectedSchoolIdProvider = StateProvider<String?>((ref) => null);
 
 /// School the signed-in person is looking at. Null uses their first school.
 final selectedSchoolIdProvider = StateProvider<String?>((ref) => null);
@@ -226,4 +233,63 @@ final liveTestDetailProvider = StreamProvider.autoDispose
       await for (final snap in LiveTestService.instance.watchSnapshot(testId)) {
         yield snap.test;
       }
+    });
+
+final adminOverviewProvider = FutureProvider.autoDispose<AdminOverview>((
+  ref,
+) async {
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
+  final result = await AdminService.instance.fetchOverview();
+  if (result.isFailure) {
+    throw StateError(result.error ?? 'Could not load overview.');
+  }
+  return result.data!;
+});
+
+final adminSchoolsProvider =
+    FutureProvider.autoDispose<List<AdminSchoolSummary>>((ref) async {
+      ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
+      final result = await AdminService.instance.listSchools();
+      if (result.isFailure) {
+        throw StateError(result.error ?? 'Could not load schools.');
+      }
+      return result.data!;
+    });
+
+final adminSchoolDetailProvider = FutureProvider.autoDispose
+    .family<AdminSchoolDetail, String>((ref, schoolId) async {
+      ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
+      final result = await AdminService.instance.schoolDetail(schoolId);
+      if (result.isFailure) {
+        throw StateError(result.error ?? 'Could not load school.');
+      }
+      return result.data!;
+    });
+
+final adminUsersProvider = FutureProvider.autoDispose<AdminUserList>((
+  ref,
+) async {
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
+  final role = ref.watch(adminUserRoleFilterProvider);
+  final search = ref.watch(adminUserSearchProvider).trim();
+  final schoolId = ref.watch(adminSelectedSchoolIdProvider);
+  final result = await AdminService.instance.listUsers(
+    role: role,
+    schoolId: schoolId,
+    search: search.isEmpty ? null : search,
+  );
+  if (result.isFailure) {
+    throw StateError(result.error ?? 'Could not load users.');
+  }
+  return result.data!;
+});
+
+final adminUserPerformanceProvider = FutureProvider.autoDispose
+    .family<AdminUserPerformance, String>((ref, userId) async {
+      ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
+      final result = await AdminService.instance.userPerformance(userId);
+      if (result.isFailure) {
+        throw StateError(result.error ?? 'Could not load performance.');
+      }
+      return result.data!;
     });

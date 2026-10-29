@@ -13,6 +13,10 @@ import '../features/reports/progress_report_screen.dart';
 import '../features/teacher/assignments_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../features/splash/splash_screen.dart';
+import '../features/admin/admin_overview_screen.dart';
+import '../features/admin/admin_performance_screen.dart';
+import '../features/admin/admin_schools_screen.dart';
+import '../features/admin/admin_users_screen.dart';
 import '../features/reviewer/review_queue_screen.dart';
 import '../features/student/foundation_path_screen.dart';
 import '../features/student/student_home_screen.dart';
@@ -109,6 +113,37 @@ const _reviewerNav = [
   ),
 ];
 
+const _adminNav = [
+  NavItem(
+    Icons.dashboard_outlined,
+    Icons.dashboard_rounded,
+    'Overview',
+    '/admin',
+    'Platform pulse',
+  ),
+  NavItem(
+    Icons.apartment_outlined,
+    Icons.apartment_rounded,
+    'Schools',
+    '/admin/schools',
+    'Schools and staff',
+  ),
+  NavItem(
+    Icons.people_outline_rounded,
+    Icons.people_rounded,
+    'Users',
+    '/admin/users',
+    'Accounts across schools',
+  ),
+  NavItem(
+    Icons.insights_outlined,
+    Icons.insights_rounded,
+    'Performance',
+    '/admin/performance',
+    'Learner analytics',
+  ),
+];
+
 Widget _studentShell(String path, Widget page) => AppShell(
   currentPath: path,
   items: _studentNav,
@@ -127,6 +162,13 @@ Widget _reviewerShell(String path, Widget page) => AppShell(
   currentPath: path,
   items: _reviewerNav,
   accent: AppColors.jade,
+  child: page,
+);
+
+Widget _adminShell(String path, Widget page) => AppShell(
+  currentPath: path,
+  items: _adminNav,
+  accent: AppColors.ink,
   child: page,
 );
 
@@ -159,6 +201,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (role == UserRole.teacher) return AppRoutes.teacherHome;
         if (role == UserRole.student) return AppRoutes.studentPath;
         if (role == UserRole.reviewer) return AppRoutes.reviewerHome;
+        if (role == UserRole.platformAdmin) return AppRoutes.adminHome;
         return AppRoutes.home;
       }
 
@@ -183,6 +226,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (role == UserRole.teacher) return AppRoutes.teacherHome;
         if (role == UserRole.student) return AppRoutes.studentPath;
         if (role == UserRole.reviewer) return AppRoutes.reviewerHome;
+        if (role == UserRole.platformAdmin) return AppRoutes.adminHome;
       }
 
       if (isAuth || isOnboarding) {
@@ -191,6 +235,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (role == UserRole.teacher) return AppRoutes.teacherHome;
         if (role == UserRole.student) return AppRoutes.studentPath;
         if (role == UserRole.reviewer) return AppRoutes.reviewerHome;
+        if (role == UserRole.platformAdmin) return AppRoutes.adminHome;
         return AppRoutes.home;
       }
 
@@ -202,6 +247,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             UserRole.student => AppRoutes.studentPath,
             UserRole.teacher => AppRoutes.teacherHome,
             UserRole.reviewer => AppRoutes.reviewerHome,
+            UserRole.platformAdmin => AppRoutes.adminHome,
           };
         }
       }
@@ -405,6 +451,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/reviewer/queue',
         builder: (_, _) =>
             _reviewerShell('/reviewer/queue', const ReviewQueueScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.adminHome,
+        builder: (_, _) =>
+            _adminShell(AppRoutes.adminHome, const AdminOverviewScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.adminSchools,
+        builder: (_, _) =>
+            _adminShell(AppRoutes.adminSchools, const AdminSchoolsScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.adminUsers,
+        builder: (_, _) =>
+            _adminShell(AppRoutes.adminUsers, const AdminUsersScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.adminPerformance,
+        builder: (_, _) => _adminShell(
+          AppRoutes.adminPerformance,
+          const AdminPerformanceScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/admin/performance/:id',
+        builder: (_, state) => _adminShell(
+          AppRoutes.adminPerformance,
+          AdminPerformanceScreen(userId: state.pathParameters['id']),
+        ),
       ),
     ],
   );

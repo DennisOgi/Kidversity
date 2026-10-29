@@ -234,13 +234,21 @@ class SupabaseAuthController extends ChangeNotifier {
           .from('user_profiles')
           .select(
             'display_name, avatar_emoji, onboarding_complete, role, '
-            'level, xp, streak_days, lessons_completed, minutes_learned',
+            'level, xp, streak_days, lessons_completed, minutes_learned, '
+            'preferences',
           )
           .eq('user_id', userId)
           .maybeSingle();
 
       if (row == null) {
         await _ensureProfile(userId);
+        return;
+      }
+
+      if (_isDeactivated(row['preferences'])) {
+        lastError = 'This account has been deactivated.';
+        await SupabaseService.instance.signOut();
+        _resetSession();
         return;
       }
 
@@ -260,6 +268,14 @@ class SupabaseAuthController extends ChangeNotifier {
       profileReady = false;
       debugPrint('Profile load failed: $e');
     }
+  }
+
+  bool _isDeactivated(dynamic preferences) {
+    if (preferences is! Map) return false;
+    final active = preferences['account_active'];
+    if (active is bool) return !active;
+    if (active is String) return active.toLowerCase() == 'false';
+    return false;
   }
 
   Future<void> _ensureProfile(String userId) async {
@@ -428,11 +444,18 @@ class SupabaseAuthController extends ChangeNotifier {
       return;
     }
 
+    final roleWrite = switch (selectedRole) {
+      UserRole.student => 'student',
+      UserRole.teacher => 'teacher',
+      // Provisioned roles stay server-owned.
+      UserRole.reviewer || UserRole.platformAdmin || null => null,
+    };
+
     await SupabaseService.instance.upsertUserProfile({
       'user_id': userId,
       'display_name': name,
       'avatar_emoji': emoji,
-      'role': selectedRole?.name,
+      if (roleWrite != null) 'role': roleWrite,
       'onboarding_complete': true,
       'updated_at': DateTime.now().toIso8601String(),
     });
@@ -505,6 +528,7 @@ class SupabaseAuthController extends ChangeNotifier {
     if (value == 'teacher') return UserRole.teacher;
     if (value == 'student') return UserRole.student;
     if (value == 'reviewer') return UserRole.reviewer;
+    if (value == 'platform_admin') return UserRole.platformAdmin;
     return null;
   }
 

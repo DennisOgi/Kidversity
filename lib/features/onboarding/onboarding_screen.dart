@@ -97,6 +97,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       setState(() => _role = null);
       return;
     }
+    if (_role == UserRole.platformAdmin &&
+        ref.read(authControllerProvider).role != UserRole.platformAdmin) {
+      context.showErrorSnackbar(
+        'Platform admin access is available by invitation.',
+      );
+      setState(() => _role = null);
+      return;
+    }
 
     setState(() => _busy = true);
 
@@ -121,6 +129,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ? AppRoutes.teacherHome
               : role == UserRole.reviewer
               ? AppRoutes.reviewerHome
+              : role == UserRole.platformAdmin
+              ? AppRoutes.adminHome
               : role == UserRole.student
               ? AppRoutes.studentPath
               : AppRoutes.home);
@@ -159,6 +169,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         UserRole.reviewer => (
           'How review works',
           'Lessons stay unpublished until you check the audio, the wording, and the quest.',
+        ),
+        UserRole.platformAdmin => (
+          'How admin works',
+          'Overview, schools, users, and learner performance across the platform.',
         ),
         _ => (
           'How learning works here',
@@ -238,9 +252,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             _StepDots(step: _step),
             const SizedBox(height: 26),
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 420),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
+              duration: const Duration(milliseconds: 240),
+              switchInCurve: Cubic(0.23, 1, 0.32, 1),
+              switchOutCurve: Cubic(0.23, 1, 0.32, 1),
               transitionBuilder: (child, animation) => FadeTransition(
                 opacity: animation,
                 child: SlideTransition(
@@ -372,6 +386,7 @@ class _OnboardingPreview extends StatelessWidget {
       UserRole.student => 'Learner path',
       UserRole.teacher => 'Class coach',
       UserRole.reviewer => 'Language reviewer',
+      UserRole.platformAdmin => 'Platform admin',
       null => 'Choose your role',
     };
     return ConstrainedBox(
@@ -457,6 +472,8 @@ class _OnboardingPreview extends StatelessWidget {
                                   'Class, assignments, a quiz you write, and progress.',
                                 UserRole.reviewer =>
                                   'The review queue is ready.',
+                                UserRole.platformAdmin =>
+                                  'Schools, users, and platform analytics.',
                                 _ =>
                                   'Path, Practice, Play, labs, and maths are open.',
                               },
@@ -672,6 +689,23 @@ class _HowItWorksStep extends StatelessWidget {
           Icons.published_with_changes_rounded,
           'Approve or send it back',
           'Approved lessons join the path. Anything that needs a fix goes back to be corrected.',
+        ),
+      ],
+      UserRole.platformAdmin => const [
+        (
+          Icons.dashboard_rounded,
+          'Overview',
+          'See schools, learners, and weekly learning activity at a glance.',
+        ),
+        (
+          Icons.apartment_rounded,
+          'Schools',
+          'Create schools and assign school admins.',
+        ),
+        (
+          Icons.people_rounded,
+          'Users and performance',
+          'Browse accounts and open per-learner Mandarin, exam, and maths stats.',
         ),
       ],
       _ => const [

@@ -83,6 +83,8 @@ void main() {
   group('Plan B roles', () {
     test('reviewer routes resolve to reviewer role', () {
       expect(roleFromPath('/reviewer/queue'), UserRole.reviewer);
+      expect(roleFromPath('/admin'), UserRole.platformAdmin);
+      expect(roleFromPath('/admin/schools'), UserRole.platformAdmin);
     });
 
     test('Foundation routes resolve to student role', () {
@@ -91,6 +93,8 @@ void main() {
 
     test('reviewer routes are protected', () {
       expect(isProtectedRoute('/reviewer/queue'), isTrue);
+      expect(isProtectedRoute('/admin'), isTrue);
+      expect(isProtectedRoute('/admin/users'), isTrue);
     });
   });
 
