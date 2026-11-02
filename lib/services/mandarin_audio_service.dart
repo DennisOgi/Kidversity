@@ -30,7 +30,9 @@ class MandarinAudioService {
         : value;
     final cached = _signed[path];
     if (cached != null &&
-        cached.expires.isAfter(DateTime.now().add(const Duration(minutes: 2)))) {
+        cached.expires.isAfter(
+          DateTime.now().add(const Duration(minutes: 2)),
+        )) {
       return cached.url;
     }
     final service = SupabaseService.instance;

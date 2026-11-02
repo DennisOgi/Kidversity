@@ -57,10 +57,7 @@ class EmptyPanel extends StatelessWidget {
                 ),
                 if (actionLabel != null && onAction != null) ...[
                   const SizedBox(height: 14),
-                  FilledButton(
-                    onPressed: onAction,
-                    child: Text(actionLabel!),
-                  ),
+                  FilledButton(onPressed: onAction, child: Text(actionLabel!)),
                 ],
               ],
             ),

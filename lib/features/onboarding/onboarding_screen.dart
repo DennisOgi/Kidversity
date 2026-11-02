@@ -2,16 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../config/features.dart';
 import '../../data/app_state.dart';
 import '../../data/auth_state.dart';
 import '../../models/models.dart';
 import '../../router/navigation.dart';
+import '../../services/family_service.dart';
+import '../../services/supabase_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
 import '../../widgets/motion.dart';
 
+/// Role first, then name, companion, a role-specific setup, and a short tour.
+///
+/// * Students can join their class and link a parent straight away.
+/// * Teachers name their first class (learners join it with a code).
+/// * Parents see the pathway and prices; their family code is on the next page.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -21,8 +29,13 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   static const _avatars = ['🦊', '🦁', '🐼', '🐯', '🐨', '🐸', '🦄', '🐙'];
+  static const _adultAvatars = ['🦊', '🦉', '🌳', '📚', '🌟', '🧭', '🎓', '🌻'];
+  static const _stepCount = 5;
 
   final _name = TextEditingController();
+  final _classCode = TextEditingController();
+  final _familyCode = TextEditingController();
+  final _className = TextEditingController();
   int _step = 0;
   String _emoji = '🦊';
   UserRole? _role;
@@ -38,15 +51,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final redirect = GoRouter.maybeOf(
-        context,
-      )?.state.uri.queryParameters['redirect'];
-      final preset = roleFromPath(redirect);
+      final query = GoRouter.maybeOf(context)?.state.uri.queryParameters;
+      final preset = roleFromPath(query?['redirect']);
       final provisionedRole = ref.read(authControllerProvider).role;
       if (preset != null &&
           (preset != UserRole.reviewer ||
-              provisionedRole == UserRole.reviewer)) {
+              provisionedRole == UserRole.reviewer) &&
+          (preset != UserRole.platformAdmin ||
+              provisionedRole == UserRole.platformAdmin)) {
         setState(() => _role = preset);
+      }
+      // Invite links can carry codes: /onboarding?class=ABC123&family=FAM-XXXXX
+      final classCode = query?['class'];
+      final familyCode = query?['family'];
+      if (classCode != null && classCode.isNotEmpty) {
+        _classCode.text = classCode;
+      }
+      if (familyCode != null && familyCode.isNotEmpty) {
+        _familyCode.text = familyCode;
       }
     });
   }
@@ -54,21 +76,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   void dispose() {
     _name.dispose();
+    _classCode.dispose();
+    _familyCode.dispose();
+    _className.dispose();
     super.dispose();
   }
 
   String? get _redirect =>
       GoRouter.maybeOf(context)?.state.uri.queryParameters['redirect'];
 
+  bool get _isAdult =>
+      _role == UserRole.teacher ||
+      _role == UserRole.parent ||
+      _role == UserRole.reviewer ||
+      _role == UserRole.platformAdmin;
+
   bool get _canContinue {
     switch (_step) {
       case 0:
-        return _name.text.trim().isNotEmpty;
-      case 1:
-        return _emoji.isNotEmpty;
-      case 2:
         return _role != null;
+      case 1:
+        return _name.text.trim().isNotEmpty;
+      case 2:
+        return _emoji.isNotEmpty;
       case 3:
+      case 4:
         return true;
       default:
         return false;
@@ -77,7 +109,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _next() {
     if (!_canContinue) return;
-    if (_step < 3) {
+    if (_step == 1 && _role == UserRole.teacher && _className.text.isEmpty) {
+      final first = _name.text.trim();
+      _className.text = '$first’s Class';
+    }
+    if (_step < _stepCount - 1) {
       setState(() => _step++);
       return;
     }
@@ -94,7 +130,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (_role == UserRole.reviewer &&
         ref.read(authControllerProvider).role != UserRole.reviewer) {
       context.showErrorSnackbar('Reviewer access is available by invitation.');
-      setState(() => _role = null);
+      setState(() {
+        _role = null;
+        _step = 0;
+      });
       return;
     }
     if (_role == UserRole.platformAdmin &&
@@ -102,7 +141,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       context.showErrorSnackbar(
         'Platform admin access is available by invitation.',
       );
-      setState(() => _role = null);
+      setState(() {
+        _role = null;
+        _step = 0;
+      });
       return;
     }
 
@@ -115,25 +157,45 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
       await ref
           .read(authControllerProvider)
-          .completeOnboarding(name: name, emoji: _emoji, selectedRole: role);
+          .completeOnboarding(
+            name: name,
+            emoji: _emoji,
+            selectedRole: role,
+            className: role == UserRole.teacher ? _className.text : null,
+          );
 
       if (role != null) {
         ref.read(roleProvider.notifier).state = role;
       }
 
-      if (!mounted) return;
+      final notes = <String>[];
+      if (role == UserRole.student) {
+        final classCode = _classCode.text.trim();
+        if (classCode.isNotEmpty) {
+          final joined = await SupabaseService.instance.joinClassWithCode(
+            classCode,
+          );
+          notes.add(
+            joined.isSuccess
+                ? 'You joined ${joined.data}.'
+                : 'Class code did not work — try again under Me.',
+          );
+        }
+        final familyCode = _familyCode.text.trim();
+        if (familyCode.isNotEmpty) {
+          final linked = await FamilyService.instance.join(familyCode);
+          notes.add(
+            linked.isSuccess
+                ? 'Linked to ${linked.data}.'
+                : 'Family code did not work — try again under Me → Family.',
+          );
+        }
+      }
 
-      final destination =
-          redirect ??
-          (role == UserRole.teacher
-              ? AppRoutes.teacherHome
-              : role == UserRole.reviewer
-              ? AppRoutes.reviewerHome
-              : role == UserRole.platformAdmin
-              ? AppRoutes.adminHome
-              : role == UserRole.student
-              ? AppRoutes.studentPath
-              : AppRoutes.home);
+      if (!mounted) return;
+      if (notes.isNotEmpty) context.showSuccessSnackbar(notes.join(' '));
+
+      final destination = redirect ?? homeForRole(role);
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -150,36 +212,111 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
+  (String, String) _stepTitle() {
+    switch (_step) {
+      case 0:
+        return (
+          'Welcome to Kidversity',
+          'Tell us who is joining so we open the right space.',
+        );
+      case 1:
+        return switch (_role) {
+          UserRole.teacher => (
+            'How should learners address you?',
+            'This is how your name appears to your class.',
+          ),
+          UserRole.parent => (
+            'Your name',
+            'We use it on your family page and receipts.',
+          ),
+          UserRole.student => (
+            'What should we call you?',
+            'Your first name is enough. Classmates see it in games.',
+          ),
+          _ => ('Your name', 'How your colleagues will see you.'),
+        };
+      case 2:
+        return _isAdult
+            ? ('Pick a profile icon', 'It shows next to your name.')
+            : (
+                'Choose your companion',
+                'Pick the character that will travel with you.',
+              );
+      case 3:
+        return switch (_role) {
+          UserRole.student => (
+            'Join your class and family',
+            'Both are optional — you can add them later under Me.',
+          ),
+          UserRole.teacher => (
+            'Name your first class',
+            'You will get a join code to share with learners.',
+          ),
+          UserRole.parent when Features.payments => (
+            'How packs work',
+            'You only pay when your child is ready for more.',
+          ),
+          UserRole.parent => (
+            'Following your child',
+            'Everything you will see on your family page.',
+          ),
+          _ => ('Almost there', 'Your workspace is ready.'),
+        };
+      default:
+        return switch (_role) {
+          UserRole.teacher => (
+            'Your class workspace',
+            'Invite learners, set the work, and run a quiz you write yourself.',
+          ),
+          UserRole.parent => (
+            'Your family page',
+            Features.payments
+                ? 'Link your child, follow their pathway, and unlock packs.'
+                : 'Link your child and follow their pathway.',
+          ),
+          UserRole.reviewer => (
+            'How review works',
+            'Lessons stay unpublished until you check the audio, the wording, and the quest.',
+          ),
+          UserRole.platformAdmin => (
+            'How admin works',
+            'Overview, schools, users, payments, and learner performance.',
+          ),
+          _ => (
+            'How learning works here',
+            'Mandarin lessons, exam topics, labs, mental maths, and Rope Pull.',
+          ),
+        };
+    }
+  }
+
+  Widget _setupStep() {
+    switch (_role) {
+      case UserRole.student:
+        return _StudentSetupStep(
+          key: const ValueKey('student-setup'),
+          classCode: _classCode,
+          familyCode: _familyCode,
+        );
+      case UserRole.teacher:
+        return _TeacherSetupStep(
+          key: const ValueKey('teacher-setup'),
+          className: _className,
+          onChanged: () => setState(() {}),
+        );
+      case UserRole.parent:
+        return const _ParentSetupStep(key: ValueKey('parent-setup'));
+      default:
+        return _HowItWorksStep(key: const ValueKey('setup'), role: _role);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final wide = MediaQuery.sizeOf(context).width > 900;
-    final stepTitles = [
-      ('Welcome to Kidversity', 'What should we call you?'),
-      (
-        'Choose your companion',
-        'Pick the character that will travel with you.',
-      ),
-      ('Choose your space', 'Your role shapes the experience you see next.'),
-      switch (_role) {
-        UserRole.teacher => (
-          'Your class workspace',
-          'Invite learners, set the work, and run a quiz you write yourself.',
-        ),
-        UserRole.reviewer => (
-          'How review works',
-          'Lessons stay unpublished until you check the audio, the wording, and the quest.',
-        ),
-        UserRole.platformAdmin => (
-          'How admin works',
-          'Overview, schools, users, and learner performance across the platform.',
-        ),
-        _ => (
-          'How learning works here',
-          'Mandarin lessons, exam topics, labs, mental maths, and Rope Pull.',
-        ),
-      },
-    ];
+    final title = _stepTitle();
+    final last = _step == _stepCount - 1;
 
     final setupCard = ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 570),
@@ -236,25 +373,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                 ),
                 Text(
-                  '${_step + 1} / 4',
+                  '${_step + 1} / $_stepCount',
                   style: text.labelLarge?.copyWith(color: AppColors.muted),
                 ),
               ],
             ),
             const SizedBox(height: 26),
             Text(
-              stepTitles[_step].$1,
+              title.$1,
               style: text.headlineSmall?.copyWith(fontSize: wide ? 30 : 26),
             ),
             const SizedBox(height: 6),
-            Text(stepTitles[_step].$2, style: text.bodyMedium),
+            Text(title.$2, style: text.bodyMedium),
             const SizedBox(height: 22),
-            _StepDots(step: _step),
+            _StepDots(step: _step, count: _stepCount),
             const SizedBox(height: 26),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 240),
-              switchInCurve: Cubic(0.23, 1, 0.32, 1),
-              switchOutCurve: Cubic(0.23, 1, 0.32, 1),
+              switchInCurve: const Cubic(0.23, 1, 0.32, 1),
+              switchOutCurve: const Cubic(0.23, 1, 0.32, 1),
               transitionBuilder: (child, animation) => FadeTransition(
                 opacity: animation,
                 child: SlideTransition(
@@ -266,18 +403,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
               ),
               child: switch (_step) {
-                0 => _NameStep(
-                  key: const ValueKey('name'),
-                  controller: _name,
-                  onChanged: (_) => setState(() {}),
-                ),
-                1 => _AvatarStep(
-                  key: const ValueKey('avatar'),
-                  selected: _emoji,
-                  options: _avatars,
-                  onSelect: (emoji) => setState(() => _emoji = emoji),
-                ),
-                2 => _RoleStep(
+                0 => _RoleStep(
                   key: const ValueKey('role'),
                   selected: _role,
                   allowReviewer:
@@ -285,6 +411,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       UserRole.reviewer,
                   onSelect: (role) => setState(() => _role = role),
                 ),
+                1 => _NameStep(
+                  key: const ValueKey('name'),
+                  controller: _name,
+                  hint: switch (_role) {
+                    UserRole.teacher => 'e.g. Mrs Adeyemi',
+                    UserRole.student => 'Your first name',
+                    _ => 'Your name',
+                  },
+                  onChanged: (_) => setState(() {}),
+                ),
+                2 => _AvatarStep(
+                  key: const ValueKey('avatar'),
+                  selected: _emoji,
+                  options: _isAdult ? _adultAvatars : _avatars,
+                  onSelect: (emoji) => setState(() => _emoji = emoji),
+                ),
+                3 => _setupStep(),
                 _ => _HowItWorksStep(key: const ValueKey('howto'), role: _role),
               },
             ),
@@ -303,10 +446,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 GradientButton(
                   label: _busy
                       ? 'Saving…'
-                      : (_step < 3 ? 'Continue' : 'Enter Kidversity'),
-                  icon: _step < 3
-                      ? Icons.arrow_forward_rounded
-                      : Icons.auto_awesome_rounded,
+                      : (last ? 'Enter Kidversity' : 'Continue'),
+                  icon: last
+                      ? Icons.auto_awesome_rounded
+                      : Icons.arrow_forward_rounded,
                   onTap: (_busy || !_canContinue) ? null : _next,
                 ),
               ],
@@ -359,6 +502,192 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 }
 
+class _StudentSetupStep extends StatelessWidget {
+  final TextEditingController classCode;
+  final TextEditingController familyCode;
+
+  const _StudentSetupStep({
+    super.key,
+    required this.classCode,
+    required this.familyCode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Class code from your teacher', style: text.titleSmall),
+        const SizedBox(height: 8),
+        TextField(
+          controller: classCode,
+          textCapitalization: TextCapitalization.characters,
+          decoration: const InputDecoration(
+            hintText: 'e.g. 7KQ2MD (optional)',
+            prefixIcon: Icon(Icons.groups_rounded),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Text('Family code from your parent', style: text.titleSmall),
+        const SizedBox(height: 8),
+        TextField(
+          controller: familyCode,
+          textCapitalization: TextCapitalization.characters,
+          decoration: const InputDecoration(
+            hintText: 'FAM-XXXXX (optional)',
+            prefixIcon: Icon(Icons.family_restroom_rounded),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Your parent can follow your progress from their own account.',
+          style: text.bodySmall?.copyWith(color: AppColors.inkSoft),
+        ),
+      ],
+    );
+  }
+}
+
+class _TeacherSetupStep extends StatelessWidget {
+  final TextEditingController className;
+  final VoidCallback onChanged;
+
+  const _TeacherSetupStep({
+    super.key,
+    required this.className,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: className,
+          onChanged: (_) => onChanged(),
+          decoration: const InputDecoration(
+            hintText: 'e.g. JSS 1 Gold',
+            prefixIcon: Icon(Icons.class_rounded),
+          ),
+        ),
+        const SizedBox(height: 14),
+        const _TipRow(
+          icon: Icons.qr_code_rounded,
+          text:
+              'Your class page shows a join code. Write it on the board — learners type it under Me.',
+        ),
+        const SizedBox(height: 8),
+        const _TipRow(
+          icon: Icons.apartment_rounded,
+          text:
+              'Part of a school? Your school admin can add you, and your class joins the school directory.',
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'You can rename the class or add more classes later.',
+          style: text.bodySmall?.copyWith(color: AppColors.inkSoft),
+        ),
+      ],
+    );
+  }
+}
+
+class _ParentSetupStep extends StatelessWidget {
+  const _ParentSetupStep({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Features.payments) {
+      return const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _TipRow(
+            icon: Icons.password_rounded,
+            text:
+                'You get a family code. Your child types it under Me → Family.',
+          ),
+          SizedBox(height: 10),
+          _TipRow(
+            icon: Icons.route_rounded,
+            text:
+                'See lessons finished, streaks, and where they are in Mandarin and maths.',
+          ),
+          SizedBox(height: 10),
+          _TipRow(
+            icon: Icons.family_restroom_rounded,
+            text: 'Link more than one child to the same family.',
+          ),
+        ],
+      );
+    }
+    final text = Theme.of(context).textTheme;
+    const rows = [
+      ('Lessons 1–2', 'Free in every subject', AppColors.success),
+      ('One pack', '₦2,500 · the next 10 lessons', AppColors.primary),
+      ('Bundle', '₦6,500 · 3 packs, any subject or child', AppColors.worldPlay),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final row in rows) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: row.$3.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: row.$3.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Expanded(child: Text(row.$1, style: text.titleSmall)),
+                Text(row.$2, style: text.bodyMedium),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        const SizedBox(height: 6),
+        const _TipRow(
+          icon: Icons.all_inclusive_rounded,
+          text:
+              'No subscription. Packs never expire, so lessons stay open for revision.',
+        ),
+        const SizedBox(height: 8),
+        const _TipRow(
+          icon: Icons.notifications_active_rounded,
+          text:
+              'When your child reaches lesson 8 of a pack, we remind you the next one is coming.',
+        ),
+      ],
+    );
+  }
+}
+
+class _TipRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _TipRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: AppColors.cinnabar),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+        ),
+      ],
+    );
+  }
+}
+
 class _OnboardingBackdrop extends StatelessWidget {
   final Widget child;
 
@@ -385,6 +714,7 @@ class _OnboardingPreview extends StatelessWidget {
     final roleLabel = switch (role) {
       UserRole.student => 'Learner path',
       UserRole.teacher => 'Class coach',
+      UserRole.parent => 'Family',
       UserRole.reviewer => 'Language reviewer',
       UserRole.platformAdmin => 'Platform admin',
       null => 'Choose your role',
@@ -464,12 +794,14 @@ class _OnboardingPreview extends StatelessWidget {
                         step == 0
                             ? 'Tell us who is joining.'
                             : step == 1
-                            ? 'Your companion is ready.'
+                            ? 'Nice to meet you.'
                             : step == 2
-                            ? 'We’ll open the right workspace.'
+                            ? 'Looking good.'
                             : switch (role) {
                                 UserRole.teacher =>
                                   'Class, assignments, a quiz you write, and progress.',
+                                UserRole.parent =>
+                                  'Your children, their pathway, and packs.',
                                 UserRole.reviewer =>
                                   'The review queue is ready.',
                                 UserRole.platformAdmin =>
@@ -528,14 +860,15 @@ class _OnboardingPreview extends StatelessWidget {
 
 class _StepDots extends StatelessWidget {
   final int step;
-  const _StepDots({required this.step});
+  final int count;
+  const _StepDots({required this.step, required this.count});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        for (int i = 0; i < 4; i++) ...[
+        for (int i = 0; i < count; i++) ...[
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: i == step ? 28 : 10,
@@ -546,7 +879,7 @@ class _StepDots extends StatelessWidget {
               color: i <= step ? null : AppColors.line,
             ),
           ),
-          if (i != 3) const SizedBox(width: 8),
+          if (i != count - 1) const SizedBox(width: 8),
         ],
       ],
     );
@@ -555,34 +888,30 @@ class _StepDots extends StatelessWidget {
 
 class _NameStep extends StatelessWidget {
   final TextEditingController controller;
+  final String hint;
   final ValueChanged<String> onChanged;
 
   const _NameStep({
     super.key,
     required this.controller,
+    required this.hint,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'What should we call you?',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: controller,
-          textInputAction: TextInputAction.done,
-          onChanged: onChanged,
-          decoration: const InputDecoration(
-            hintText: 'Your name',
-            prefixIcon: Icon(Icons.person_outline_rounded),
-          ),
-        ),
-      ],
+    return TextField(
+      controller: controller,
+      autofocus: true,
+      textInputAction: TextInputAction.done,
+      textCapitalization: TextCapitalization.words,
+      maxLength: 40,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: const Icon(Icons.person_outline_rounded),
+        counterText: '',
+      ),
     );
   }
 }
@@ -604,11 +933,6 @@ class _AvatarStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Choose your avatar',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 16),
         Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -672,6 +996,23 @@ class _HowItWorksStep extends StatelessWidget {
           Icons.route_rounded,
           'Progress',
           'See who is moving through Mandarin, and who needs you next.',
+        ),
+      ],
+      UserRole.parent => const [
+        (
+          Icons.password_rounded,
+          'Your family code',
+          'It is on your Family page. Your child types it under Me → Family.',
+        ),
+        (
+          Icons.route_rounded,
+          'Follow the pathway',
+          'See lessons finished, streaks, and where each child is in Mandarin and maths.',
+        ),
+        (
+          Icons.lock_open_rounded,
+          'One lesson at a time',
+          'Each lesson opens when the one before it is finished, so you always know what is next.',
         ),
       ],
       UserRole.reviewer => const [
@@ -807,11 +1148,22 @@ class _RoleStep extends StatelessWidget {
         const SizedBox(height: 12),
         _RoleCard(
           emoji: '🧑‍🏫',
-          title: "I'm a Teacher or Parent",
+          title: "I'm a Teacher",
           subtitle: 'Set work, follow the class, and run a live quiz',
-          gradient: AppColors.sunsetGradient,
+          gradient: AppColors.mandarinGradient,
           selected: selected == UserRole.teacher,
           onTap: () => onSelect(UserRole.teacher),
+        ),
+        const SizedBox(height: 12),
+        _RoleCard(
+          emoji: '👪',
+          title: "I'm a Parent",
+          subtitle: 'Follow your child and unlock lesson packs',
+          gradient: const LinearGradient(
+            colors: [AppColors.success, Color(0xFF0E5536)],
+          ),
+          selected: selected == UserRole.parent,
+          onTap: () => onSelect(UserRole.parent),
         ),
         if (allowReviewer) ...[
           const SizedBox(height: 12),

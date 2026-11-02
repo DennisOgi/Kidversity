@@ -85,7 +85,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         const PageIntro(
           eyebrow: 'Platform',
           title: 'Users',
-          body: 'Search accounts, filter by role or school, open performance, or deactivate.',
+          body:
+              'Search accounts, filter by role or school, open performance, or deactivate.',
         ),
         const SizedBox(height: 14),
         TextField(
@@ -165,17 +166,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               children: [
                 Text(
                   '${page.total} account${page.total == 1 ? '' : 's'}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.inkSoft,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.inkSoft),
                 ),
                 const SizedBox(height: 10),
                 for (final user in page.users) ...[
                   _UserTile(
                     user: user,
-                    onOpen: () => context.go(
-                      AppRoutes.adminUserPerformance(user.userId),
-                    ),
+                    onOpen: () =>
+                        context.go(AppRoutes.adminUserPerformance(user.userId)),
                     onToggleActive: () => _toggleActive(user),
                   ),
                   const SizedBox(height: 10),
@@ -223,10 +223,7 @@ class _UserTile extends StatelessWidget {
                       child: Text(user.displayName, style: text.titleSmall),
                     ),
                     if (!user.active)
-                      const Pill(
-                        label: 'Inactive',
-                        color: AppColors.cinnabar,
-                      ),
+                      const Pill(label: 'Inactive', color: AppColors.cinnabar),
                   ],
                 ),
                 Text(
@@ -244,9 +241,7 @@ class _UserTile extends StatelessWidget {
             tooltip: user.active ? 'Deactivate' : 'Reactivate',
             onPressed: onToggleActive,
             icon: Icon(
-              user.active
-                  ? Icons.person_off_outlined
-                  : Icons.person_rounded,
+              user.active ? Icons.person_off_outlined : Icons.person_rounded,
             ),
           ),
         ],

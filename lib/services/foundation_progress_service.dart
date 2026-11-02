@@ -185,29 +185,35 @@ class FoundationProgressService {
           .select('user_id, lesson_id, score, answers, completed_at')
           .inFilter('user_id', userIds.toList());
 
-      final catalog = course == null ? const <String, _ItemLookup>{} : _catalog(course);
+      final catalog = course == null
+          ? const <String, _ItemLookup>{}
+          : _catalog(course);
       final lessonTitles = {
         for (final lesson in course?.lessons ?? const <MandarinCourseLesson>[])
           lesson.id: lesson.title,
       };
 
-      return app_errors.Result.success([
-        for (final raw in profiles as List)
-          _mapStudent(
-            Map<String, dynamic>.from(raw as Map),
-            (results as List)
-                .where((result) => (result as Map)['user_id'] == raw['user_id'])
-                .map((result) => Map<String, dynamic>.from(result as Map))
-                .toList(),
-            catalog: catalog,
-            lessonTitles: lessonTitles,
-          ),
-      ]..sort((a, b) {
-        if (a.needsAttention != b.needsAttention) {
-          return a.needsAttention ? -1 : 1;
-        }
-        return b.completedCount.compareTo(a.completedCount);
-      }));
+      return app_errors.Result.success(
+        [
+          for (final raw in profiles as List)
+            _mapStudent(
+              Map<String, dynamic>.from(raw as Map),
+              (results as List)
+                  .where(
+                    (result) => (result as Map)['user_id'] == raw['user_id'],
+                  )
+                  .map((result) => Map<String, dynamic>.from(result as Map))
+                  .toList(),
+              catalog: catalog,
+              lessonTitles: lessonTitles,
+            ),
+        ]..sort((a, b) {
+          if (a.needsAttention != b.needsAttention) {
+            return a.needsAttention ? -1 : 1;
+          }
+          return b.completedCount.compareTo(a.completedCount);
+        }),
+      );
     } catch (error, stack) {
       await app_errors.ErrorHandler.reportError(
         error,
@@ -270,7 +276,8 @@ class FoundationProgressService {
           ..sort();
 
     final missCounts = <String, int>{};
-    final missMeta = <String, ({String label, String detail, String? lesson})>{};
+    final missMeta =
+        <String, ({String label, String detail, String? lesson})>{};
     final weakItemIds = <String>[];
 
     for (final row in results) {
@@ -291,8 +298,10 @@ class FoundationProgressService {
         weakItemIds.add(key);
         missCounts[key] = (missCounts[key] ?? 0) + 1;
         missMeta[key] = (
-          label: lookup?.label ?? (correct.isNotEmpty ? correct : 'Missed item'),
-          detail: lookup?.detail ??
+          label:
+              lookup?.label ?? (correct.isNotEmpty ? correct : 'Missed item'),
+          detail:
+              lookup?.detail ??
               (selected.isNotEmpty
                   ? 'Chose “$selected”'
                   : (lessonTitle ?? 'Needs revisit')),
@@ -301,28 +310,26 @@ class FoundationProgressService {
       }
     }
 
-    final struggles =
-        [
-          for (final entry in missCounts.entries)
-            StruggleItem(
-              key: entry.key,
-              label: missMeta[entry.key]?.label ?? entry.key,
-              detail: missMeta[entry.key]?.detail ?? 'Needs revisit',
-              missCount: entry.value,
-              lessonTitle: missMeta[entry.key]?.lesson,
-            ),
-        ]..sort((a, b) => b.missCount.compareTo(a.missCount));
+    final struggles = [
+      for (final entry in missCounts.entries)
+        StruggleItem(
+          key: entry.key,
+          label: missMeta[entry.key]?.label ?? entry.key,
+          detail: missMeta[entry.key]?.detail ?? 'Needs revisit',
+          missCount: entry.value,
+          lessonTitle: missMeta[entry.key]?.lesson,
+        ),
+    ]..sort((a, b) => b.missCount.compareTo(a.missCount));
 
     final scoresByLesson = {
       for (final row in results)
         row['lesson_id'] as String: (row['score'] as num).round(),
     };
 
-    final strengthEntries =
-        [
-          for (final entry in scoresByLesson.entries)
-            if (entry.value >= 80) entry,
-        ]..sort((a, b) => b.value.compareTo(a.value));
+    final strengthEntries = [
+      for (final entry in scoresByLesson.entries)
+        if (entry.value >= 80) entry,
+    ]..sort((a, b) => b.value.compareTo(a.value));
     final strengths = [
       for (final entry in strengthEntries.take(3))
         lessonTitles[entry.key] ?? 'Lesson score ${entry.value}%',

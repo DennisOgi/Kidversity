@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,6 +35,11 @@ final ropePullRoomProvider = StreamProvider.autoDispose
       return RopePullService.instance.watchRoom(roomId);
     });
 
+final ropePullLadderProvider =
+    FutureProvider.autoDispose<List<RopePullLadderEntry>>((ref) {
+      return RopePullService.instance.ladder();
+    });
+
 class RopePullHubScreen extends ConsumerStatefulWidget {
   final bool hostPlays;
   final bool boardByDefault;
@@ -53,6 +59,7 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
   final _university = TextEditingController();
   Timer? _schoolRefresh;
   bool _busy = false;
+  bool _quick = false;
   bool _examMatch = false;
   bool _mathsMatch = false;
   bool _examDefaultsApplied = false;
@@ -116,19 +123,17 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
     }
     setState(() => _busy = true);
     final auth = ref.read(authControllerProvider);
-    final result = await RopePullService.instance.createRoom(
+    final result = await _openRoom(
       bank: _bank,
       questions: questions,
-      hostPlays: widget.hostPlays,
       displayName: auth.displayName.isEmpty ? 'Host' : auth.displayName,
       avatar: auth.avatarEmoji.isEmpty ? '🦊' : auth.avatarEmoji,
       challengedUserId: challengedUserId,
-      classId: _classId,
     );
     if (!mounted) return;
     setState(() => _busy = false);
     if (result.isFailure || result.data == null) {
-      context.showErrorSnackbar(result.error ?? 'Could not open a room.');
+      context.showErrorSnackbar(_roomError(result.error));
       return;
     }
     ref.invalidate(ropePullSchoolPlayProvider);
@@ -138,6 +143,17 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
           ? AppRoutes.teacherRope(id)
           : AppRoutes.studentRope(id),
     );
+  }
+
+  /// Pair with a classmate who picked the same game; no code needed.
+  Future<void> _quickMatch() async {
+    if (_busy) return;
+    _quick = true;
+    try {
+      await _create();
+    } finally {
+      _quick = false;
+    }
   }
 
   Future<void> _join() async {
@@ -224,6 +240,14 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
     required String avatar,
     String? challengedUserId,
   }) async {
+    if (_quick) {
+      return RopePullService.instance.quickMatch(
+        bank: bank,
+        questions: questions,
+        displayName: displayName,
+        avatar: avatar,
+      );
+    }
     var useBank = bank;
     var deck = questions;
     app_errors.Result<RopePullSnapshot>? result;
@@ -364,7 +388,21 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
     return ShellScrollView(
       children: [
         const RopePullHubBanner(),
-        const SizedBox(height: 22),
+        const SizedBox(height: 18),
+        if (widget.hostPlays) ...[
+          _QuickMatchCard(
+            busy: _busy,
+            gameLabel: _examMatch
+                ? 'Exam practice'
+                : _mathsMatch
+                ? 'Four operations'
+                : _bank.title,
+            onTap: _quickMatch,
+          ),
+          const SizedBox(height: 14),
+          const _LadderCard(),
+          const SizedBox(height: 22),
+        ],
         Text(
           'Join a friend',
           style: ropePullText(size: 18, weight: FontWeight.w800),
@@ -656,7 +694,10 @@ class _SchoolPlayPanelState extends ConsumerState<_SchoolPlayPanel> {
                   ),
                   child: Row(
                     children: [
-                      Text(match.hostAvatar, style: const TextStyle(fontSize: 22)),
+                      Text(
+                        match.hostAvatar,
+                        style: const TextStyle(fontSize: 22),
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -874,10 +915,7 @@ class _ExamMatchPicker extends StatelessWidget {
                 ),
                 items: [
                   for (final item in subjects)
-                    DropdownMenuItem(
-                      value: item.slug,
-                      child: Text(item.name),
-                    ),
+                    DropdownMenuItem(value: item.slug, child: Text(item.name)),
                 ],
                 onChanged: (slug) {
                   if (slug == null) return;
@@ -1018,9 +1056,10 @@ class _RopePullRoomScreenState extends ConsumerState<RopePullRoomScreen> {
     final allIn = snap.players.every(
       (player) => snap.answerFor(player.userId, snap.room.currentRound) != null,
     );
-    final isHost = userId != null && userId == snap.room.hostId;
     final limit = snap.room.roundSeconds.toDouble();
-    if (!(elapsed >= limit || (isHost && allIn && elapsed >= 1.2))) return;
+    // The server lets any player move on once everyone has answered, so a
+    // host who drops out never stalls the match.
+    if (!(elapsed >= limit || (allIn && elapsed >= 1.2))) return;
     if (_advanceRound == snap.room.currentRound) return;
     _advanceRound = snap.room.currentRound;
     _advancing = true;
@@ -1292,9 +1331,15 @@ class _Lobby extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'Share the code. Indigo and Teal fill on their own.',
+          snap.room.quickMatch
+              ? 'Finding a classmate who picked the same game. The pull starts as soon as they arrive — or share the code below.'
+              : 'Share the code. Indigo and Teal fill on their own.',
           style: ropePullText(size: 14, color: AppColors.inkSoft),
         ),
+        if (snap.room.quickMatch && snap.players.length < 2) ...[
+          const SizedBox(height: 12),
+          const LinearProgressIndicator(minHeight: 3),
+        ],
         const SizedBox(height: 16),
         GestureDetector(
           onTap: () async {
@@ -1351,7 +1396,7 @@ class _Lobby extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        RopePullKitScene(controller: controller, maxHeight: 280),
+        RopePullKitScene(controller: controller, maxHeight: 320),
         const SizedBox(height: 14),
         Row(
           children: [
@@ -1497,10 +1542,15 @@ class _Play extends StatelessWidget {
     final mine = userId == null
         ? null
         : snap.answerFor(userId!, snap.room.currentRound);
+    // Quick matches open with a short countdown. Bounded so a device clock
+    // that runs behind the server can never lock a whole round.
+    final lead = started.difference(now);
+    final countingDown =
+        lead > Duration.zero && lead <= const Duration(milliseconds: 3500);
     final showReveal = mine != null || remaining <= 0;
     final canAnswer =
         !boardMode && userId != null && snap.playerFor(userId) != null;
-    final locked = mine != null || submitting;
+    final locked = mine != null || submitting || countingDown;
     final optionKeys = <ShortcutActivator, VoidCallback>{};
     if (canAnswer && !locked) {
       const letters = [
@@ -1545,9 +1595,13 @@ class _Play extends StatelessWidget {
               const SizedBox(height: 8),
               RopePullKitScene(
                 controller: controller,
-                maxHeight: exam
-                    ? (MediaQuery.sizeOf(context).width >= 700 ? 220 : 180)
-                    : (MediaQuery.sizeOf(context).width >= 700 ? 300 : 250),
+                // Short phones keep room for the answers below.
+                maxHeight: math.min(
+                  exam
+                      ? (MediaQuery.sizeOf(context).width >= 700 ? 240 : 190)
+                      : (MediaQuery.sizeOf(context).width >= 700 ? 320 : 260),
+                  MediaQuery.sizeOf(context).height * (exam ? 0.26 : 0.34),
+                ),
               ),
               const SizedBox(height: 10),
               if (exam)
@@ -1986,7 +2040,7 @@ class _Finish extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        RopePullKitScene(controller: controller, maxHeight: 280),
+        RopePullKitScene(controller: controller, maxHeight: 320),
         const SizedBox(height: 22),
         Text(
           missed.isEmpty
@@ -2120,6 +2174,146 @@ class _ScorePill extends StatelessWidget {
               height: 1.1,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickMatchCard extends StatelessWidget {
+  final bool busy;
+  final String gameLabel;
+  final VoidCallback onTap;
+
+  const _QuickMatchCard({
+    required this.busy,
+    required this.gameLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Quick match with a classmate, $gameLabel',
+      child: GlassCard(
+        onTap: busy ? null : onTap,
+        gradient: const LinearGradient(colors: [kRopeIndigo, kRopeTeal]),
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.bolt_rounded,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    busy ? 'Finding a classmate…' : 'Quick match',
+                    style: ropePullText(
+                      size: 19,
+                      weight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Pull against a classmate on $gameLabel. No code needed.',
+                    style: ropePullText(
+                      size: 13.5,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LadderCard extends ConsumerWidget {
+  const _LadderCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ladder = ref.watch(ropePullLadderProvider);
+    final rows = ladder.whenOrNull(data: (value) => value) ?? const [];
+    if (rows.isEmpty) return const SizedBox.shrink();
+    final top = rows.take(5).toList();
+    final you = rows.where((row) => row.isYou).firstOrNull;
+    final youRank = you == null ? null : rows.indexOf(you) + 1;
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.emoji_events_rounded, color: AppColors.gold),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'This week’s strongest pullers',
+                  style: ropePullText(size: 16, weight: FontWeight.w800),
+                ),
+              ),
+              if (youRank != null)
+                Pill(label: 'You: #$youRank', color: AppColors.primary),
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (var i = 0; i < top.length; i++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 26,
+                    child: Text(
+                      '${i + 1}',
+                      style: ropePullText(size: 14, weight: FontWeight.w800),
+                    ),
+                  ),
+                  EmojiText(top[i].avatar, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      top[i].isYou
+                          ? '${top[i].displayName} (you)'
+                          : top[i].displayName,
+                      overflow: TextOverflow.ellipsis,
+                      style: ropePullText(
+                        size: 14,
+                        weight: top[i].isYou
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${top[i].wins} wins · ${top[i].correct} right',
+                    style: ropePullText(size: 13, color: AppColors.inkSoft),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

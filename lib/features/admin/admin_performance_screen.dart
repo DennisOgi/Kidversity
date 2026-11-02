@@ -21,7 +21,8 @@ class AdminPerformanceScreen extends ConsumerStatefulWidget {
       _AdminPerformanceScreenState();
 }
 
-class _AdminPerformanceScreenState extends ConsumerState<AdminPerformanceScreen> {
+class _AdminPerformanceScreenState
+    extends ConsumerState<AdminPerformanceScreen> {
   String? _pickedId;
   late final TextEditingController _search;
 
@@ -86,8 +87,9 @@ class _AdminPerformanceScreenState extends ConsumerState<AdminPerformanceScreen>
                 children: [
                   for (final user in learners.take(30)) ...[
                     GlassCard(
-                      onTap: () =>
-                          context.go(AppRoutes.adminUserPerformance(user.userId)),
+                      onTap: () => context.go(
+                        AppRoutes.adminUserPerformance(user.userId),
+                      ),
                       padding: const EdgeInsets.all(14),
                       child: Row(
                         children: [
@@ -139,8 +141,7 @@ class _PerformanceDetail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final performance = ref.watch(adminUserPerformanceProvider(userId));
     return performance.when(
-      loading: () =>
-          const LoadingIndicator(message: 'Loading performance…'),
+      loading: () => const LoadingIndicator(message: 'Loading performance…'),
       error: (error, _) => ErrorDisplay(
         message: 'Performance could not be loaded.',
         error: error,
@@ -193,7 +194,9 @@ class _PerformanceBody extends StatelessWidget {
                     if (data.schools.isNotEmpty)
                       Text(
                         data.schools.map((s) => s.name).join(', '),
-                        style: text.bodySmall?.copyWith(color: AppColors.inkSoft),
+                        style: text.bodySmall?.copyWith(
+                          color: AppColors.inkSoft,
+                        ),
                       ),
                   ],
                 ),
@@ -214,10 +217,7 @@ class _PerformanceBody extends StatelessWidget {
               label: 'Avg Mandarin score',
               value: '${data.foundationAvgScore.round()}%',
             ),
-            _StatChip(
-              label: 'This week',
-              value: '+${data.lessonsThisWeek}',
-            ),
+            _StatChip(label: 'This week', value: '+${data.lessonsThisWeek}'),
             _StatChip(label: 'XP', value: '${data.xp}'),
             _StatChip(label: 'Streak', value: '${data.streakDays}d'),
             _StatChip(
@@ -288,7 +288,8 @@ class _PerformanceBody extends StatelessWidget {
         const SizedBox(height: 24),
         SectionHeader(
           title: 'Completed lesson IDs',
-          subtitle: '${data.completedLessonIds.length} foundation results stored',
+          subtitle:
+              '${data.completedLessonIds.length} foundation results stored',
         ),
         if (data.completedLessonIds.isEmpty)
           Text(

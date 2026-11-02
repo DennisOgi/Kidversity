@@ -174,10 +174,7 @@ class _HeroPulse extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     for (final tile in tiles)
-                      SizedBox(
-                        width: (box.maxWidth - 8) / 2,
-                        child: tile,
-                      ),
+                      SizedBox(width: (box.maxWidth - 8) / 2, child: tile),
                   ],
                 );
               }
@@ -257,7 +254,10 @@ class _AttentionCard extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Text(student.avatarEmoji, style: const TextStyle(fontSize: 24)),
+            child: Text(
+              student.avatarEmoji,
+              style: const TextStyle(fontSize: 24),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -287,7 +287,10 @@ class _AttentionCard extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('•  ', style: TextStyle(color: AppColors.cinnabar)),
+                        const Text(
+                          '•  ',
+                          style: TextStyle(color: AppColors.cinnabar),
+                        ),
                         Expanded(
                           child: Text(
                             reason,
@@ -304,10 +307,7 @@ class _AttentionCard extends StatelessWidget {
                     runSpacing: 6,
                     children: [
                       for (final item in student.struggles.take(3))
-                        _Chip(
-                          label: item.label,
-                          tone: AppColors.cinnabar,
-                        ),
+                        _Chip(label: item.label, tone: AppColors.cinnabar),
                     ],
                   ),
                 ],
@@ -409,9 +409,9 @@ class _MoversStrip extends StatelessWidget {
                   student.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontSize: 14,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(fontSize: 14),
                 ),
                 Text(
                   '+${student.lessonsThisWeek} lesson${student.lessonsThisWeek == 1 ? '' : 's'}',
@@ -471,7 +471,10 @@ class _LearnerCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(student.name, style: text.titleLarge?.copyWith(fontSize: 18)),
+                    Text(
+                      student.name,
+                      style: text.titleLarge?.copyWith(fontSize: 18),
+                    ),
                     Text(
                       '$completed/30 lessons · ${student.averageScore.round()}% avg · ${student.lastActiveLabel}',
                       style: text.bodySmall?.copyWith(color: AppColors.inkSoft),

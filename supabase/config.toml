@@ -469,3 +469,16 @@ entrypoint = "./functions/class-access/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/class-access/*.html" ]
+
+[functions.payments-checkout]
+enabled = true
+verify_jwt = true
+
+[functions.payments-verify]
+enabled = true
+verify_jwt = true
+
+# Paystack calls this without a Supabase JWT; the HMAC signature is checked in code.
+[functions.payments-webhook]
+enabled = true
+verify_jwt = false

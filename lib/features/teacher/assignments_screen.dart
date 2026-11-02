@@ -125,7 +125,9 @@ class _AssignmentList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ref.watch(classAssignmentsProvider).when(
+    return ref
+        .watch(classAssignmentsProvider)
+        .when(
           loading: () => const LinearProgressIndicator(minHeight: 3),
           error: (error, _) => ErrorDisplay(
             message: 'Assignments could not be loaded.',

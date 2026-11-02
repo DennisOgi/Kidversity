@@ -14,8 +14,10 @@ import '../services/mandarin_experience_builder.dart';
 import '../services/foundation_review_service.dart';
 import '../services/foundation_progress_service.dart';
 import '../models/admin_models.dart';
+import '../models/payment_models.dart';
 import '../models/school_models.dart';
 import '../services/admin_service.dart';
+import '../services/payment_service.dart';
 import '../services/school_service.dart';
 import '../services/supabase_service.dart';
 import 'auth_state.dart';
@@ -94,8 +96,9 @@ final foundationClassDashboardProvider =
 
 final foundationCompletedLessonIdsProvider =
     FutureProvider.autoDispose<Set<String>>((ref) async {
-      final authenticated =
-          ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
+      final authenticated = ref.watch(
+        authControllerProvider.select((a) => a.isAuthenticated),
+      );
       final service = SupabaseService.instance;
       if (!service.isInitialized || !authenticated) return const {};
 
@@ -293,3 +296,25 @@ final adminUserPerformanceProvider = FutureProvider.autoDispose
       }
       return result.data!;
     });
+
+final paymentCatalogProvider = FutureProvider.autoDispose<PaymentCatalog>((
+  ref,
+) async {
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
+  final result = await PaymentService.instance.fetchCatalog();
+  if (result.isFailure) {
+    throw StateError(result.error ?? 'Could not load payment catalog.');
+  }
+  return result.data!;
+});
+
+final paymentAccessProvider = FutureProvider.autoDispose<PaymentAccess>((
+  ref,
+) async {
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
+  final result = await PaymentService.instance.fetchMyAccess();
+  if (result.isFailure) {
+    throw StateError(result.error ?? 'Could not load payment access.');
+  }
+  return result.data!;
+});

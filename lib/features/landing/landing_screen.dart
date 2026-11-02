@@ -212,7 +212,7 @@ class _WorldDirectory extends ConsumerWidget {
         1,
       ),
       (
-        'assets/rope_pull/environment/campus-court.png',
+        'assets/rope_pull/scene/tile.jpg',
         'Play',
         'Rope Pull',
         'A live tug-of-war. Each team gets its own question. The rope sits in the middle.',

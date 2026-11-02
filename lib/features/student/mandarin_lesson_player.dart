@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../config/features.dart';
 import '../../data/app_state.dart';
 import '../../data/auth_state.dart';
 import '../../models/mandarin_content.dart';
 import '../../models/user_preferences.dart';
+import '../../router/navigation.dart';
 import '../../services/mandarin_audio_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
+import 'payments_screen.dart';
 
 enum _FoundationStage {
   warmup,
@@ -286,11 +289,41 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
       _saved = result.isSuccess;
     });
     if (result.isFailure) {
-      context.showErrorSnackbar(result.error ?? 'Could not save your result.');
+      final message = result.error ?? 'Could not save your result.';
+      if (message.contains('PACK_PURCHASE_REQUIRED') ||
+          message.toLowerCase().contains('pack')) {
+        context.showErrorSnackbar('This lesson needs a paid pack.');
+        if (mounted) {
+          context.go('${AppRoutes.studentPayments}?subject=mandarin');
+        }
+        return;
+      }
+      context.showErrorSnackbar(message);
       return;
     }
     ref.invalidate(foundationCompletedLessonIdsProvider);
+    ref.invalidate(paymentAccessProvider);
     await ref.read(authControllerProvider).reloadProfile();
+    if (!mounted) return;
+    if (Features.payments && isPackRenewPromptLesson(lesson.sequence)) {
+      final catalog = await ref.read(paymentCatalogProvider.future);
+      final current = catalog.packForSequence('mandarin', lesson.sequence);
+      final next = current == null
+          ? null
+          : catalog
+                .subjectById('mandarin')
+                ?.packs
+                .where((p) => p.packIndex == current.packIndex + 1)
+                .firstOrNull;
+      if (current != null && mounted) {
+        await showPackRenewPrompt(
+          context,
+          ref,
+          currentPack: current,
+          nextPack: next,
+        );
+      }
+    }
   }
 
   @override
@@ -320,6 +353,29 @@ class _MandarinLessonPlayerState extends ConsumerState<MandarinLessonPlayer> {
           ),
           data: (experience) {
             final lesson = experience.source;
+            final access = ref
+                .watch(paymentAccessProvider)
+                .whenOrNull(data: (value) => value);
+            final entitled =
+                !Features.payments ||
+                (access?.hasAccess(
+                      'mandarin',
+                      lesson.sequence,
+                      completedLessonIds: completedLessonIds,
+                    ) ??
+                    (lesson.sequence <= 2 ||
+                        completedLessonIds.contains(lesson.id)));
+            if (!entitled) {
+              return Scaffold(
+                body: ErrorDisplay(
+                  message:
+                      'Lessons 1–2 are free. Unlock the next pack to continue.',
+                  onRetry: () => context.go(
+                    '${AppRoutes.studentPayments}?subject=mandarin',
+                  ),
+                ),
+              );
+            }
             if (lesson.sequence > 1) {
               final previousId =
                   'mfv1_l${(lesson.sequence - 1).toString().padLeft(2, '0')}';

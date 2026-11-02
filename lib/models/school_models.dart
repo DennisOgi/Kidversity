@@ -93,8 +93,7 @@ class SchoolPerson {
     email: json['email'] as String? ?? '',
     role: json['role'] as String? ?? 'student',
     classIds: [
-      for (final id in json['class_ids'] as List? ?? const [])
-        id.toString(),
+      for (final id in json['class_ids'] as List? ?? const []) id.toString(),
     ],
   );
 

@@ -49,10 +49,7 @@ class SchoolService {
     try {
       final raw = await SupabaseService.instance.client.rpc(
         'create_school_class',
-        params: {
-          'p_name': name.trim(),
-          'p_school_id': ?schoolId,
-        },
+        params: {'p_name': name.trim(), 'p_school_id': ?schoolId},
       );
       final map = _asMap(raw);
       return app_errors.Result.success(
@@ -89,10 +86,7 @@ class SchoolService {
     try {
       final raw = await SupabaseService.instance.client.rpc(
         'add_school_teacher',
-        params: {
-          'p_email': email.trim(),
-          'p_school_id': ?schoolId,
-        },
+        params: {'p_email': email.trim(), 'p_school_id': ?schoolId},
       );
       final map = _asMap(raw);
       final name = map['display_name'] as String? ?? email.trim();
@@ -276,9 +270,7 @@ class SchoolService {
 
   Map<String, dynamic> _asMap(Object? raw) => switch (raw) {
     final Map value => Map<String, dynamic>.from(value),
-    final String value => Map<String, dynamic>.from(
-      jsonDecode(value) as Map,
-    ),
+    final String value => Map<String, dynamic>.from(jsonDecode(value) as Map),
     _ => throw StateError('Unexpected school payload'),
   };
 }

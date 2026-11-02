@@ -56,10 +56,7 @@ class ClassBoardCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Pill(
-                label: 'MOVEMENT',
-                color: AppColors.gold,
-              ),
+              const Pill(label: 'MOVEMENT', color: AppColors.gold),
             ],
           ),
           const SizedBox(height: 14),
@@ -97,10 +94,7 @@ class ClassBoardCard extends StatelessWidget {
             )
           else
             for (final entry in snapshot.entries)
-              _BoardRow(
-                entry: entry,
-                teacherView: teacherView,
-              ),
+              _BoardRow(entry: entry, teacherView: teacherView),
           if (teacherView && snapshot.hiddenCount > 0) ...[
             const SizedBox(height: 8),
             Text(
@@ -191,7 +185,9 @@ class _BoardRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entry.isYou ? '${entry.displayName} (you)' : entry.displayName,
+                  entry.isYou
+                      ? '${entry.displayName} (you)'
+                      : entry.displayName,
                   style: text.titleMedium?.copyWith(fontSize: 15),
                 ),
                 Text(

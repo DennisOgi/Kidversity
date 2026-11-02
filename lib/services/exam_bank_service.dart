@@ -90,10 +90,45 @@ class ExamBankService {
       PastSubject(id: 27, name: 'Yoruba', slug: 'yoruba'),
     ],
     years: [
-      2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016,
-      2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005,
-      2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996, 1995, 1994,
-      1993, 1992, 1991, 1990, 1989, 1988,
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007,
+      2006,
+      2005,
+      2004,
+      2003,
+      2002,
+      2001,
+      2000,
+      1999,
+      1998,
+      1997,
+      1996,
+      1995,
+      1994,
+      1993,
+      1992,
+      1991,
+      1990,
+      1989,
+      1988,
     ],
   );
 
@@ -134,9 +169,7 @@ class ExamBankService {
               'slug': item['slug'],
             }),
         ],
-        years: [
-          for (final item in yearsRaw) (item['year'] as num).toInt(),
-        ],
+        years: [for (final item in yearsRaw) (item['year'] as num).toInt()],
       );
     } catch (error, stack) {
       await app_errors.ErrorHandler.reportError(
@@ -145,28 +178,6 @@ class ExamBankService {
         context: 'exam_bank.readCatalog',
       );
       return null;
-    }
-  }
-
-  Future<void> saveCatalog(PastQuestionsCatalog catalog) async {
-    if (!_ready || catalog.exams.isEmpty) return;
-    try {
-      await SupabaseService.instance.client.rpc(
-        'exam_bank_replace_catalog',
-        params: {
-          'p_exams': [for (final exam in catalog.exams) exam.toJson()],
-          'p_subjects': [
-            for (final subject in catalog.subjects) subject.toJson(),
-          ],
-          'p_years': [for (final year in catalog.years) year.toString()],
-        },
-      );
-    } catch (error, stack) {
-      await app_errors.ErrorHandler.reportError(
-        error,
-        stack,
-        context: 'exam_bank.saveCatalog',
-      );
     }
   }
 
@@ -230,32 +241,32 @@ class ExamBankService {
     }
   }
 
-  Future<int> upsert(
-    List<PastQuestion> questions, {
+  /// Ask the server to fetch one paper into the shared bank.
+  /// Returns how many new questions were added (0 when already cached).
+  Future<int> fillPaper({
     required String examSlug,
     required String subjectSlug,
+    required int year,
   }) async {
-    if (!_ready || questions.isEmpty) return 0;
+    if (!_ready) return 0;
     try {
-      final raw = await SupabaseService.instance.client.rpc(
-        'exam_bank_upsert',
-        params: {
-          'p_rows': [
-            for (final question in questions)
-              {
-                ...question.toJson(),
-                'exam_slug': examSlug,
-                'subject_slug': subjectSlug,
-              },
-          ],
+      final response = await SupabaseService.instance.client.functions.invoke(
+        'exam-bank',
+        body: {
+          'action': 'fill',
+          'exam': examSlug,
+          'subject': subjectSlug,
+          'year': year,
         },
       );
-      return (raw as num?)?.toInt() ?? 0;
+      final data = response.data;
+      if (data is Map) return (data['added'] as num?)?.toInt() ?? 0;
+      return 0;
     } catch (error, stack) {
       await app_errors.ErrorHandler.reportError(
         error,
         stack,
-        context: 'exam_bank.upsert',
+        context: 'exam_bank.fill',
       );
       return 0;
     }
@@ -332,8 +343,7 @@ class ExamBankService {
     if (value is! List) return const [];
     return [
       for (final item in value)
-        if (item is Map)
-          PastQuestion.fromJson(Map<String, dynamic>.from(item)),
+        if (item is Map) PastQuestion.fromJson(Map<String, dynamic>.from(item)),
     ];
   }
 }

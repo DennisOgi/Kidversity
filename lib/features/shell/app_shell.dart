@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/auth_state.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/motion.dart';
 import '../../widgets/common.dart';
 
 class NavItem {
@@ -288,8 +289,8 @@ class _NavButton extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeOut,
+          duration: AppMotion.of(context, AppMotion.hint),
+          curve: AppMotion.curve(context),
           padding: EdgeInsets.symmetric(vertical: compact ? 8 : 10),
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
@@ -310,7 +311,7 @@ class _NavButton extends StatelessWidget {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 240),
+                  duration: AppMotion.of(context, AppMotion.hint),
                   style: TextStyle(
                     fontSize: compact ? 10 : 11,
                     fontWeight: selected ? FontWeight.w800 : FontWeight.w600,

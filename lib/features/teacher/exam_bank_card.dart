@@ -55,7 +55,8 @@ class _ExamBankCardState extends State<ExamBankCard> {
           harvested: _status?.harvested ?? 0,
           exhausted: _status?.exhausted ?? 0,
         );
-        _note = result.message ??
+        _note =
+            result.message ??
             (result.done
                 ? 'Saved ${result.questions} questions.'
                 : 'Saved ${result.questions} so far…');

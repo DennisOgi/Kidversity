@@ -167,11 +167,15 @@ class RopePullAnswer {
   final String selected;
   final bool isCorrect;
 
+  /// True while another player's pick for the live round is still secret.
+  final bool hidden;
+
   const RopePullAnswer({
     required this.userId,
     required this.roundIndex,
     required this.selected,
     required this.isCorrect,
+    this.hidden = false,
   });
 
   factory RopePullAnswer.fromJson(Map<String, dynamic> json) => RopePullAnswer(
@@ -179,6 +183,7 @@ class RopePullAnswer {
     roundIndex: (json['round_index'] as num?)?.toInt() ?? 0,
     selected: json['selected'] as String? ?? '',
     isCorrect: json['is_correct'] as bool? ?? false,
+    hidden: json['hidden'] == true,
   );
 }
 
@@ -193,6 +198,9 @@ class RopePullRoom {
   final int ropeScore;
   final List<RopePullQuestion> questions;
 
+  /// Paired automatically with a classmate; starts when the second joins.
+  final bool quickMatch;
+
   const RopePullRoom({
     required this.id,
     required this.hostId,
@@ -203,6 +211,7 @@ class RopePullRoom {
     required this.ropeScore,
     required this.questions,
     this.roundStartedAt,
+    this.quickMatch = false,
   });
 
   factory RopePullRoom.fromJson(Map<String, dynamic> json) {
@@ -223,6 +232,7 @@ class RopePullRoom {
         json['round_started_at'] as String? ?? '',
       )?.toUtc(),
       ropeScore: (json['rope_score'] as num?)?.toInt() ?? 0,
+      quickMatch: json['quick_match'] == true,
       questions: questionsRaw
           .map(
             (item) => RopePullQuestion.fromJson(
@@ -233,8 +243,7 @@ class RopePullRoom {
     );
   }
 
-  bool get isSplit =>
-      questions.length >= 4 && questions.first.split;
+  bool get isSplit => questions.length >= 4 && questions.first.split;
 
   int get roundCount => isSplit ? questions.length ~/ 2 : questions.length;
 
@@ -358,9 +367,8 @@ class RopePullSnapshot {
     return RopePullOutcome.draw;
   }
 
-  int correctCountFor(String userId) => answers
-      .where((item) => item.userId == userId && item.isCorrect)
-      .length;
+  int correctCountFor(String userId) =>
+      answers.where((item) => item.userId == userId && item.isCorrect).length;
 
   List<RopePullQuestion> missedBy(String userId) {
     final team = playerFor(userId)?.team ?? 'blue';
@@ -460,11 +468,45 @@ class RopePullSchoolPlay {
         ],
         matches: [
           for (final item in json['matches'] as List? ?? const [])
-            RopePullSchoolMatch.fromJson(Map<String, dynamic>.from(item as Map)),
+            RopePullSchoolMatch.fromJson(
+              Map<String, dynamic>.from(item as Map),
+            ),
         ],
       );
 
   bool get hasSchool => schoolName != null && schoolName!.isNotEmpty;
 
   static const empty = RopePullSchoolPlay();
+}
+
+/// One row of the weekly Rope Pull ladder for a school.
+class RopePullLadderEntry {
+  final String userId;
+  final String displayName;
+  final String avatar;
+  final int matches;
+  final int wins;
+  final int correct;
+  final bool isYou;
+
+  const RopePullLadderEntry({
+    required this.userId,
+    required this.displayName,
+    required this.avatar,
+    required this.matches,
+    required this.wins,
+    required this.correct,
+    required this.isYou,
+  });
+
+  factory RopePullLadderEntry.fromJson(Map<String, dynamic> json) =>
+      RopePullLadderEntry(
+        userId: json['user_id'] as String? ?? '',
+        displayName: json['display_name'] as String? ?? 'Learner',
+        avatar: json['avatar'] as String? ?? '🦊',
+        matches: (json['matches'] as num?)?.toInt() ?? 0,
+        wins: (json['wins'] as num?)?.toInt() ?? 0,
+        correct: (json['correct'] as num?)?.toInt() ?? 0,
+        isYou: json['is_you'] == true,
+      );
 }

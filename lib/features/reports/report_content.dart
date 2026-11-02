@@ -23,7 +23,9 @@ List<String> reportNextSteps(ProgressReport report) {
     );
   }
   if (report.lessonsDone == 0) {
-    steps.add('Start Mandarin Lesson 1. Each lesson takes about fifteen minutes.');
+    steps.add(
+      'Start Mandarin Lesson 1. Each lesson takes about fifteen minutes.',
+    );
   } else if (report.lessonsDone < foundationLessonCount) {
     steps.add(
       'Continue Mandarin: ${foundationLessonCount - report.lessonsDone} lessons left in the Foundation path.',
@@ -37,10 +39,14 @@ List<String> reportNextSteps(ProgressReport report) {
     }
   }
   if (report.activeDaysThisWeek() < 3) {
-    steps.add('Aim for three short sessions this week. Little and often beats one long cram.');
+    steps.add(
+      'Aim for three short sessions this week. Little and often beats one long cram.',
+    );
   }
   if (steps.isEmpty) {
-    steps.add('Everything is on track. Try a Timed mock to practise exam pacing.');
+    steps.add(
+      'Everything is on track. Try a Timed mock to practise exam pacing.',
+    );
   }
   return steps;
 }
@@ -85,26 +91,32 @@ button{background:#4433CC;color:#fff;border:0;border-radius:8px;padding:10px 16p
 <h1>${_esc(report.name)}</h1>
 <div class="muted">Progress report · ${dateLabel(report.generatedAt)}${className == null ? '' : ' · ${_esc(className)}'}</div>
 <div class="stats">''');
-  b.write(stat(
-    'Mandarin',
-    '${report.lessonsDone}/$foundationLessonCount',
-    report.lessons.isEmpty ? 'Not started' : 'lessons · avg ${report.lessonAverage}%',
-  ));
-  b.write(stat(
-    'Exam practice',
-    report.attempts.isEmpty ? '—' : '${report.examAverage}%',
-    '${report.examQuestions} questions · ${report.attempts.length} sessions',
-  ));
-  b.write(stat(
-    'Maths',
-    '${report.mathsLevelsPassed.length}/${mathsLevels.length}',
-    report.maths.isEmpty ? 'Not started' : 'levels cleared · avg ${report.mathsAverage}%',
-  ));
-  b.write(stat(
-    'This week',
-    '${report.activeDaysThisWeek()}',
-    'active days',
-  ));
+  b.write(
+    stat(
+      'Mandarin',
+      '${report.lessonsDone}/$foundationLessonCount',
+      report.lessons.isEmpty
+          ? 'Not started'
+          : 'lessons · avg ${report.lessonAverage}%',
+    ),
+  );
+  b.write(
+    stat(
+      'Exam practice',
+      report.attempts.isEmpty ? '—' : '${report.examAverage}%',
+      '${report.examQuestions} questions · ${report.attempts.length} sessions',
+    ),
+  );
+  b.write(
+    stat(
+      'Maths',
+      '${report.mathsLevelsPassed.length}/${mathsLevels.length}',
+      report.maths.isEmpty
+          ? 'Not started'
+          : 'levels cleared · avg ${report.mathsAverage}%',
+    ),
+  );
+  b.write(stat('This week', '${report.activeDaysThisWeek()}', 'active days'));
   b.write('</div>');
 
   b.write('<h2>Suggested next steps</h2><ul>');
@@ -115,22 +127,30 @@ button{background:#4433CC;color:#fff;border:0;border-radius:8px;padding:10px 16p
 
   final subjects = report.subjects;
   if (subjects.isNotEmpty) {
-    b.write('<h2>Exam subjects</h2><table><tr><th>Paper</th><th>Sessions</th>'
-        '<th>Questions</th><th>Average</th><th>Best</th></tr>');
+    b.write(
+      '<h2>Exam subjects</h2><table><tr><th>Paper</th><th>Sessions</th>'
+      '<th>Questions</th><th>Average</th><th>Best</th></tr>',
+    );
     for (final s in subjects) {
-      b.write('<tr><td>${_esc(s.label)}</td><td>${s.attempts}</td>'
-          '<td>${s.questions}</td><td>${s.averagePercent}%</td>'
-          '<td>${s.bestPercent}%</td></tr>');
+      b.write(
+        '<tr><td>${_esc(s.label)}</td><td>${s.attempts}</td>'
+        '<td>${s.questions}</td><td>${s.averagePercent}%</td>'
+        '<td>${s.bestPercent}%</td></tr>',
+      );
     }
     b.write('</table>');
   }
 
   if (report.attempts.isNotEmpty) {
-    b.write('<h2>Recent exam sessions</h2><table><tr><th>Date</th><th>Paper</th>'
-        '<th>Mode</th><th>Score</th></tr>');
+    b.write(
+      '<h2>Recent exam sessions</h2><table><tr><th>Date</th><th>Paper</th>'
+      '<th>Mode</th><th>Score</th></tr>',
+    );
     for (final a in report.attempts.take(10)) {
-      b.write('<tr><td>${dateLabel(a.createdAt)}</td><td>${_esc(a.headline)}</td>'
-          '<td>${_esc(a.modeLabel)}</td><td>${a.correct}/${a.total} (${a.percent}%)</td></tr>');
+      b.write(
+        '<tr><td>${dateLabel(a.createdAt)}</td><td>${_esc(a.headline)}</td>'
+        '<td>${_esc(a.modeLabel)}</td><td>${a.correct}/${a.total} (${a.percent}%)</td></tr>',
+      );
     }
     b.write('</table>');
   }
@@ -138,10 +158,14 @@ button{background:#4433CC;color:#fff;border:0;border-radius:8px;padding:10px 16p
   if (report.lessons.isNotEmpty) {
     final lessons = [...report.lessons]
       ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
-    b.write('<h2>Mandarin lessons</h2><table><tr><th>Date</th><th>Lesson</th><th>Score</th></tr>');
+    b.write(
+      '<h2>Mandarin lessons</h2><table><tr><th>Date</th><th>Lesson</th><th>Score</th></tr>',
+    );
     for (final l in lessons.take(10)) {
-      b.write('<tr><td>${dateLabel(l.completedAt)}</td>'
-          '<td>${_esc(lessonTitles[l.lessonId] ?? l.lessonId)}</td><td>${l.score}%</td></tr>');
+      b.write(
+        '<tr><td>${dateLabel(l.completedAt)}</td>'
+        '<td>${_esc(lessonTitles[l.lessonId] ?? l.lessonId)}</td><td>${l.score}%</td></tr>',
+      );
     }
     b.write('</table>');
   }
@@ -153,12 +177,18 @@ button{background:#4433CC;color:#fff;border:0;border-radius:8px;padding:10px 16p
         if (report.mathsLevelsPassed.contains(level.sequence))
           '${level.sequence}. ${level.title}',
     ];
-    b.write(names.isEmpty ? 'None yet. Seven of ten right clears a level.' : _esc(names.join(' · ')));
+    b.write(
+      names.isEmpty
+          ? 'None yet. Seven of ten right clears a level.'
+          : _esc(names.join(' · ')),
+    );
     b.write('</p>');
   }
 
-  b.write('<p class="muted" style="margin-top:32px;font-size:12px">'
-      'Generated by Kidversity from saved lessons, exam sessions, and maths drills.</p>'
-      '</div></body></html>');
+  b.write(
+    '<p class="muted" style="margin-top:32px;font-size:12px">'
+    'Generated by Kidversity from saved lessons, exam sessions, and maths drills.</p>'
+    '</div></body></html>',
+  );
   return b.toString();
 }

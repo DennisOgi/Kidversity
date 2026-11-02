@@ -120,6 +120,8 @@ class RopePullVisualAdapter {
         phase != RopePhase.reconnecting &&
         phase != RopePhase.lobby;
     for (final answer in snap.answers) {
+      // Opponents' picks stay secret until the round closes; react then.
+      if (answer.hidden) continue;
       final id = '${answer.userId}:${answer.roundIndex}';
       if (!_seenEvents.add(id)) continue;
       if (!replaySafe) continue;

@@ -319,7 +319,7 @@ MathsSum _addFractions(Random random) {
   final answer = '$top/$bottom';
   final wrongs = <String>{
     '${top + 1}/$bottom',
-    '${left}/$bottom',
+    '$left/$bottom',
     '$top/${bottom * 2}',
     '${top - 1}/$bottom',
     '$left/$right',
@@ -404,13 +404,13 @@ MathsSum _rectangle(Random random) {
   if (random.nextBool()) {
     return _choices(
       random,
-      'A rectangle is ${width} cm by ${height} cm. What is its area in cm²?',
+      'A rectangle is $width cm by $height cm. What is its area in cm²?',
       width * height,
     );
   }
   return _choices(
     random,
-    'A rectangle is ${width} cm by ${height} cm. What is its perimeter in cm?',
+    'A rectangle is $width cm by $height cm. What is its perimeter in cm?',
     2 * (width + height),
   );
 }

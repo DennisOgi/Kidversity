@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 
 /// System color-emoji fonts only. Do not set a missing webfont as
 /// `fontFamily` — Flutter web paints empty rectangles until fallback loads.
@@ -136,7 +137,7 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget content = AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+      duration: AppMotion.hint,
       padding: padding,
       decoration: BoxDecoration(
         color: gradient == null
@@ -196,10 +197,15 @@ class _PressableState extends State<_Pressable> {
 
   @override
   Widget build(BuildContext context) {
-    final scale = _pressed ? 0.97 : (_hovered ? 1.02 : 1.0);
+    final scale = _pressed ? AppMotion.pressScale : 1.0;
+    final motion = AppMotion.of(context, AppMotion.press);
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
+      onEnter: (event) {
+        if (event.kind == ui.PointerDeviceKind.mouse) {
+          setState(() => _hovered = true);
+        }
+      },
       onExit: (_) => setState(() => _hovered = false),
       child: Material(
         color: Colors.transparent,
@@ -211,10 +217,10 @@ class _PressableState extends State<_Pressable> {
           highlightColor: AppColors.primary.withValues(alpha: 0.04),
           child: AnimatedScale(
             scale: scale,
-            duration: const Duration(milliseconds: 160),
-            curve: Curves.easeOut,
+            duration: motion,
+            curve: AppMotion.curve(context),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
+              duration: motion,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(widget.radius),
                 boxShadow: _hovered
@@ -475,11 +481,7 @@ class DashboardAppBar extends StatelessWidget {
   final VoidCallback? onBrandTap;
   final VoidCallback? onSignOut;
 
-  const DashboardAppBar({
-    super.key,
-    this.onBrandTap,
-    this.onSignOut,
-  });
+  const DashboardAppBar({super.key, this.onBrandTap, this.onSignOut});
 
   @override
   Widget build(BuildContext context) {
@@ -624,8 +626,11 @@ class MiniBarChart extends StatelessWidget {
             Expanded(
               child: TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: values[i].clamp(0.06, 1)),
-                duration: Duration(milliseconds: 500 + i * 80),
-                curve: Curves.easeOutBack,
+                duration: AppMotion.of(
+                  context,
+                  Duration(milliseconds: 180 + i * 40),
+                ),
+                curve: AppMotion.easeOut,
                 builder: (context, v, _) => Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(

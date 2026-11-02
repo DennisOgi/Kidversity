@@ -184,7 +184,7 @@ async function harvestCombo(
     year: String(combo.exam_year),
     limit: "50",
   });
-  const rows = asList(body.data).map((item) => ({
+  const rows: Record<string, unknown>[] = asList(body.data).map((item) => ({
     ...item,
     exam_slug: combo.exam_slug,
     subject_slug: combo.subject_slug,
@@ -272,12 +272,57 @@ Deno.serve(async (req) => {
   try {
     const user = await authenticatedUser(req);
     const admin = adminClient();
-    const body = await req.json() as {action?: string; rounds?: number};
+    const body = await req.json() as {
+      action?: string;
+      rounds?: number;
+      exam?: string;
+      subject?: string;
+      year?: number | string;
+    };
     const action = body.action ?? "status";
 
     if (action === "status") {
       const questions = await questionCount(admin);
       return jsonResponse({questions});
+    }
+
+    // Any signed-in learner can ask for one paper to be filled on demand.
+    // The paper is fetched once; after that it is served from the bank.
+    if (action === "fill") {
+      const exam = String(body.exam ?? "").toLowerCase();
+      const subject = String(body.subject ?? "").toLowerCase();
+      const year = Number(body.year);
+      if (
+        !/^[a-z0-9-]{1,40}$/.test(exam) ||
+        !/^[a-z0-9-]{1,40}$/.test(subject) ||
+        !Number.isInteger(year) || year < 1980 || year > 2100
+      ) {
+        return jsonResponse({error: "INVALID_PAPER"}, 400);
+      }
+      const {data: paper} = await admin
+        .from("exam_bank_papers")
+        .select("question_count, exhausted, last_harvested_at")
+        .eq("exam_slug", exam)
+        .eq("subject_slug", subject)
+        .eq("exam_year", year)
+        .eq("university", "")
+        .maybeSingle();
+      const recentlyTried = paper?.last_harvested_at &&
+        Date.now() - Date.parse(paper.last_harvested_at) < 6 * 60 * 60 * 1000;
+      if (paper?.exhausted || recentlyTried) {
+        return jsonResponse({added: 0, questions: paper?.question_count ?? 0, cached: true});
+      }
+      try {
+        sdashToken();
+      } catch {
+        return jsonResponse({added: 0, questions: paper?.question_count ?? 0, cached: true});
+      }
+      const added = await harvestCombo(admin, {
+        exam_slug: exam,
+        subject_slug: subject,
+        exam_year: year,
+      });
+      return jsonResponse({added, questions: (paper?.question_count ?? 0) + added});
     }
 
     if (action === "catalog") {

@@ -16,6 +16,7 @@ class SupabaseAuthController extends ChangeNotifier {
   static const _sessionRecoveryTimeout = Duration(seconds: 5);
 
   bool isLoading = true;
+
   /// True only for the first launch settle. Sign-in uses [isLoading] without
   /// remounting splash or sending the router back to `/splash`.
   bool isBootstrapping = true;
@@ -429,6 +430,7 @@ class SupabaseAuthController extends ChangeNotifier {
     required String name,
     required String emoji,
     UserRole? selectedRole,
+    String? className,
     bool notify = true,
   }) async {
     displayName = name;
@@ -447,6 +449,7 @@ class SupabaseAuthController extends ChangeNotifier {
     final roleWrite = switch (selectedRole) {
       UserRole.student => 'student',
       UserRole.teacher => 'teacher',
+      UserRole.parent => 'parent',
       // Provisioned roles stay server-owned.
       UserRole.reviewer || UserRole.platformAdmin || null => null,
     };
@@ -455,7 +458,7 @@ class SupabaseAuthController extends ChangeNotifier {
       'user_id': userId,
       'display_name': name,
       'avatar_emoji': emoji,
-      if (roleWrite != null) 'role': roleWrite,
+      'role': ?roleWrite,
       'onboarding_complete': true,
       'updated_at': DateTime.now().toIso8601String(),
     });
@@ -468,8 +471,9 @@ class SupabaseAuthController extends ChangeNotifier {
           .limit(1)
           .maybeSingle();
       if (school == null) {
+        final chosen = className?.trim() ?? '';
         await SupabaseService.instance.ensureTeacherClass(
-          className: '$name\'s Class',
+          className: chosen.isNotEmpty ? chosen : '$name\'s Class',
         );
       }
     }
@@ -527,6 +531,7 @@ class SupabaseAuthController extends ChangeNotifier {
   UserRole? _roleFromDb(String? value) {
     if (value == 'teacher') return UserRole.teacher;
     if (value == 'student') return UserRole.student;
+    if (value == 'parent') return UserRole.parent;
     if (value == 'reviewer') return UserRole.reviewer;
     if (value == 'platform_admin') return UserRole.platformAdmin;
     return null;

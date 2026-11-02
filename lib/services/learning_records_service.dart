@@ -68,7 +68,10 @@ class LearningRecordsService {
     });
   }
 
-  Future<List<ExamAttempt>> fetchAttempts({String? userId, int limit = 60}) async {
+  Future<List<ExamAttempt>> fetchAttempts({
+    String? userId,
+    int limit = 60,
+  }) async {
     final uid = userId ?? _uid;
     if (uid == null) return const [];
     final rows = await _client
@@ -329,8 +332,9 @@ class LearningRecordsService {
             lessonId: (row as Map)['lesson_id'] as String,
             score: (row['score'] as num).round(),
             completedAt:
-                DateTime.tryParse(row['completed_at'] as String? ?? '')
-                    ?.toLocal() ??
+                DateTime.tryParse(
+                  row['completed_at'] as String? ?? '',
+                )?.toLocal() ??
                 DateTime.now(),
           ),
       ],

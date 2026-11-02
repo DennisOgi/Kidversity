@@ -62,7 +62,9 @@ void main() {
     final random = Random(7);
     for (var i = 0; i < 200; i++) {
       final fraction = makeMathsSum(7, random);
-      final match = RegExp(r'(\d+)/(\d+) of (\d+)').firstMatch(fraction.prompt)!;
+      final match = RegExp(
+        r'(\d+)/(\d+) of (\d+)',
+      ).firstMatch(fraction.prompt)!;
       final top = int.parse(match.group(1)!);
       final bottom = int.parse(match.group(2)!);
       final whole = int.parse(match.group(3)!);

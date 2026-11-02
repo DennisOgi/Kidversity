@@ -137,7 +137,9 @@ class PastExamType {
   List<PastSubject> subjectsFor(List<PastSubject> all) {
     final allow = subjectSlugAllowlist;
     if (allow == null) return all;
-    final filtered = all.where((subject) => allow.contains(subject.slug)).toList();
+    final filtered = all
+        .where((subject) => allow.contains(subject.slug))
+        .toList();
     return filtered.isEmpty ? all : filtered;
   }
 }

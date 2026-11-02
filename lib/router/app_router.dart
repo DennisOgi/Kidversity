@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/features.dart';
 import '../data/app_state.dart';
 import '../data/auth_state.dart';
-import '../models/models.dart';
 import '../features/auth/auth_screen.dart';
 import '../features/landing/landing_screen.dart';
 import '../features/legal/legal_screen.dart';
@@ -13,7 +13,10 @@ import '../features/reports/progress_report_screen.dart';
 import '../features/teacher/assignments_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../features/splash/splash_screen.dart';
+import '../features/student/payments_screen.dart';
 import '../features/admin/admin_overview_screen.dart';
+import '../features/admin/admin_payments_screen.dart';
+import '../features/parent/parent_home_screen.dart';
 import '../features/admin/admin_performance_screen.dart';
 import '../features/admin/admin_schools_screen.dart';
 import '../features/admin/admin_users_screen.dart';
@@ -103,6 +106,24 @@ const _teacherNav = [
   ),
 ];
 
+const _parentNav = [
+  NavItem(
+    Icons.family_restroom_outlined,
+    Icons.family_restroom_rounded,
+    'Family',
+    '/parent/family',
+    'Your children and what is due',
+  ),
+  if (Features.payments)
+    NavItem(
+      Icons.local_offer_outlined,
+      Icons.local_offer_rounded,
+      'Packs',
+      '/parent/packs',
+      'Pathway, pack contents, and prices',
+    ),
+];
+
 const _reviewerNav = [
   NavItem(
     Icons.fact_check_outlined,
@@ -142,6 +163,14 @@ const _adminNav = [
     '/admin/performance',
     'Learner analytics',
   ),
+  if (Features.payments)
+    NavItem(
+      Icons.payments_outlined,
+      Icons.payments_rounded,
+      'Payments',
+      '/admin/payments',
+      'Families, packs, and repeat buys',
+    ),
 ];
 
 Widget _studentShell(String path, Widget page) => AppShell(
@@ -155,6 +184,13 @@ Widget _teacherShell(String path, Widget page) => AppShell(
   currentPath: path,
   items: _teacherNav,
   accent: AppColors.secondary,
+  child: page,
+);
+
+Widget _parentShell(String path, Widget page) => AppShell(
+  currentPath: path,
+  items: _parentNav,
+  accent: AppColors.success,
   child: page,
 );
 
@@ -197,12 +233,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return AppRoutes.home;
         }
         if (!session.onboardingComplete) return AppRoutes.onboarding;
-        final role = session.role ?? ref.read(roleProvider);
-        if (role == UserRole.teacher) return AppRoutes.teacherHome;
-        if (role == UserRole.student) return AppRoutes.studentPath;
-        if (role == UserRole.reviewer) return AppRoutes.reviewerHome;
-        if (role == UserRole.platformAdmin) return AppRoutes.adminHome;
-        return AppRoutes.home;
+        return homeForRole(session.role ?? ref.read(roleProvider));
       }
 
       if (session.isBootstrapping) return null;
@@ -223,32 +254,19 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (session.isAuthenticated && session.onboardingComplete && isHome) {
         final role = session.role ?? ref.read(roleProvider);
-        if (role == UserRole.teacher) return AppRoutes.teacherHome;
-        if (role == UserRole.student) return AppRoutes.studentPath;
-        if (role == UserRole.reviewer) return AppRoutes.reviewerHome;
-        if (role == UserRole.platformAdmin) return AppRoutes.adminHome;
+        if (role != null) return homeForRole(role);
       }
 
       if (isAuth || isOnboarding) {
         if (redirect != null && redirect.isNotEmpty) return redirect;
-        final role = session.role ?? ref.read(roleProvider);
-        if (role == UserRole.teacher) return AppRoutes.teacherHome;
-        if (role == UserRole.student) return AppRoutes.studentPath;
-        if (role == UserRole.reviewer) return AppRoutes.reviewerHome;
-        if (role == UserRole.platformAdmin) return AppRoutes.adminHome;
-        return AppRoutes.home;
+        return homeForRole(session.role ?? ref.read(roleProvider));
       }
 
       if (isProtected) {
         final role = session.role ?? ref.read(roleProvider);
         final requiredRole = roleFromPath(path);
         if (role != null && requiredRole != null && role != requiredRole) {
-          return switch (role) {
-            UserRole.student => AppRoutes.studentPath,
-            UserRole.teacher => AppRoutes.teacherHome,
-            UserRole.reviewer => AppRoutes.reviewerHome,
-            UserRole.platformAdmin => AppRoutes.adminHome,
-          };
+          return homeForRole(role);
         }
       }
 
@@ -367,6 +385,29 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) =>
             _studentShell('/student/profile', const ProfileScreen()),
       ),
+      GoRoute(
+        path: AppRoutes.studentPayments,
+        redirect: (_, _) => Features.payments ? null : AppRoutes.studentPath,
+        builder: (_, state) => _studentShell(
+          '/student/path',
+          PaymentsScreen(
+            subjectId: state.uri.queryParameters['subject'],
+            highlightPackId: state.uri.queryParameters['pack'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.studentPaymentsReturn,
+        redirect: (_, _) => Features.payments ? null : AppRoutes.studentPath,
+        builder: (_, state) => _studentShell(
+          '/student/path',
+          PaymentsScreen(
+            reference:
+                state.uri.queryParameters['reference'] ??
+                state.uri.queryParameters['trxref'],
+          ),
+        ),
+      ),
       GoRoute(path: '/student/home', redirect: (_, _) => AppRoutes.studentPath),
       GoRoute(
         path: '/student/explore',
@@ -428,10 +469,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.teacherLiveCompose,
-        builder: (_, _) => _teacherShell(
-          '/teacher/live',
-          const TeacherLiveComposeScreen(),
-        ),
+        builder: (_, _) =>
+            _teacherShell('/teacher/live', const TeacherLiveComposeScreen()),
       ),
       GoRoute(
         path: '/teacher/live/:id/monitor',
@@ -447,6 +486,38 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/teacher/students',
         redirect: (_, _) => AppRoutes.teacherHome,
       ),
+      GoRoute(
+        path: AppRoutes.parentHome,
+        builder: (_, _) =>
+            _parentShell(AppRoutes.parentHome, const ParentHomeScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.parentPacks,
+        redirect: (_, _) => Features.payments ? null : AppRoutes.parentHome,
+        builder: (_, state) => _parentShell(
+          AppRoutes.parentPacks,
+          PaymentsScreen(
+            subjectId: state.uri.queryParameters['subject'],
+            highlightPackId: state.uri.queryParameters['pack'],
+            learnerUserId: state.uri.queryParameters['learner'],
+            parentMode: true,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.parentPaymentsReturn,
+        redirect: (_, _) => Features.payments ? null : AppRoutes.parentHome,
+        builder: (_, state) => _parentShell(
+          AppRoutes.parentPacks,
+          PaymentsScreen(
+            reference:
+                state.uri.queryParameters['reference'] ??
+                state.uri.queryParameters['trxref'],
+            parentMode: true,
+          ),
+        ),
+      ),
+      GoRoute(path: '/parent', redirect: (_, _) => AppRoutes.parentHome),
       GoRoute(
         path: '/reviewer/queue',
         builder: (_, _) =>
@@ -473,6 +544,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           AppRoutes.adminPerformance,
           const AdminPerformanceScreen(),
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.adminPayments,
+        redirect: (_, _) => Features.payments ? null : AppRoutes.adminHome,
+        builder: (_, _) =>
+            _adminShell(AppRoutes.adminPayments, const AdminPaymentsScreen()),
       ),
       GoRoute(
         path: '/admin/performance/:id',

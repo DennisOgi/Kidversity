@@ -116,10 +116,14 @@ class _TeacherLiveComposeScreenState
       );
       if (!mounted) return;
       if (created.isFailure || created.data == null) {
-        setState(() => _problem = created.error ?? 'Could not create the quiz.');
+        setState(
+          () => _problem = created.error ?? 'Could not create the quiz.',
+        );
         return;
       }
-      final started = await LiveTestService.instance.startTest(created.data!.id);
+      final started = await LiveTestService.instance.startTest(
+        created.data!.id,
+      );
       if (!mounted) return;
       if (started.isFailure || started.data == null) {
         setState(() => _problem = started.error ?? 'Could not start the quiz.');
@@ -293,7 +297,9 @@ class _QuestionEditor extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Expanded(child: Text('Question $number', style: text.titleMedium)),
+              Expanded(
+                child: Text('Question $number', style: text.titleMedium),
+              ),
               if (canRemove)
                 IconButton(
                   tooltip: 'Remove question',

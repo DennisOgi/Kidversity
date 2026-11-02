@@ -8,6 +8,7 @@ import 'package:kidversity/models/past_questions_models.dart';
 import 'package:kidversity/models/rope_pull_models.dart';
 import 'package:kidversity/router/navigation.dart';
 import 'package:kidversity/services/rope_pull_questions.dart';
+import 'package:kidversity/widgets/rope_arena.dart';
 import 'package:kidversity/widgets/rope_pull_arena.dart';
 
 void main() {
@@ -96,60 +97,11 @@ void main() {
     expect(slots.length, 1);
   });
 
-  test('mobile courtyard keeps both foxes and the knot on screen', () {
-    for (final pull in [-1.0, 0.0, 1.0]) {
-      final layout = RopePullArenaLayout.of(
-        width: 360,
-        height: 210,
-        pull: pull,
-      );
-      expect(layout.leftFoxX, greaterThanOrEqualTo(-2));
-      expect(layout.rightFoxX + layout.foxW, lessThanOrEqualTo(362));
-      expect(
-        layout.knotX,
-        inInclusiveRange(layout.knotSize / 2, 360 - layout.knotSize / 2),
-      );
-      expect(layout.leftHand.dx, lessThan(layout.knotX));
-      expect(layout.rightHand.dx, greaterThan(layout.knotX));
-    }
-  });
-
-  testWidgets('courtyard arena shows blue and red seals', (tester) async {
-    const snap = RopePullSnapshot(
-      room: RopePullRoom(
-        id: 'r1',
-        hostId: 'h1',
-        joinCode: 'MCXK',
-        bank: RopePullBank.lessons15,
-        status: RopePullStatus.lobby,
-        currentRound: 0,
-        ropeScore: -2,
-        questions: [],
-      ),
-      players: [
-        RopePullPlayer(
-          userId: '1',
-          displayName: 'Olala',
-          avatar: '🦊',
-          team: 'blue',
-        ),
-        RopePullPlayer(
-          userId: '2',
-          displayName: 'Friend',
-          avatar: '🐼',
-          team: 'red',
-        ),
-      ],
-      answers: [],
-    );
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: RopePullArena(snapshot: snap, height: 240)),
-      ),
-    );
-    await tester.pump();
-    expect(find.text('Blue'), findsOneWidget);
-    expect(find.text('Red'), findsOneWidget);
+  test('arena picks a taller view on phones and a wide one on screens', () {
+    expect(ropeArenaAspectFor(360), lessThan(ropeArenaAspectFor(700)));
+    expect(ropeArenaAspectFor(700), lessThan(ropeArenaAspectFor(1400)));
+    expect(ropeArenaAspectFor(360), greaterThanOrEqualTo(1.2));
+    expect(ropeArenaAspectFor(1400), lessThanOrEqualTo(2.4));
   });
 
   test('rope score names a winner', () {

@@ -36,7 +36,8 @@ class NarrationService {
   Duration estimateDuration(String text, {double rate = 1.0}) {
     // ~2.6 spoken syllables/words per second feels natural for kids' pacing.
     final units = text.runes.length > text.split(RegExp(r'\s+')).length * 3
-        ? text.runes.length / 1.8 // CJK: count characters
+        ? text.runes.length /
+              1.8 // CJK: count characters
         : text.split(RegExp(r'\s+')).length.toDouble();
     final seconds = (units / 2.4 / rate).clamp(2.0, 30.0);
     return Duration(milliseconds: (seconds * 1000).round());
@@ -55,7 +56,9 @@ class NarrationService {
       _lang = lang;
       try {
         await _tts.setLanguage(lang);
-      } catch (_) {/* voice may be unavailable; engine falls back */}
+      } catch (_) {
+        /* voice may be unavailable; engine falls back */
+      }
     }
     // Web rate is roughly 0..1 around 0.5 = normal; mobile uses similar range.
     await _tts.setSpeechRate(rate.clamp(0.0, 1.0));

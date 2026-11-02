@@ -799,9 +799,7 @@ class _TopicCard extends StatelessWidget {
                 if (cleared)
                   Text(
                     'Cleared',
-                    style: text.labelLarge?.copyWith(
-                      color: AppColors.success,
-                    ),
+                    style: text.labelLarge?.copyWith(color: AppColors.success),
                   ),
               ],
             ),

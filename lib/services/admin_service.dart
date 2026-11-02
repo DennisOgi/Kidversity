@@ -48,7 +48,9 @@ class AdminService {
       return app_errors.Result.success(
         list
             .whereType<Map>()
-            .map((e) => AdminSchoolSummary.fromJson(Map<String, dynamic>.from(e)))
+            .map(
+              (e) => AdminSchoolSummary.fromJson(Map<String, dynamic>.from(e)),
+            )
             .toList(),
       );
     } on PostgrestException catch (error, stack) {
@@ -76,9 +78,7 @@ class AdminService {
         'admin_school_detail',
         params: {'p_school_id': schoolId},
       );
-      return app_errors.Result.success(
-        AdminSchoolDetail.fromJson(_asMap(raw)),
-      );
+      return app_errors.Result.success(AdminSchoolDetail.fromJson(_asMap(raw)));
     } on PostgrestException catch (error, stack) {
       await app_errors.ErrorHandler.reportError(
         error,
@@ -167,10 +167,7 @@ class AdminService {
     try {
       final raw = await SupabaseService.instance.client.rpc(
         'admin_create_school',
-        params: {
-          'p_name': name.trim(),
-          'p_admin_email': ?adminEmail,
-        },
+        params: {'p_name': name.trim(), 'p_admin_email': ?adminEmail},
       );
       final map = _asMap(raw);
       return app_errors.Result.success(

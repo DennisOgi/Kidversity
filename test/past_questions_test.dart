@@ -44,13 +44,7 @@ void main() {
       'id': 4821,
       'question': 'Which of the following is table salt?',
       'section': 'Use the passage.',
-      'option': {
-        'a': 'NaCl',
-        'b': 'KCl',
-        'c': 'CaCO3',
-        'd': 'NaOH',
-        'e': '',
-      },
+      'option': {'a': 'NaCl', 'b': 'KCl', 'c': 'CaCO3', 'd': 'NaOH', 'e': ''},
       'answer': 'A',
       'solution': 'NaCl is sodium chloride.',
       'image': null,
@@ -96,7 +90,11 @@ void main() {
 
   test('English and Mathematics stay open on the paid plan', () {
     expect(
-      const PastSubject(id: 1, name: 'English', slug: 'english').isSandboxLocked,
+      const PastSubject(
+        id: 1,
+        name: 'English',
+        slug: 'english',
+      ).isSandboxLocked,
       isFalse,
     );
     expect(
@@ -119,10 +117,11 @@ void main() {
       PastSubject(id: 4, name: 'English', slug: 'english'),
       PastSubject(id: 5, name: 'Current Affairs', slug: 'currentaffairs'),
     ];
-    expect(
-      university.subjectsFor(subjects).map((s) => s.slug),
-      ['biology', 'english', 'currentaffairs'],
-    );
+    expect(university.subjectsFor(subjects).map((s) => s.slug), [
+      'biology',
+      'english',
+      'currentaffairs',
+    ]);
   });
 
   test('a practice paper keeps one exam year only', () {

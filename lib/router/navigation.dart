@@ -25,6 +25,8 @@ abstract final class AppRoutes {
   static const studentExams = '/student/exams';
   static const studentExamSession = '/student/exams/session';
   static const studentProfile = '/student/profile';
+  static const studentPayments = '/student/payments';
+  static const studentPaymentsReturn = '/student/payments/return';
   static const studentRewards = '/student/rewards';
   static const studentExplore = '/student/explore';
   static const teacherHome = '/teacher/class';
@@ -35,11 +37,15 @@ abstract final class AppRoutes {
   static const teacherPlay = '/teacher/play';
   static const teacherAssign = '/teacher/assign';
   static const studentReport = '/student/report';
+  static const parentHome = '/parent/family';
+  static const parentPacks = '/parent/packs';
+  static const parentPaymentsReturn = '/parent/packs/return';
   static const reviewerHome = '/reviewer/queue';
   static const adminHome = '/admin';
   static const adminSchools = '/admin/schools';
   static const adminUsers = '/admin/users';
   static const adminPerformance = '/admin/performance';
+  static const adminPayments = '/admin/payments';
 
   static String adminUserPerformance(String userId) =>
       '/admin/performance/$userId';
@@ -59,6 +65,7 @@ abstract final class AppRoutes {
 bool isProtectedRoute(String path) =>
     path.startsWith('/student') ||
     path.startsWith('/teacher') ||
+    path.startsWith('/parent') ||
     path.startsWith('/reviewer') ||
     path.startsWith('/admin');
 
@@ -72,10 +79,21 @@ UserRole? roleFromPath(String? path) {
   if (path == null) return null;
   if (path.startsWith('/teacher')) return UserRole.teacher;
   if (path.startsWith('/student')) return UserRole.student;
+  if (path.startsWith('/parent')) return UserRole.parent;
   if (path.startsWith('/reviewer')) return UserRole.reviewer;
   if (path.startsWith('/admin')) return UserRole.platformAdmin;
   return null;
 }
+
+/// Where each role lands after sign-in.
+String homeForRole(UserRole? role) => switch (role) {
+  UserRole.student => AppRoutes.studentPath,
+  UserRole.teacher => AppRoutes.teacherHome,
+  UserRole.parent => AppRoutes.parentHome,
+  UserRole.reviewer => AppRoutes.reviewerHome,
+  UserRole.platformAdmin => AppRoutes.adminHome,
+  null => AppRoutes.home,
+};
 
 /// Landing role tiles — sends unauthenticated users to auth first.
 void enterStudentSpace(BuildContext context, WidgetRef ref) =>
@@ -83,6 +101,9 @@ void enterStudentSpace(BuildContext context, WidgetRef ref) =>
 
 void enterTeacherSpace(BuildContext context, WidgetRef ref) =>
     enterRoleSpace(context, ref, UserRole.teacher, AppRoutes.teacherHome);
+
+void enterParentSpace(BuildContext context, WidgetRef ref) =>
+    enterRoleSpace(context, ref, UserRole.parent, AppRoutes.parentHome);
 
 void enterReviewerSpace(BuildContext context, WidgetRef ref) =>
     enterRoleSpace(context, ref, UserRole.reviewer, AppRoutes.reviewerHome);
@@ -137,28 +158,8 @@ void continueAfterAuth(
   }
 
   final role = auth.role ?? ref.read(roleProvider);
-  if (role == UserRole.teacher) {
-    ref.read(roleProvider.notifier).state = UserRole.teacher;
-    context.go(AppRoutes.teacherHome);
-    return;
-  }
-  if (role == UserRole.student) {
-    ref.read(roleProvider.notifier).state = UserRole.student;
-    context.go(AppRoutes.studentPath);
-    return;
-  }
-  if (role == UserRole.reviewer) {
-    ref.read(roleProvider.notifier).state = UserRole.reviewer;
-    context.go(AppRoutes.reviewerHome);
-    return;
-  }
-  if (role == UserRole.platformAdmin) {
-    ref.read(roleProvider.notifier).state = UserRole.platformAdmin;
-    context.go(AppRoutes.adminHome);
-    return;
-  }
-
-  context.go(AppRoutes.home);
+  if (role != null) ref.read(roleProvider.notifier).state = role;
+  context.go(homeForRole(role));
 }
 
 /// Homepage path tiles — deep-link into live app areas.

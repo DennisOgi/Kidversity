@@ -32,19 +32,28 @@ class TeacherLiveMonitorScreen extends ConsumerWidget {
         title: const Text('Live monitor'),
         actions: [
           snapshotAsync.whenOrNull(
-            data: (snap) => snap != null && snap.test.status == LiveTestStatus.live
-                ? TextButton.icon(
-                    onPressed: () async {
-                      await LiveTestService.instance.endTest(testId);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quiz ended')));
-                      }
-                    },
-                    icon: const Icon(Icons.stop_circle_outlined, color: AppColors.danger),
-                    label: const Text('End quiz', style: TextStyle(color: AppColors.danger)),
-                  )
-                : null,
-          ) ??
+                data: (snap) =>
+                    snap != null && snap.test.status == LiveTestStatus.live
+                    ? TextButton.icon(
+                        onPressed: () async {
+                          await LiveTestService.instance.endTest(testId);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Quiz ended')),
+                            );
+                          }
+                        },
+                        icon: const Icon(
+                          Icons.stop_circle_outlined,
+                          color: AppColors.danger,
+                        ),
+                        label: const Text(
+                          'End quiz',
+                          style: TextStyle(color: AppColors.danger),
+                        ),
+                      )
+                    : null,
+              ) ??
               const SizedBox.shrink(),
         ],
       ),
@@ -63,8 +72,10 @@ class TeacherLiveMonitorScreen extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  if (test.status == LiveTestStatus.live) const LivePulseBadge(),
-                  if (test.status == LiveTestStatus.live) const SizedBox(width: 12),
+                  if (test.status == LiveTestStatus.live)
+                    const LivePulseBadge(),
+                  if (test.status == LiveTestStatus.live)
+                    const SizedBox(width: 12),
                   Expanded(child: Text(test.title, style: text.headlineSmall)),
                 ],
               ),
@@ -84,14 +95,30 @@ class TeacherLiveMonitorScreen extends ConsumerWidget {
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child: _StatTile(label: 'Joined', value: '$joined', icon: Icons.people_rounded, color: AppColors.primary)),
+                  Expanded(
+                    child: _StatTile(
+                      label: 'Joined',
+                      value: '$joined',
+                      icon: Icons.people_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: _StatTile(label: 'Submitted', value: '$submitted', icon: Icons.check_rounded, color: AppColors.success)),
+                  Expanded(
+                    child: _StatTile(
+                      label: 'Submitted',
+                      value: '$submitted',
+                      icon: Icons.check_rounded,
+                      color: AppColors.success,
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: _StatTile(
                       label: 'Avg score',
-                      value: joined == 0 ? '—' : snap.averageScore.toStringAsFixed(1),
+                      value: joined == 0
+                          ? '—'
+                          : snap.averageScore.toStringAsFixed(1),
                       icon: Icons.leaderboard_rounded,
                       color: AppColors.secondary,
                     ),
@@ -100,27 +127,45 @@ class TeacherLiveMonitorScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
               if (snap.participants.isNotEmpty) ...[
-                const SectionHeader(title: 'Live leaderboard', subtitle: 'Top scores update instantly'),
+                const SectionHeader(
+                  title: 'Live leaderboard',
+                  subtitle: 'Top scores update instantly',
+                ),
                 const SizedBox(height: 12),
-                GlassCard(child: LiveLeaderboard(participants: snap.leaderboard)),
+                GlassCard(
+                  child: LiveLeaderboard(participants: snap.leaderboard),
+                ),
                 const SizedBox(height: 24),
               ],
-              const SectionHeader(title: 'Students', subtitle: 'Updates in real time'),
+              const SectionHeader(
+                title: 'Students',
+                subtitle: 'Updates in real time',
+              ),
               const SizedBox(height: 10),
               if (snap.participants.isEmpty)
-                GlassCard(child: Text('Waiting for students to join…', style: text.bodyLarge))
+                GlassCard(
+                  child: Text(
+                    'Waiting for students to join…',
+                    style: text.bodyLarge,
+                  ),
+                )
               else
                 for (final p in snap.leaderboard)
                   _ParticipantRow(participant: p, snapshot: snap),
               const SizedBox(height: 24),
-              const SectionHeader(title: 'Answer breakdown', subtitle: 'See class understanding instantly'),
+              const SectionHeader(
+                title: 'Answer breakdown',
+                subtitle: 'See class understanding instantly',
+              ),
               const SizedBox(height: 10),
               for (final q in test.questions) ...[
                 GlassCard(
                   child: AnswerDistributionBar(
                     question: q,
                     counts: snap.optionCounts(q.id),
-                    total: snap.participants.where((p) => p.status != ParticipantStatus.waiting).length,
+                    total: snap.participants
+                        .where((p) => p.status != ParticipantStatus.waiting)
+                        .length,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -146,7 +191,12 @@ class _StatTile extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _StatTile({required this.label, required this.value, required this.icon, required this.color});
+  const _StatTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -200,13 +250,23 @@ class _ParticipantRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(participant.displayName, style: text.titleMedium?.copyWith(fontSize: 15)),
+                  Text(
+                    participant.displayName,
+                    style: text.titleMedium?.copyWith(fontSize: 15),
+                  ),
                   const SizedBox(height: 4),
-                  Text('$answered / $totalQuestions answered', style: text.bodySmall?.copyWith(color: AppColors.muted)),
+                  Text(
+                    '$answered / $totalQuestions answered',
+                    style: text.bodySmall?.copyWith(color: AppColors.muted),
+                  ),
                   const SizedBox(height: 6),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(value: progress.clamp(0, 1), minHeight: 6, backgroundColor: AppColors.line),
+                    child: LinearProgressIndicator(
+                      value: progress.clamp(0, 1),
+                      minHeight: 6,
+                      backgroundColor: AppColors.line,
+                    ),
                   ),
                 ],
               ),
@@ -215,8 +275,14 @@ class _ParticipantRow extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text('${participant.score}/$totalQuestions', style: text.titleMedium),
-                Text(statusLabel, style: text.bodySmall?.copyWith(color: statusColor)),
+                Text(
+                  '${participant.score}/$totalQuestions',
+                  style: text.titleMedium,
+                ),
+                Text(
+                  statusLabel,
+                  style: text.bodySmall?.copyWith(color: statusColor),
+                ),
               ],
             ),
           ],

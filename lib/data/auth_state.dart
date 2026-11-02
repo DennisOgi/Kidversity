@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'supabase_auth.dart';
 
 /// Supabase-backed auth session — drives router redirects and auth UI.
-final authControllerProvider = ChangeNotifierProvider<SupabaseAuthController>((ref) {
+final authControllerProvider = ChangeNotifierProvider<SupabaseAuthController>((
+  ref,
+) {
   final c = SupabaseAuthController();
   c.bootstrap();
   return c;

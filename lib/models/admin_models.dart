@@ -317,14 +317,17 @@ class AdminUserPerformance {
         foundationCompleted: _int(json['foundation_completed']),
         foundationAvgScore: _double(json['foundation_avg_score']),
         lessonsThisWeek: _int(json['lessons_this_week']),
-        completedLessonIds: _list(json['completed_lesson_ids'])
-            .map((e) => e.toString())
-            .toList(),
+        completedLessonIds: _list(
+          json['completed_lesson_ids'],
+        ).map((e) => e.toString()).toList(),
         examAttempts: _int(json['exam_attempts']),
         examAvgScore: _double(json['exam_avg_score']),
         mathsAttempts: _int(json['maths_attempts']),
         mathsAvgScore: _double(json['maths_avg_score']),
-        weeklyActivity: _mapList(json['weekly_activity'], AdminDayCount.fromJson),
+        weeklyActivity: _mapList(
+          json['weekly_activity'],
+          AdminDayCount.fromJson,
+        ),
         schools: _mapList(json['schools'], AdminUserSchool.fromJson),
       );
 }

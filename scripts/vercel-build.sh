@@ -19,12 +19,12 @@ ENVIRONMENT=${ENVIRONMENT:-production}
 APP_RELEASE=${APP_RELEASE:-${VERCEL_GIT_COMMIT_SHA:-production}}
 API_BASE_URL=${API_BASE_URL:-https://api.kidversity.app}
 API_TIMEOUT_SECONDS=${API_TIMEOUT_SECONDS:-30}
-SDASH_ACCESS_TOKEN=${SDASH_ACCESS_TOKEN:-}
-SDASH_API_BASE_URL=${SDASH_API_BASE_URL:-https://www.sdashapi.com/api}
 EOF
 
-if [[ -z "${SDASH_ACCESS_TOKEN:-}" ]]; then
-  echo "WARNING: SDASH_ACCESS_TOKEN is not set in Vercel. Past questions will be unavailable on this deploy."
+# Past questions are fetched by the exam-bank Edge Function. Never pass the
+# SdashAPI token to the web build: everything in the build is public.
+if [[ -n "${SDASH_ACCESS_TOKEN:-}" ]]; then
+  echo "WARNING: SDASH_ACCESS_TOKEN is set in Vercel. Remove it; it belongs in Supabase function secrets only."
 fi
 
 if [[ ! -d "${HOME}/flutter" ]]; then
@@ -45,8 +45,6 @@ flutter build web --release \
   --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-${SUPABASE_CLIENT_KEY}}" \
   --dart-define=ENVIRONMENT="${ENVIRONMENT:-production}" \
   --dart-define=APP_RELEASE="${APP_RELEASE:-${VERCEL_GIT_COMMIT_SHA:-production}}" \
-  --dart-define=SENTRY_DSN="${SENTRY_DSN:-}" \
-  --dart-define=SDASH_ACCESS_TOKEN="${SDASH_ACCESS_TOKEN:-}" \
-  --dart-define=SDASH_API_BASE_URL="${SDASH_API_BASE_URL:-https://www.sdashapi.com/api}"
+  --dart-define=SENTRY_DSN="${SENTRY_DSN:-}"
 
 echo "==> Build complete: build/web"

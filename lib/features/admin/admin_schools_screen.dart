@@ -117,7 +117,10 @@ class _AdminSchoolsScreenState extends ConsumerState<AdminSchoolsScreen> {
       context.showErrorSnackbar('Enter a valid email.');
       return;
     }
-    final users = await AdminService.instance.listUsers(search: email, limit: 5);
+    final users = await AdminService.instance.listUsers(
+      search: email,
+      limit: 5,
+    );
     if (!mounted) return;
     if (users.isFailure || users.data == null || users.data!.users.isEmpty) {
       context.showErrorSnackbar('No Kidversity account uses that email.');
@@ -150,7 +153,8 @@ class _AdminSchoolsScreenState extends ConsumerState<AdminSchoolsScreen> {
         PageIntro(
           eyebrow: 'Platform',
           title: 'Schools',
-          body: 'Browse tenants, open detail, create a school, or assign a school admin.',
+          body:
+              'Browse tenants, open detail, create a school, or assign a school admin.',
           trailing: FilledButton.icon(
             onPressed: _createSchool,
             icon: const Icon(Icons.add_rounded),
@@ -163,7 +167,8 @@ class _AdminSchoolsScreenState extends ConsumerState<AdminSchoolsScreen> {
             prefixIcon: Icon(Icons.search_rounded),
             hintText: 'Search schools',
           ),
-          onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+          onChanged: (value) =>
+              setState(() => _query = value.trim().toLowerCase()),
         ),
         const SizedBox(height: 18),
         schools.when(
@@ -175,7 +180,10 @@ class _AdminSchoolsScreenState extends ConsumerState<AdminSchoolsScreen> {
           ),
           data: (items) {
             final filtered = items
-                .where((s) => _query.isEmpty || s.name.toLowerCase().contains(_query))
+                .where(
+                  (s) =>
+                      _query.isEmpty || s.name.toLowerCase().contains(_query),
+                )
                 .toList();
             if (filtered.isEmpty) {
               return const EmptyPanel(
@@ -325,7 +333,10 @@ class _SchoolDetailPanel extends ConsumerWidget {
                     padding: const EdgeInsets.all(14),
                     child: Row(
                       children: [
-                        Text(person.avatarEmoji, style: const TextStyle(fontSize: 22)),
+                        Text(
+                          person.avatarEmoji,
+                          style: const TextStyle(fontSize: 22),
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -361,14 +372,22 @@ class _SchoolDetailPanel extends ConsumerWidget {
                     padding: const EdgeInsets.all(14),
                     child: Row(
                       children: [
-                        Text(learner.avatarEmoji, style: const TextStyle(fontSize: 22)),
+                        Text(
+                          learner.avatarEmoji,
+                          style: const TextStyle(fontSize: 22),
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(learner.displayName, style: text.titleSmall),
+                          child: Text(
+                            learner.displayName,
+                            style: text.titleSmall,
+                          ),
                         ),
                         Text(
                           '${learner.weeklyXp} XP · ${learner.lessonsCompleted} lessons',
-                          style: text.bodySmall?.copyWith(color: AppColors.inkSoft),
+                          style: text.bodySmall?.copyWith(
+                            color: AppColors.inkSoft,
+                          ),
                         ),
                       ],
                     ),

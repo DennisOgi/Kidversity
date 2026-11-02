@@ -29,12 +29,14 @@ class ProgressReportScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final report = ref.watch(progressReportProvider(studentId));
     final lessonTitles =
-        ref.watch(mandarinCourseProvider).whenOrNull(
-          data: (course) => {
-            for (final lesson in course.lessons)
-              lesson.id: 'Lesson ${lesson.sequence}: ${lesson.title}',
-          },
-        ) ??
+        ref
+            .watch(mandarinCourseProvider)
+            .whenOrNull(
+              data: (course) => {
+                for (final lesson in course.lessons)
+                  lesson.id: 'Lesson ${lesson.sequence}: ${lesson.title}',
+              },
+            ) ??
         const <String, String>{};
 
     void print(ProgressReport value) {
@@ -235,11 +237,12 @@ class _ReportBody extends StatelessWidget {
                     title: 'Mandarin lessons',
                     child: Column(
                       children: [
-                        for (final l in ([...report.lessons]
-                              ..sort(
-                                (a, b) => b.completedAt.compareTo(a.completedAt),
-                              ))
-                            .take(10))
+                        for (final l
+                            in ([...report.lessons]..sort(
+                                  (a, b) =>
+                                      b.completedAt.compareTo(a.completedAt),
+                                ))
+                                .take(10))
                           ListTile(
                             contentPadding: EdgeInsets.zero,
                             dense: true,

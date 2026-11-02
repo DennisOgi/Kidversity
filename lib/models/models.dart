@@ -1,4 +1,4 @@
-enum UserRole { student, teacher, reviewer, platformAdmin }
+enum UserRole { student, teacher, parent, reviewer, platformAdmin }
 
 class StudentPerformance {
   final String name;

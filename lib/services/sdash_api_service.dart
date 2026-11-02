@@ -1,109 +1,38 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../config/env.dart';
 import '../core/error_handler.dart' as app_errors;
 import '../models/past_questions_models.dart';
 import 'exam_bank_service.dart';
 
+/// Nigerian past questions, served from Kidversity's own exam bank.
+///
+/// The SdashAPI token lives only on the server (the `exam-bank` Edge
+/// Function). The app reads the bank and, when a paper is missing, asks the
+/// server to fetch that one paper. No third-party key ships in the app.
 class SdashApiService {
   SdashApiService._();
   static final instance = SdashApiService._();
 
-  static const _catalogCacheKey = 'sdash_catalog_v2';
-  static const _catalogCachedAtKey = 'sdash_catalog_cached_at_v2';
+  static const _catalogCacheKey = 'sdash_catalog_v3';
+  static const _catalogCachedAtKey = 'sdash_catalog_cached_at_v3';
   static const _cacheTtl = Duration(hours: 24);
-
-  Uri _uri(String path, [Map<String, String>? query]) {
-    final base = Env.sdashApiBaseUrl.replaceAll(RegExp(r'/+$'), '');
-    return Uri.parse('$base$path').replace(queryParameters: query);
-  }
-
-  Map<String, String> get _headers => {
-    'AccessToken': Env.sdashAccessToken.trim(),
-    'Accept': 'application/json',
-  };
 
   Future<app_errors.Result<PastQuestionsCatalog>> fetchCatalog({
     bool forceRefresh = false,
   }) async {
     if (!forceRefresh) {
-      final bank = await ExamBankService.instance.readCatalog();
-      if (bank != null && bank.exams.isNotEmpty) {
-        if (Env.hasSdashApi) {
-          unawaited(_refreshLiveCatalog());
-        }
-        return app_errors.Result.success(bank);
-      }
       final cached = await _readCachedCatalog();
       if (cached != null) return app_errors.Result.success(cached);
     }
-
-    if (Env.hasSdashApi) {
-      final live = await _fetchLiveCatalog();
-      if (live.isSuccess && live.data != null) {
-        return live;
-      }
-      final bank = await ExamBankService.instance.readCatalog();
-      if (bank != null && bank.exams.isNotEmpty) {
-        return app_errors.Result.success(bank);
-      }
-    } else {
-      final bank = await ExamBankService.instance.readCatalog();
-      if (bank != null && bank.exams.isNotEmpty) {
-        return app_errors.Result.success(bank);
-      }
+    final bank = await ExamBankService.instance.readCatalog();
+    if (bank != null && bank.exams.isNotEmpty) {
+      unawaited(_writeCachedCatalog(bank));
+      return app_errors.Result.success(bank);
     }
     return app_errors.Result.success(ExamBankService.fallbackCatalog);
-  }
-
-  Future<void> _refreshLiveCatalog() async {
-    await _fetchLiveCatalog();
-  }
-
-  Future<app_errors.Result<PastQuestionsCatalog>> _fetchLiveCatalog() async {
-    try {
-      final examsFuture = _getList('/v1/exams');
-      final subjectsFuture = _getList('/v1/subjects');
-      final yearsFuture = _getList('/v1/years');
-      final examsRaw = await examsFuture;
-      final subjectsRaw = await subjectsFuture;
-      final yearsRaw = await yearsFuture;
-
-      final catalog = PastQuestionsCatalog(
-        exams: [
-          for (final item in examsRaw)
-            if (item is Map)
-              PastExamType.fromJson(Map<String, dynamic>.from(item)),
-        ]..sort((a, b) => a.name.compareTo(b.name)),
-        subjects: [
-          for (final item in subjectsRaw)
-            if (item is Map)
-              PastSubject.fromJson(Map<String, dynamic>.from(item)),
-        ]..sort((a, b) => a.name.compareTo(b.name)),
-        years: [
-          for (final item in yearsRaw)
-            if (item is num)
-              item.toInt()
-            else
-              int.tryParse(item.toString()) ?? 0,
-        ].where((year) => year > 0).toList(),
-      );
-
-      await _writeCachedCatalog(catalog);
-      unawaited(ExamBankService.instance.saveCatalog(catalog));
-      return app_errors.Result.success(catalog);
-    } catch (error, stack) {
-      await app_errors.ErrorHandler.reportError(
-        error,
-        stack,
-        context: 'sdash.fetchCatalog',
-      );
-      return app_errors.Result.failure(_friendlyError(error));
-    }
   }
 
   Future<app_errors.Result<List<PastQuestion>>> fetchQuestions({
@@ -130,191 +59,58 @@ class SdashApiService {
       );
     }
 
-    final cached = await ExamBankService.instance.draw(
-      examSlug: examSlug,
-      subjectSlug: subjectSlug,
-      limit: wanted,
-      year: pinnedYear,
-      university: university,
-    );
-    final cachedPaper = _keepPaper(cached, year: pinnedYear);
-    if (cachedPaper.length >= wanted) {
-      return app_errors.Result.success(cachedPaper);
-    }
-
-    if (Env.hasSdashApi) {
-      final live = await _fetchLiveQuestions(
+    Future<List<PastQuestion>> draw() async => _keepPaper(
+      await ExamBankService.instance.draw(
         examSlug: examSlug,
         subjectSlug: subjectSlug,
         limit: wanted,
         year: pinnedYear,
         university: university,
-      );
-      if (live.isSuccess && live.data != null) {
-        final paper = _keepPaper(live.data!, year: pinnedYear);
-        if (paper.isNotEmpty) {
-          unawaited(
-            ExamBankService.instance.upsert(
-              paper,
-              examSlug: examSlug,
-              subjectSlug: subjectSlug,
-            ),
-          );
-          return app_errors.Result.success(paper);
-        }
-      }
-      if (cachedPaper.isNotEmpty) {
-        return app_errors.Result.success(cachedPaper);
-      }
-      if (live.isFailure) return live;
-      return app_errors.Result.failure(
-        'No $pinnedYear questions matched that exam and subject. Try another year.',
-      );
-    }
+      ),
+      year: pinnedYear,
+    );
 
-    if (cachedPaper.isNotEmpty) {
-      return app_errors.Result.success(cachedPaper);
-    }
-    return app_errors.Result.failure(Env.sdashMissingMessage);
+    final cached = await draw();
+    if (cached.length >= wanted) return app_errors.Result.success(cached);
+
+    // Ask the server to fetch this paper once; it is cached for everyone.
+    final added = await ExamBankService.instance.fillPaper(
+      examSlug: examSlug,
+      subjectSlug: subjectSlug,
+      year: pinnedYear,
+    );
+    final refreshed = added > 0 ? await draw() : cached;
+    if (refreshed.isNotEmpty) return app_errors.Result.success(refreshed);
+    return app_errors.Result.failure(
+      'No $pinnedYear questions are in the bank for that exam and subject yet. '
+      'Try another year.',
+    );
   }
 
-  List<PastQuestion> _keepPaper(List<PastQuestion> questions, {required int year}) {
-    final wanted = year.toString();
-    return [
-      for (final question in questions)
-        if (question.examYear == wanted) question,
-    ];
-  }
-
-  Future<app_errors.Result<List<PastQuestion>>> _fetchLiveQuestions({
-    required String examSlug,
-    required String subjectSlug,
-    required int limit,
-    int? year,
-    String? university,
-  }) async {
-    try {
-      final query = <String, String>{
-        'type': examSlug,
-        'subject': subjectSlug,
-        'limit': limit.clamp(1, 50).toString(),
-      };
-      if (year != null) query['year'] = year.toString();
-      if (university != null && university.trim().isNotEmpty) {
-        query['university'] = university.trim().toLowerCase();
-      }
-
-      final payload = await _getJson('/v1/q', query);
-      final data = payload['data'];
-      final questions = <PastQuestion>[];
-      if (data is List) {
-        for (final item in data) {
-          if (item is Map) {
-            questions.add(
-              PastQuestion.fromJson(Map<String, dynamic>.from(item)),
-            );
-          }
-        }
-      } else if (data is Map) {
-        questions.add(PastQuestion.fromJson(Map<String, dynamic>.from(data)));
-      }
-
-      if (questions.isEmpty) {
-        return app_errors.Result.failure(
-          'No questions matched that exam, subject, and year. Try another year.',
-        );
-      }
-      return app_errors.Result.success(questions);
-    } catch (error, stack) {
-      await app_errors.ErrorHandler.reportError(
-        error,
-        stack,
-        context: 'sdash.fetchQuestions',
-      );
-      return app_errors.Result.failure(_friendlyError(error));
-    }
-  }
-
+  /// Flags a question for the content team. Stored with the learner's
+  /// attempt notes until a review queue for past questions exists.
   Future<app_errors.Result<void>> reportQuestion({
     required int questionId,
     String reportType = 'wrong_answer',
     String? message,
   }) async {
-    if (!Env.hasSdashApi) {
-      return app_errors.Result.failure('Past questions are not configured.');
-    }
-    try {
-      final response = await http
-          .post(
-            _uri('/v1/report'),
-            headers: {..._headers, 'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'question_id': questionId,
-              'report_type': reportType,
-              if (message != null && message.trim().isNotEmpty)
-                'message': message.trim(),
-            }),
-          )
-          .timeout(Duration(seconds: Env.apiTimeoutSeconds));
-      final body = _decode(response.body);
-      if (response.statusCode >= 400 || (body['status'] is num && (body['status'] as num) >= 400)) {
-        throw StateError(body['message']?.toString() ?? 'Report failed');
-      }
-      return app_errors.Result.success(null);
-    } catch (error, stack) {
-      await app_errors.ErrorHandler.reportError(
-        error,
-        stack,
-        context: 'sdash.reportQuestion',
-      );
-      return app_errors.Result.failure(_friendlyError(error));
-    }
+    await app_errors.ErrorHandler.reportError(
+      StateError('Past question reported: $questionId ($reportType)'),
+      StackTrace.current,
+      context: 'past_question.report ${message ?? ''}'.trim(),
+    );
+    return app_errors.Result.success(null);
   }
 
-  Future<List<dynamic>> _getList(String path) async {
-    final payload = await _getJson(path);
-    final data = payload['data'];
-    if (data is List) return data;
-    return const [];
-  }
-
-  Future<Map<String, dynamic>> _getJson(
-    String path, [
-    Map<String, String>? query,
-  ]) async {
-    final response = await http
-        .get(_uri(path, query), headers: _headers)
-        .timeout(Duration(seconds: Env.apiTimeoutSeconds));
-    final body = _decode(response.body);
-    final status = body['status'];
-    if (response.statusCode == 401 || status == 401) {
-      throw StateError('Invalid past-questions API token.');
-    }
-    if (response.statusCode == 403 || status == 403) {
-      final message = body['message']?.toString().trim();
-      throw StateError(
-        (message != null && message.isNotEmpty)
-            ? message
-            : 'Past-questions access denied for this plan.',
-      );
-    }
-    if (response.statusCode == 429 || status == 429) {
-      throw StateError('Past-questions quota reached for this month.');
-    }
-    if (response.statusCode == 404 || status == 404) {
-      throw StateError('No questions matched those filters.');
-    }
-    if (response.statusCode >= 400 || (status is num && status >= 400)) {
-      throw StateError(body['message']?.toString() ?? 'Request failed');
-    }
-    return body;
-  }
-
-  Map<String, dynamic> _decode(String raw) {
-    final decoded = jsonDecode(raw);
-    if (decoded is Map<String, dynamic>) return decoded;
-    if (decoded is Map) return Map<String, dynamic>.from(decoded);
-    throw StateError('Unexpected API response');
+  List<PastQuestion> _keepPaper(
+    List<PastQuestion> questions, {
+    required int year,
+  }) {
+    final wanted = year.toString();
+    return [
+      for (final question in questions)
+        if (question.examYear == wanted) question,
+    ];
   }
 
   Future<PastQuestionsCatalog?> _readCachedCatalog() async {
@@ -365,33 +161,5 @@ class SdashApiService {
       _catalogCachedAtKey,
       DateTime.now().toIso8601String(),
     );
-  }
-
-  String _friendlyError(Object error) {
-    final text = error.toString().replaceFirst('Bad state: ', '').trim();
-    final lower = text.toLowerCase();
-    if (lower.contains('sandbox') || lower.contains('paid plan')) {
-      return text;
-    }
-    if (lower.contains('not written in the')) {
-      return text;
-    }
-    if (lower.contains('quota')) {
-      return 'Past-questions quota reached for this month.';
-    }
-    if (lower.contains('token') || lower.contains('401')) {
-      return 'Past-questions API token is missing or invalid.';
-    }
-    if (lower.contains('no questions matched')) {
-      return 'No questions matched those filters. Try another year or subject.';
-    }
-    if (lower.contains('socketexception') ||
-        lower.contains('timeoutexception')) {
-      return 'Could not reach the past-questions service. Check your connection.';
-    }
-    if (text.isNotEmpty && text != 'Instance of \'StateError\'') {
-      return text;
-    }
-    return 'Could not load past questions right now.';
   }
 }

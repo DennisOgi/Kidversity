@@ -12,6 +12,7 @@ import '../../widgets/common.dart';
 import '../../widgets/dashboard_guide.dart';
 import '../../widgets/empty_panel.dart';
 import '../../widgets/error_boundary.dart';
+import '../../widgets/stat_grid.dart';
 import '../../widgets/surfaces.dart';
 
 class SchoolHome extends ConsumerWidget {
@@ -59,8 +60,7 @@ class SchoolHome extends ConsumerWidget {
         }
         selected ??= overview.classes.firstOrNull;
         final youId = SupabaseService.instance.currentUser?.id;
-        final teachesSelected =
-            selected != null && selected.teacherId == youId;
+        final teachesSelected = selected != null && selected.teacherId == youId;
 
         return ShellScrollView(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
@@ -99,11 +99,8 @@ class SchoolHome extends ConsumerWidget {
                           ),
                           if (overview.isAdmin)
                             OutlinedButton.icon(
-                              onPressed: () => _addTeacher(
-                                context,
-                                ref,
-                                overview.schoolId,
-                              ),
+                              onPressed: () =>
+                                  _addTeacher(context, ref, overview.schoolId),
                               icon: const Icon(Icons.person_add_alt_1_rounded),
                               label: const Text('Add a teacher'),
                             ),
@@ -161,17 +158,10 @@ class SchoolHome extends ConsumerWidget {
                         schoolClass: selected,
                         isAdmin: overview.isAdmin,
                         teachesIt: teachesSelected,
-                        onAssignTeacher: () => _assignTeacher(
-                          context,
-                          ref,
-                          selected!.id,
-                        ),
+                        onAssignTeacher: () =>
+                            _assignTeacher(context, ref, selected!.id),
                         onAddStudent: overview.isAdmin
-                            ? () => _assignStudent(
-                                context,
-                                ref,
-                                selected!.id,
-                              )
+                            ? () => _assignStudent(context, ref, selected!.id)
                             : null,
                       ),
                     ],
@@ -292,8 +282,7 @@ class SchoolHome extends ConsumerWidget {
     );
     final email = picked;
     if (email == null || email.isEmpty || !context.mounted) return;
-    final chosen = unique[email.trim().toLowerCase()] ??
-        unique[email.trim()];
+    final chosen = unique[email.trim().toLowerCase()] ?? unique[email.trim()];
     if (chosen == null || chosen.role != 'teacher') {
       final promoted = await SchoolService.instance.addTeacher(
         email,
@@ -313,7 +302,9 @@ class SchoolHome extends ConsumerWidget {
     );
     if (!context.mounted) return;
     if (result.isFailure) {
-      context.showErrorSnackbar(result.error ?? 'Could not assign that teacher.');
+      context.showErrorSnackbar(
+        result.error ?? 'Could not assign that teacher.',
+      );
       return;
     }
     ref.invalidate(schoolOverviewProvider);
@@ -502,96 +493,36 @@ class _StatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 720;
-        final tiles = [
-          _StatTile(
-            label: 'Students',
-            value: '${overview.studentCount}',
-            icon: Icons.school_rounded,
-            color: AppColors.primary,
-          ),
-          _StatTile(
-            label: 'Classes',
-            value: '${overview.classes.length}',
-            icon: Icons.groups_rounded,
-            color: AppColors.worldLanguage,
-          ),
-          _StatTile(
-            label: 'Assigned',
-            value:
-                '${overview.classes.where((item) => item.hasTeacher).length}',
+    final classes = overview.classes;
+    final withTeacher = classes.where((item) => item.hasTeacher).length;
+    final seated = classes.fold<int>(0, (sum, item) => sum + item.memberCount);
+    return StatGrid(
+      tiles: [
+        StatTile.count(
+          label: 'Students',
+          count: overview.studentCount,
+          icon: Icons.school_rounded,
+          caption: '$seated seated in a class',
+        ),
+        StatTile.count(
+          label: 'Classes',
+          count: classes.length,
+          icon: Icons.groups_rounded,
+          color: AppColors.worldLanguage,
+          caption: classes.isEmpty ? 'Create the first one' : null,
+        ),
+        if (overview.isAdmin)
+          StatTile(
+            label: 'With a teacher',
+            value: '$withTeacher/${classes.length}',
             icon: Icons.person_rounded,
             color: AppColors.worldExams,
+            caption: withTeacher < classes.length
+                ? '${classes.length - withTeacher} need a teacher'
+                : 'All covered',
           ),
-        ];
-        if (wide) {
-          return Row(
-            children: [
-              for (var i = 0; i < tiles.length; i++) ...[
-                if (i > 0) const SizedBox(width: 12),
-                Expanded(child: tiles[i]),
-              ],
-            ],
-          );
-        }
-        return Column(
-          children: [
-            for (var i = 0; i < tiles.length; i++) ...[
-              if (i > 0) const SizedBox(height: 10),
-              tiles[i],
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatTile({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: color),
-          ),
-          const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: text.headlineSmall?.copyWith(fontSize: 26),
-              ),
-              Text(label, style: text.bodyMedium),
-            ],
-          ),
-        ],
-      ),
+      ],
+      maxColumns: 3,
     );
   }
 }
@@ -640,11 +571,11 @@ class _OnboardedPeopleList extends ConsumerWidget {
                             ? 'Admin'
                             : person.role == 'teacher'
                             ? (person.classIds.isEmpty
-                                ? 'Teacher · no class'
-                                : 'Teacher')
+                                  ? 'Teacher · no class'
+                                  : 'Teacher')
                             : (person.classIds.isEmpty
-                                ? 'Student · no class'
-                                : 'Student'),
+                                  ? 'Student · no class'
+                                  : 'Student'),
                         style: text.bodyMedium,
                       ),
                     ],
@@ -819,7 +750,9 @@ class _SelectedClassPanel extends ConsumerWidget {
                       if (!context.mounted) return;
                       if (result.isSuccess) {
                         ref.invalidate(schoolOverviewProvider);
-                        context.showSuccessSnackbar('New class code generated.');
+                        context.showSuccessSnackbar(
+                          'New class code generated.',
+                        );
                       } else {
                         context.showErrorSnackbar(
                           result.error ?? 'Could not regenerate the code.',

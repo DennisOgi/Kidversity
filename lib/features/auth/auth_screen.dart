@@ -169,84 +169,44 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     return Scaffold(
       backgroundColor: AppColors.paper,
       body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  wide ? 56 : 16,
-                  8,
-                  wide ? 56 : 16,
-                  0,
-                ),
-                child: KidversityBrandMark(
-                  onTap: () => context.go(AppRoutes.home),
-                  showLabel: wide || MediaQuery.sizeOf(context).width > 360,
-                ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                wide ? 56 : 16,
+                8,
+                wide ? 56 : 16,
+                0,
               ),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, c) {
-                    return SingleChildScrollView(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: wide ? 56 : 22,
-                        vertical: 20,
-                      ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: c.maxHeight - 80,
-                        ),
-                        child: wide
-                            ? Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Expanded(
-                                    child: _HeroPanel(
-                                      text: text,
-                                      signup: _tabs.index == 1,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 48),
-                                  Expanded(
-                                    child: _FormCard(
-                                      tabs: _tabs,
-                                      text: text,
-                                      auth: auth,
-                                      email: _email,
-                                      password: _password,
-                                      confirmPassword: _confirmPassword,
-                                      name: _name,
-                                      age: _age,
-                                      gender: _gender,
-                                      onGenderChanged: (g) =>
-                                          setState(() => _gender = g),
-                                      obscure: _obscure,
-                                      obscureConfirm: _obscureConfirm,
-                                      onToggleObscure: () =>
-                                          setState(() => _obscure = !_obscure),
-                                      onToggleObscureConfirm: () => setState(
-                                        () =>
-                                            _obscureConfirm = !_obscureConfirm,
-                                      ),
-                                      onSignIn: _submitSignIn,
-                                      onSignUp: _submitSignUp,
-                                      onResetPassword: _resetPassword,
-                                      rememberMe: _rememberMe,
-                                      onRememberMeChanged: (v) =>
-                                          setState(() => _rememberMe = v),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Column(
-                                children: [
-                                  _HeroPanel(
+              child: KidversityBrandMark(
+                onTap: () => context.go(AppRoutes.home),
+                showLabel: wide || MediaQuery.sizeOf(context).width > 360,
+              ),
+            ),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: wide ? 56 : 22,
+                      vertical: 20,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: c.maxHeight - 80),
+                      child: wide
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: _HeroPanel(
                                     text: text,
-                                    compact: true,
                                     signup: _tabs.index == 1,
                                   ),
-                                  const SizedBox(height: 16),
-                                  _FormCard(
+                                ),
+                                const SizedBox(width: 48),
+                                Expanded(
+                                  child: _FormCard(
                                     tabs: _tabs,
                                     text: text,
                                     auth: auth,
@@ -272,16 +232,53 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                                     onRememberMeChanged: (v) =>
                                         setState(() => _rememberMe = v),
                                   ),
-                                ],
-                              ),
-                      ),
-                    );
-                  },
-                ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              children: [
+                                _HeroPanel(
+                                  text: text,
+                                  compact: true,
+                                  signup: _tabs.index == 1,
+                                ),
+                                const SizedBox(height: 16),
+                                _FormCard(
+                                  tabs: _tabs,
+                                  text: text,
+                                  auth: auth,
+                                  email: _email,
+                                  password: _password,
+                                  confirmPassword: _confirmPassword,
+                                  name: _name,
+                                  age: _age,
+                                  gender: _gender,
+                                  onGenderChanged: (g) =>
+                                      setState(() => _gender = g),
+                                  obscure: _obscure,
+                                  obscureConfirm: _obscureConfirm,
+                                  onToggleObscure: () =>
+                                      setState(() => _obscure = !_obscure),
+                                  onToggleObscureConfirm: () => setState(
+                                    () => _obscureConfirm = !_obscureConfirm,
+                                  ),
+                                  onSignIn: _submitSignIn,
+                                  onSignUp: _submitSignUp,
+                                  onResetPassword: _resetPassword,
+                                  rememberMe: _rememberMe,
+                                  onRememberMeChanged: (v) =>
+                                      setState(() => _rememberMe = v),
+                                ),
+                              ],
+                            ),
+                    ),
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
     );
   }
 }
@@ -542,10 +539,7 @@ class _Fields extends StatelessWidget {
   final VoidCallback onToggleObscure;
   final VoidCallback? onToggleObscureConfirm;
 
-  static const _genderOptions = [
-    ('female', 'Female'),
-    ('male', 'Male'),
-  ];
+  static const _genderOptions = [('female', 'Female'), ('male', 'Male')];
 
   const _Fields({
     super.key,

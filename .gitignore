@@ -59,3 +59,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local AI tool configs often hold tokens
+.cursor/mcp.json
+.cursor/*.local.json
+
+# Seed scratch files and rosters (contain personal data)
+tmp_seed_parts*/
+*roster*.json

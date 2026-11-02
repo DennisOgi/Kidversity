@@ -29,13 +29,6 @@ class Env {
     'API_TIMEOUT_SECONDS',
     defaultValue: '30',
   );
-  static const _defineSdashAccessToken = String.fromEnvironment(
-    'SDASH_ACCESS_TOKEN',
-  );
-  static const _defineSdashApiBaseUrl = String.fromEnvironment(
-    'SDASH_API_BASE_URL',
-    defaultValue: 'https://www.sdashapi.com/api',
-  );
 
   /// Load `.env` from assets. Safe to call multiple times.
   static Future<void> load() async {
@@ -72,21 +65,6 @@ class Env {
   static int get apiTimeoutSeconds =>
       int.tryParse(_read('API_TIMEOUT_SECONDS', _defineApiTimeoutSeconds)) ??
       30;
-  static String get sdashAccessToken =>
-      _read('SDASH_ACCESS_TOKEN', _defineSdashAccessToken);
-  static String get sdashApiBaseUrl =>
-      _read('SDASH_API_BASE_URL', _defineSdashApiBaseUrl);
-
-  static bool get hasSdashApi => sdashAccessToken.trim().isNotEmpty;
-
-  /// Shown when the exam bank key is missing. Developers get the fix;
-  /// everyone else gets a plain explanation.
-  static String get sdashMissingMessage => isDevelopment
-      ? 'Past questions need SDASH_ACCESS_TOKEN in your .env file. '
-            'Add it, then stop and run the app again.'
-      : 'Past questions are switched off on this build. '
-            'The site owner needs to add the exam bank key and redeploy.';
-
   static bool get isDevelopment => environment == 'development';
   static bool get isProduction => environment == 'production';
   static bool get isStaging => environment == 'staging';

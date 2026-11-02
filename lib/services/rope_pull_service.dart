@@ -31,6 +31,9 @@ class RopePullService {
     if (text.contains('NOT_AUTHORIZED') || text.contains('NOT_A_PLAYER')) {
       return 'You are not in this room.';
     }
+    if (text.contains('NEEDS_SCHOOL')) {
+      return 'Quick match pairs you with classmates. Join your class first, or share a code.';
+    }
     if (text.contains('INVALID_BANK')) return 'INVALID_BANK';
     if (text.contains('INVALID_QUESTIONS')) return 'INVALID_QUESTIONS';
     return 'Could not update the rope pull.';
@@ -145,6 +148,47 @@ class RopePullService {
     }
   }
 
+  /// Pairs the caller with a classmate waiting for the same game, or opens
+  /// a room that the next classmate drops into. The pull starts on its own.
+  Future<app_errors.Result<RopePullSnapshot>> quickMatch({
+    required RopePullBank bank,
+    required List<RopePullQuestion> questions,
+    required String displayName,
+    required String avatar,
+  }) {
+    return _rpc('rope_pull_quick_match', {
+      'p_bank': bank.wire,
+      'p_questions': questions.map((item) => item.toJson()).toList(),
+      'p_display_name': displayName,
+      'p_avatar': avatar,
+    });
+  }
+
+  /// This week's winners in the caller's school.
+  Future<List<RopePullLadderEntry>> ladder({int days = 7}) async {
+    final client = _client;
+    if (client == null || client.auth.currentUser == null) return const [];
+    try {
+      final raw = await client.rpc(
+        'rope_pull_ladder',
+        params: {'p_days': days},
+      );
+      if (raw is! List) return const [];
+      return [
+        for (final item in raw)
+          if (item is Map)
+            RopePullLadderEntry.fromJson(Map<String, dynamic>.from(item)),
+      ];
+    } catch (error, stack) {
+      await app_errors.ErrorHandler.reportError(
+        error,
+        stack,
+        context: 'rope_pull.ladder',
+      );
+      return const [];
+    }
+  }
+
   Future<app_errors.Result<RopePullSnapshot>> startRoom(String roomId) {
     return _rpc('start_rope_pull_room', {'p_room_id': roomId});
   }
@@ -206,17 +250,8 @@ class RopePullService {
             ),
             callback: (_) => refresh(),
           )
-          .onPostgresChanges(
-            event: PostgresChangeEvent.all,
-            schema: 'public',
-            table: 'rope_pull_answers',
-            filter: PostgresChangeFilter(
-              type: PostgresChangeFilterType.eq,
-              column: 'room_id',
-              value: roomId,
-            ),
-            callback: (_) => refresh(),
-          )
+          // Every answer touches the room row, so rooms + players are enough.
+          // rope_pull_answers is not published: picks stay secret mid-round.
           .subscribe();
       timer = Timer.periodic(const Duration(seconds: 2), (_) => refresh());
     }

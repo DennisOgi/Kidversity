@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +15,7 @@ import '../../widgets/common.dart';
 import '../../widgets/dashboard_guide.dart';
 import '../../widgets/live_test_widgets.dart';
 import '../../widgets/labs_entry_card.dart';
+import '../../widgets/stat_grid.dart';
 import '../../widgets/surfaces.dart';
 
 class StudentHomeScreen extends ConsumerWidget {
@@ -21,7 +24,13 @@ class StudentHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final name = ref.watch(authControllerProvider).displayName.trim();
-    final greeting = name.isEmpty ? 'Welcome back' : 'Hello, $name';
+    final hour = DateTime.now().hour;
+    final part = hour < 12
+        ? 'Good morning'
+        : hour < 17
+        ? 'Good afternoon'
+        : 'Good evening';
+    final greeting = name.isEmpty ? part : '$part, $name';
     final course = ref.watch(mandarinCourseProvider);
     final completed =
         ref
@@ -44,6 +53,8 @@ class StudentHomeScreen extends ConsumerWidget {
                   title: greeting,
                   body: 'Pick up where you left off, or open a world.',
                 ),
+                const SizedBox(height: 16),
+                const _ProgressStrip(),
                 const SizedBox(height: 16),
                 DashboardGuide.student(),
                 const _SchoolPlace(),
@@ -74,6 +85,144 @@ class StudentHomeScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// XP level, streak, lessons and minutes. Level = floor(xp / 500) + 1
+/// on the server, so the bar shows progress inside the current 500.
+class _ProgressStrip extends ConsumerStatefulWidget {
+  const _ProgressStrip();
+
+  @override
+  ConsumerState<_ProgressStrip> createState() => _ProgressStripState();
+}
+
+class _ProgressStripState extends ConsumerState<_ProgressStrip> {
+  static const xpPerLevel = 500;
+
+  @override
+  void initState() {
+    super.initState();
+    // Maths, exams and Rope Pull award XP without touching the auth
+    // controller, so refresh once when home opens.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(ref.read(authControllerProvider).reloadProfile());
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = ref.watch(authControllerProvider);
+    final text = Theme.of(context).textTheme;
+    final into = auth.xp % xpPerLevel;
+    final toGo = xpPerLevel - into;
+
+    final level = GlassCard(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              gradient: AppColors.brandGradient,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              '${auth.level}',
+              style: text.headlineSmall?.copyWith(color: Colors.white),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('Level ${auth.level}', style: text.titleMedium),
+                    const Spacer(),
+                    Text(
+                      '${auth.xp} XP',
+                      style: text.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: into / xpPerLevel,
+                    minHeight: 8,
+                    backgroundColor: AppColors.primarySoft,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$toGo XP to level ${auth.level + 1}',
+                  style: text.bodySmall?.copyWith(color: AppColors.inkSoft),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final streak = auth.streakDays;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tiles = [
+          StatTile(
+            label: streak == 1 ? 'day streak' : 'days streak',
+            value: '$streak',
+            icon: Icons.local_fire_department_rounded,
+            color: streak > 0 ? const Color(0xFFD9480F) : AppColors.muted,
+            caption: streak > 0
+                ? 'Keep it going today'
+                : 'Learn today to start',
+          ),
+          StatTile.count(
+            label: 'lessons done',
+            count: auth.lessonsCompleted,
+            icon: Icons.check_circle_rounded,
+            color: AppColors.success,
+          ),
+          StatTile.count(
+            label: 'minutes learned',
+            count: auth.minutesLearned,
+            icon: Icons.timer_rounded,
+            color: AppColors.worldExams,
+          ),
+        ];
+        if (constraints.maxWidth >= 900) {
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 5, child: level),
+                for (final tile in tiles) ...[
+                  const SizedBox(width: 12),
+                  Expanded(flex: 3, child: tile),
+                ],
+              ],
+            ),
+          );
+        }
+        return Column(
+          children: [
+            level,
+            const SizedBox(height: 12),
+            StatGrid(tiles: tiles, maxColumns: 3),
+          ],
+        );
+      },
     );
   }
 }
@@ -435,7 +584,7 @@ class _WorldGrid extends StatelessWidget {
       true,
     ),
     (
-      'assets/rope_pull/environment/campus-court.png',
+      'assets/rope_pull/scene/tile.jpg',
       'Play',
       'Rope Pull',
       'Indigo and Teal pull. Words, past questions, or mental maths.',

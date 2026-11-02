@@ -36,7 +36,7 @@ List<MandarinVocabItem> vocabForRopeBank({
       unique.putIfAbsent('${word.simplified}|${word.pinyin}', () => word);
     }
   }
-    final words = unique.values.toList();
+  final words = unique.values.toList();
   if (words.length < 4 &&
       bank != RopePullBank.lessons15 &&
       bank != RopePullBank.pastQuestions &&

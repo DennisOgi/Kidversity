@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../models/rope_pull_models.dart';
@@ -96,7 +98,13 @@ class RopePullStage extends StatelessWidget {
                   )
                 : Column(
                     children: [
-                      SizedBox(height: 180, child: center),
+                      SizedBox(
+                        height: math.min(
+                          300,
+                          MediaQuery.sizeOf(context).height * 0.42,
+                        ),
+                        child: center,
+                      ),
                       const SizedBox(height: 8),
                       Expanded(
                         child: Row(

@@ -49,7 +49,8 @@ class _FadeInUpState extends State<FadeInUp>
       _c.value = 1;
       return;
     }
-    final wait = widget.delay + widget.duration + const Duration(milliseconds: 120);
+    final wait =
+        widget.delay + widget.duration + const Duration(milliseconds: 120);
     _stallCheck = Timer(wait, () {
       if (!mounted || _c.isCompleted) return;
       debugPrint(

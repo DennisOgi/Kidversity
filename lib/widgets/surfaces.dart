@@ -1,8 +1,11 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
 import 'common.dart';
 
 /// Eyebrow label used above page titles.
@@ -10,11 +13,7 @@ class Eyebrow extends StatelessWidget {
   final String text;
   final Color color;
 
-  const Eyebrow(
-    this.text, {
-    super.key,
-    this.color = AppColors.primary,
-  });
+  const Eyebrow(this.text, {super.key, this.color = AppColors.primary});
 
   @override
   Widget build(BuildContext context) {
@@ -106,25 +105,28 @@ class _LiftCardState extends State<LiftCard> {
 
   @override
   Widget build(BuildContext context) {
-    final scale = _pressed ? 0.985 : (_hovered ? 1.012 : 1.0);
-    final border = _hovered
-        ? (widget.hoverBorder ?? AppColors.primary.withValues(alpha: 0.35))
-        : (widget.borderColor ?? AppColors.line);
+    final scale = _pressed ? AppMotion.pressScale : 1.0;
+    final motion = AppMotion.of(context, AppMotion.press);
+    final curve = AppMotion.curve(context);
+    final hairline =
+        widget.borderColor ?? AppColors.ink.withValues(alpha: 0.08);
 
     final card = AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
+      duration: motion,
+      curve: curve,
       padding: widget.padding,
       decoration: BoxDecoration(
         color: widget.color,
         borderRadius: BorderRadius.circular(widget.radius),
-        border: Border.all(color: border),
+        border: Border.all(color: hairline),
         boxShadow: _hovered
             ? [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  blurRadius: 28,
-                  offset: const Offset(0, 14),
+                  color: (widget.hoverBorder ?? AppColors.primary).withValues(
+                    alpha: 0.14,
+                  ),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
                 ),
               ]
             : AppTheme.cardShadow,
@@ -136,7 +138,11 @@ class _LiftCardState extends State<LiftCard> {
       cursor: widget.onTap == null
           ? MouseCursor.defer
           : SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
+      onEnter: (event) {
+        if (event.kind == PointerDeviceKind.mouse) {
+          setState(() => _hovered = true);
+        }
+      },
       onExit: (_) => setState(() {
         _hovered = false;
         _pressed = false;
@@ -154,8 +160,8 @@ class _LiftCardState extends State<LiftCard> {
         onTap: widget.onTap,
         child: AnimatedScale(
           scale: scale,
-          duration: const Duration(milliseconds: 160),
-          curve: Curves.easeOut,
+          duration: motion,
+          curve: curve,
           child: card,
         ),
       ),
@@ -204,10 +210,7 @@ class WorldTile extends StatelessWidget {
                       color: color.withValues(alpha: 0.12),
                       child: Icon(Icons.door_front_door_rounded, color: color),
                     )
-                  : WarmAssetImage(
-                      asset,
-                      alignment: Alignment.topCenter,
-                    ),
+                  : WarmAssetImage(asset, alignment: Alignment.topCenter),
             ),
           ),
           Padding(

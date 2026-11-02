@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
+import 'motion.dart';
 
 /// App-wide theme. Headings use Plus Jakarta Sans. Body uses DM Sans.
 class AppTheme {
@@ -13,20 +14,25 @@ class AppTheme {
   static const double radiusXl = 16;
 
   static List<BoxShadow> get softShadow => [
-        BoxShadow(
-          color: AppColors.primary.withValues(alpha: 0.08),
-          blurRadius: 24,
-          offset: const Offset(0, 12),
-        ),
-      ];
+    BoxShadow(
+      color: AppColors.primary.withValues(alpha: 0.08),
+      blurRadius: 24,
+      offset: const Offset(0, 12),
+    ),
+  ];
 
   static List<BoxShadow> get cardShadow => [
-        BoxShadow(
-          color: const Color(0xFF1B1830).withValues(alpha: 0.05),
-          blurRadius: 18,
-          offset: const Offset(0, 8),
-        ),
-      ];
+    BoxShadow(
+      color: const Color(0xFF1B1830).withValues(alpha: 0.06),
+      blurRadius: 20,
+      offset: const Offset(0, 8),
+    ),
+    BoxShadow(
+      color: const Color(0xFF1B1830).withValues(alpha: 0.04),
+      blurRadius: 4,
+      offset: const Offset(0, 1),
+    ),
+  ];
 
   static ThemeData get light {
     final base = ThemeData(useMaterial3: true, brightness: Brightness.light);
@@ -92,7 +98,9 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusLg)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusLg),
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -100,28 +108,44 @@ class AppTheme {
           foregroundColor: Colors.white,
           textStyle: textTheme.labelLarge?.copyWith(color: Colors.white),
           padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusMd),
+          ),
           elevation: 0,
+          animationDuration: AppMotion.press,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.ink,
           backgroundColor: AppColors.surface,
-          side: const BorderSide(color: AppColors.ink, width: 1.8),
+          side: BorderSide(color: AppColors.ink.withValues(alpha: 0.18)),
           textStyle: textTheme.labelLarge,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusMd),
+          ),
+          animationDuration: AppMotion.press,
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(foregroundColor: AppColors.primary, textStyle: textTheme.labelLarge),
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          textStyle: textTheme.labelLarge,
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        hintStyle: textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
+        hintStyle: textTheme.bodyLarge?.copyWith(color: AppColors.muted),
+        labelStyle: textTheme.bodyLarge?.copyWith(fontSize: 16),
+        floatingLabelStyle: textTheme.bodyMedium?.copyWith(
+          color: AppColors.primary,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
           borderSide: const BorderSide(color: AppColors.line, width: 1.5),
@@ -137,13 +161,24 @@ class AppTheme {
       ),
       chipTheme: base.chipTheme.copyWith(
         backgroundColor: AppColors.primarySoft,
-        labelStyle: textTheme.labelLarge?.copyWith(color: AppColors.primary, fontSize: 13),
+        labelStyle: textTheme.labelLarge?.copyWith(
+          color: AppColors.primary,
+          fontSize: 13,
+        ),
         side: BorderSide.none,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusSm)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusSm),
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      dividerTheme: const DividerThemeData(color: AppColors.line, thickness: 1, space: 1),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(color: AppColors.primary),
+      dividerTheme: const DividerThemeData(
+        color: AppColors.line,
+        thickness: 1,
+        space: 1,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.primary,
+      ),
     );
   }
 }

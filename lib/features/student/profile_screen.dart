@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../config/features.dart';
 import '../../data/app_state.dart';
 import '../../data/auth_state.dart';
 import '../../theme/app_colors.dart';
@@ -13,6 +14,7 @@ import '../../widgets/class_board_card.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
 import '../../widgets/surfaces.dart';
+import 'family_link_card.dart';
 import 'join_class.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -78,100 +80,158 @@ class ProfileScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-        const PageIntro(
-          eyebrow: 'Me',
-          title: 'Your place at school',
-          body: 'Class, progress, and how Kidversity feels to use.',
-        ),
-        const SizedBox(height: 18),
-        GlassCard(
-          gradient: AppColors.brandGradient,
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            children: [
-              Container(
-                width: 88,
-                height: 88,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.25),
-                  shape: BoxShape.circle,
+                const PageIntro(
+                  eyebrow: 'Me',
+                  title: 'Your place at school',
+                  body: 'Class, progress, and how Kidversity feels to use.',
                 ),
-                alignment: Alignment.center,
-                child: EmojiText(avatar, size: 44),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                displayName,
-                style: text.headlineSmall?.copyWith(color: Colors.white),
-              ),
-                Text(
-                schoolLine,
-                style: text.bodyMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.9),
+                const SizedBox(height: 18),
+                GlassCard(
+                  gradient: AppColors.brandGradient,
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 88,
+                        height: 88,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: EmojiText(avatar, size: 44),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        displayName,
+                        style: text.headlineSmall?.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        schoolLine,
+                        textAlign: TextAlign.center,
+                        style: text.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          _HeroChip(
+                            icon: Icons.star_rounded,
+                            label: 'Level ${auth.level}',
+                          ),
+                          _HeroChip(
+                            icon: Icons.bolt_rounded,
+                            label: '${auth.xp} XP',
+                          ),
+                          _HeroChip(
+                            icon: Icons.local_fire_department_rounded,
+                            label: '${auth.streakDays}-day streak',
+                          ),
+                          _HeroChip(
+                            icon: Icons.check_circle_rounded,
+                            label: '${auth.lessonsCompleted} lessons',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 22),
-        const _FoundationProfileProgress(),
-        const SizedBox(height: 12),
-        GlassCard(
-          child: Row(
-            children: [
-              const SoftIcon(icon: Icons.insights_rounded, size: 38),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 22),
+                const _FoundationProfileProgress(),
+                const SizedBox(height: 12),
+                const FamilyLinkCard(),
+                const SizedBox(height: 12),
+                if (Features.payments) ...[
+                  GlassCard(
+                    child: Row(
+                      children: [
+                        const SoftIcon(icon: Icons.payments_outlined, size: 38),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Lesson packs', style: text.titleMedium),
+                              Text(
+                                'See the pathway, prices, family purchases, and unlock the next 10 lessons.',
+                                style: text.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: () =>
+                              context.push(AppRoutes.studentPayments),
+                          child: const Text('Open'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                GlassCard(
+                  child: Row(
+                    children: [
+                      const SoftIcon(icon: Icons.insights_rounded, size: 38),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Progress report', style: text.titleMedium),
+                            Text(
+                              'Mandarin, exams, and maths in one page. Print it or save a PDF for home.',
+                              style: text.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: () => context.push(AppRoutes.studentReport),
+                        child: const Text('Open'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                const SchoolStudentRank(),
+                const _ClassBoardSection(),
+                const SizedBox(height: 22),
+                const _ClassMembershipCard(),
+                const SizedBox(height: 22),
+                const SectionHeader(title: 'Settings'),
+                const _SettingsSection(),
+                const SizedBox(height: 22),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    Text('Progress report', style: text.titleMedium),
-                    Text(
-                      'Mandarin, exams, and maths in one page. Print it or save a PDF for home.',
-                      style: text.bodyMedium,
+                    TextButton(
+                      onPressed: () => context.push('/privacy'),
+                      child: const Text('Privacy'),
+                    ),
+                    TextButton(
+                      onPressed: () => context.push('/terms'),
+                      child: const Text('Terms'),
+                    ),
+                    TextButton(
+                      onPressed: () => context.push('/guardian-consent'),
+                      child: const Text('Guardian consent'),
+                    ),
+                    TextButton(
+                      onPressed: deleteAccount,
+                      child: const Text('Delete my account'),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: () => context.push(AppRoutes.studentReport),
-                child: const Text('Open'),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 22),
-        const SchoolStudentRank(),
-        const _ClassBoardSection(),
-        const SizedBox(height: 22),
-        const _ClassMembershipCard(),
-        const SizedBox(height: 22),
-        const SectionHeader(title: 'Settings'),
-        const _SettingsSection(),
-        const SizedBox(height: 22),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            TextButton(
-              onPressed: () => context.push('/privacy'),
-              child: const Text('Privacy'),
-            ),
-            TextButton(
-              onPressed: () => context.push('/terms'),
-              child: const Text('Terms'),
-            ),
-            TextButton(
-              onPressed: () => context.push('/guardian-consent'),
-              child: const Text('Guardian consent'),
-            ),
-            TextButton(
-              onPressed: deleteAccount,
-              child: const Text('Delete my account'),
-            ),
-          ],
-        ),
               ],
             ),
           ),
@@ -206,9 +266,9 @@ class _FoundationProfileProgress extends ConsumerWidget {
             .whenOrNull(data: (value) => value.length) ??
         0;
     final total =
-        ref.watch(mandarinCourseProvider).whenOrNull(
-          data: (course) => course.lessons.length,
-        ) ??
+        ref
+            .watch(mandarinCourseProvider)
+            .whenOrNull(data: (course) => course.lessons.length) ??
         30;
     final safeTotal = total == 0 ? 1 : total;
     return GlassCard(
@@ -268,10 +328,7 @@ class _ClassBoardSection extends ConsumerWidget {
           onRetry: () => ref.invalidate(classBoardProvider),
         ),
       ),
-      data: (snap) => ClassBoardCard(
-        snapshot: snap,
-        onOptInChanged: setOptIn,
-      ),
+      data: (snap) => ClassBoardCard(snapshot: snap, onOptInChanged: setOptIn),
     );
   }
 }
@@ -357,6 +414,40 @@ class _SettingRow extends StatelessWidget {
             ),
           ),
           trailing,
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _HeroChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: Colors.white,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

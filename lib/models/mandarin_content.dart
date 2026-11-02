@@ -7,13 +7,23 @@ enum MandarinActivityType { listenTap, match, mcq, fillBlank }
 bool isFoundationLessonUnlocked(
   MandarinCourseLesson lesson,
   Set<String> completedLessonIds,
-  Iterable<MandarinCourseLesson> courseLessons,
-) {
+  Iterable<MandarinCourseLesson> courseLessons, {
+  bool Function(int sequence)? hasPackAccess,
+}) {
+  final entitled = hasPackAccess?.call(lesson.sequence) ?? lesson.sequence <= 2;
+  if (!entitled) return false;
   if (lesson.sequence == 1) return true;
   final previous = courseLessons.where(
     (candidate) => candidate.sequence == lesson.sequence - 1,
   );
   return previous.isNotEmpty && completedLessonIds.contains(previous.first.id);
+}
+
+/// True when this sequence sits at the 8th lesson of its paid pack.
+bool isPackRenewPromptLesson(int sequence, {int freeLessons = 2}) {
+  if (sequence <= freeLessons) return false;
+  final indexInPack = (sequence - freeLessons - 1) % 10;
+  return indexInPack == 7; // 8th lesson of the pack (0-based 7)
 }
 
 class ContentSourceRef {

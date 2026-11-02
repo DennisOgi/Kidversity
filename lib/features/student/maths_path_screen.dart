@@ -2,14 +2,20 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../config/features.dart';
+import '../../data/app_state.dart';
 import '../../data/records_providers.dart';
+import '../../models/payment_models.dart';
+import '../../router/navigation.dart';
 import '../../services/learning_records_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
 import '../../widgets/surfaces.dart';
 import 'maths_bank.dart';
+import 'payments_screen.dart';
 
 const _prefsKey = 'kidversity_maths_levels';
 
@@ -85,12 +91,60 @@ class _MathsPathScreenState extends ConsumerState<MathsPathScreen> {
     );
     if (!mounted) return;
     setState(() => _done = next);
+    await _maybePromptNextPack();
   }
 
-  bool _open(MathsLevel level) =>
-      level.sequence == 1 ||
-      _done.contains(level.sequence - 1) ||
-      level.sequence == widget.startLevel;
+  /// Lesson 8 of a paid maths pack: remind the family the next pack is due.
+  Future<void> _maybePromptNextPack() async {
+    if (!Features.payments) return;
+    try {
+      ref.invalidate(paymentAccessProvider);
+      final access = await ref.read(paymentAccessProvider.future);
+      final status = access.statusFor('maths');
+      if (status == null ||
+          !status.renewPromptDue ||
+          status.completedInCurrentPack != 8) {
+        return;
+      }
+      final catalog = await ref.read(paymentCatalogProvider.future);
+      final packs =
+          catalog.subjectById('maths')?.packs ?? const <PaymentPack>[];
+      final current = packs
+          .where((pack) => pack.id == status.currentPackId)
+          .firstOrNull;
+      final next = packs
+          .where((pack) => pack.id == status.nextPackId)
+          .firstOrNull;
+      if (current == null || !mounted) return;
+      await showPackRenewPrompt(
+        context,
+        ref,
+        currentPack: current,
+        nextPack: next,
+      );
+    } catch (_) {
+      // The prompt is a nudge; never block practice on it.
+    }
+  }
+
+  bool _packOk(MathsLevel level) {
+    if (!Features.payments) return true;
+    final access = ref
+        .watch(paymentAccessProvider)
+        .whenOrNull(data: (value) => value);
+    if (access == null) {
+      return level.sequence <= 2 || _done.contains(level.sequence);
+    }
+    return access.hasAccess('maths', level.sequence) ||
+        _done.contains(level.sequence);
+  }
+
+  bool _open(MathsLevel level) {
+    if (!_packOk(level)) return false;
+    return level.sequence == 1 ||
+        _done.contains(level.sequence - 1) ||
+        level.sequence == widget.startLevel;
+  }
 
   List<({String? header, MathsLevel? level})> _strandSections() {
     const order = ['Number', 'Fractions', 'Data', 'Measure', 'Algebra'];
@@ -132,8 +186,18 @@ class _MathsPathScreenState extends ConsumerState<MathsPathScreen> {
                   eyebrow: 'Maths',
                   title: 'Mental maths',
                   body:
-                      'Twenty levels in five strands: number, fractions, data, measure, and a first step into algebra. $mathsSumsPerLevel sums each; ${mathsClearScore(mathsSumsPerLevel)} right clears a level.',
+                      'Twenty levels in five strands: number, fractions, data, measure, and a first step into algebra. $mathsSumsPerLevel sums each; ${mathsClearScore(mathsSumsPerLevel)} right clears a level. ${Features.payments ? 'Levels 1–2 are free; unlock packs for the rest.' : 'Clear a level to open the next one.'}',
                 ),
+                if (Features.payments) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go(
+                      '${AppRoutes.studentPayments}?subject=maths',
+                    ),
+                    icon: const Icon(Icons.payments_outlined),
+                    label: const Text('Maths packs & prices'),
+                  ),
+                ],
                 const SizedBox(height: 18),
                 if (!_ready)
                   const LinearProgressIndicator(minHeight: 3)

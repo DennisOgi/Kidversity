@@ -1,0 +1,23 @@
+---
+description: Emil Kowalski design-eng rules for Kidversity UI, motion, and mobile web
+globs: lib/**/*.dart, web/**/*.html
+alwaysApply: false
+---
+
+# UI craft
+
+Read `.cursor/skills/emil-design-eng/SKILL.md` before changing UI. For phones also read `mobile-native`. For motion reviews use `review-animations`.
+
+Flutter mapping:
+
+- Pressable things: `scale(0.97)` in **140ms**, `AppMotion.easeOut`. Never `Curves.easeIn`.
+- Hover only when `PointerDeviceKind.mouse`. Touch gets press, not leftover hover.
+- Animate **transform and opacity** only. No width/height/padding animation.
+- UI motion **under 200ms**. Nav used tens of times a day: color/opacity only, 160ms max.
+- Never enter from `scale(0)`. Use `0.95` + opacity.
+- Elevation: **soft translucent shadow**, not a heavy opaque border.
+- Inputs: **16px** on coarse pointers so iOS does not zoom.
+- Honor `MediaQuery.disableAnimationsOf`.
+- Toasts/snackbars: enter and exit the **same edge**; exit faster than enter.
+
+Do not add motion because it looks cool. Valid reasons: press feedback, spatial continuity, or hiding a jarring swap.

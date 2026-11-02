@@ -11,10 +11,16 @@ class AuthRememberMe {
     final prefs = await SharedPreferences.getInstance();
     final enabled = prefs.getBool(_rememberKey) ?? false;
     final email = enabled ? prefs.getString(_emailKey) : null;
-    return (enabled: enabled, email: email?.trim().isEmpty == true ? null : email);
+    return (
+      enabled: enabled,
+      email: email?.trim().isEmpty == true ? null : email,
+    );
   }
 
-  static Future<void> save({required bool enabled, required String email}) async {
+  static Future<void> save({
+    required bool enabled,
+    required String email,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     if (enabled) {
       await prefs.setBool(_rememberKey, true);

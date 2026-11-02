@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../config/features.dart';
 import '../../data/app_state.dart';
 import '../../data/auth_state.dart';
 import '../../models/mandarin_content.dart';
@@ -23,6 +24,9 @@ class FoundationPathScreen extends ConsumerWidget {
             .watch(foundationCompletedLessonIdsProvider)
             .whenOrNull(data: (value) => value) ??
         const <String>{};
+    final access = ref
+        .watch(paymentAccessProvider)
+        .whenOrNull(data: (value) => value);
 
     return course.when(
       loading: () => const Center(
@@ -36,9 +40,25 @@ class FoundationPathScreen extends ConsumerWidget {
       data: (value) {
         final lessons = [...value.lessons]
           ..sort((a, b) => a.sequence.compareTo(b.sequence));
+        bool entitled(int sequence) =>
+            !Features.payments ||
+            (access?.hasAccess(
+                  'mandarin',
+                  sequence,
+                  completedLessonIds: completedLessonIds,
+                ) ??
+                (sequence <= 2 ||
+                    completedLessonIds.contains(
+                      'mfv1_l${sequence.toString().padLeft(2, '0')}',
+                    )));
         final unlocked = {
           for (final lesson in lessons)
-            if (isFoundationLessonUnlocked(lesson, completedLessonIds, lessons))
+            if (isFoundationLessonUnlocked(
+              lesson,
+              completedLessonIds,
+              lessons,
+              hasPackAccess: entitled,
+            ))
               lesson.id,
         };
         MandarinCourseLesson? next;
@@ -70,6 +90,18 @@ class FoundationPathScreen extends ConsumerWidget {
               const SizedBox(height: 22),
             ] else
               const _CourseCompleteCard(),
+            if (Features.payments)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () => context.go(
+                    '${AppRoutes.studentPayments}?subject=mandarin',
+                  ),
+                  icon: const Icon(Icons.payments_outlined),
+                  label: const Text('Pathway, packs & prices'),
+                ),
+              ),
+            const SizedBox(height: 14),
             const _HowItWorks(),
             const SizedBox(height: 22),
             for (final module in value.modules)
@@ -78,6 +110,7 @@ class FoundationPathScreen extends ConsumerWidget {
                 completedLessonIds: completedLessonIds,
                 unlockedLessonIds: unlocked,
                 nextLessonId: next?.id,
+                hasPackAccess: entitled,
               ),
           ],
         );
@@ -311,12 +344,14 @@ class _ModuleSection extends StatefulWidget {
   final Set<String> completedLessonIds;
   final Set<String> unlockedLessonIds;
   final String? nextLessonId;
+  final bool Function(int sequence) hasPackAccess;
 
   const _ModuleSection({
     required this.module,
     required this.completedLessonIds,
     required this.unlockedLessonIds,
     required this.nextLessonId,
+    required this.hasPackAccess,
   });
 
   @override
@@ -423,6 +458,7 @@ class _ModuleSectionState extends State<_ModuleSection> {
                 lesson: lesson,
                 completed: widget.completedLessonIds.contains(lesson.id),
                 unlocked: widget.unlockedLessonIds.contains(lesson.id),
+                needsPack: !widget.hasPackAccess(lesson.sequence),
                 isNext: lesson.id == widget.nextLessonId,
               ),
             if (hiddenCount > 0)
@@ -447,21 +483,25 @@ class _LessonRow extends StatelessWidget {
   final MandarinCourseLesson lesson;
   final bool completed;
   final bool unlocked;
+  final bool needsPack;
   final bool isNext;
 
   const _LessonRow({
     required this.lesson,
     required this.completed,
     required this.unlocked,
+    required this.needsPack,
     required this.isNext,
   });
 
   @override
   Widget build(BuildContext context) {
-    final playable = lesson.isPlayable && unlocked;
+    final playable = lesson.isPlayable && unlocked && !needsPack;
     final text = Theme.of(context).textTheme;
     final status = completed
         ? 'Done'
+        : needsPack
+        ? 'Unlock with a lesson pack'
         : isNext
         ? 'Up next'
         : playable
@@ -471,6 +511,8 @@ class _LessonRow extends StatelessWidget {
     return InkWell(
       onTap: playable
           ? () => context.go(AppRoutes.mandarinLesson(lesson.id))
+          : needsPack
+          ? () => context.go('${AppRoutes.studentPayments}?subject=mandarin')
           : null,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
