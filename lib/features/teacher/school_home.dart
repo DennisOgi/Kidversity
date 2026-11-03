@@ -39,6 +39,10 @@ class SchoolHome extends ConsumerWidget {
         ],
       ),
       data: (overview) {
+        // Teachers who signed up on their own have a class but no school.
+        // The school overview has nothing to list for them, so show their
+        // own class and its join code directly.
+        if (!overview.hasSchool) return const _SoloTeacherHome();
         final selectedId = ref.watch(selectedClassIdProvider);
         final known = overview.classes.any((item) => item.id == selectedId);
         if (!known && overview.classes.isNotEmpty) {
@@ -702,6 +706,30 @@ class _SelectedClassPanel extends ConsumerWidget {
               color: Colors.white.withValues(alpha: 0.92),
             ),
           ),
+          if (code.isEmpty && (isAdmin || teachesIt)) ...[
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.primary,
+              ),
+              onPressed: () async {
+                final result = await SupabaseService.instance
+                    .regenerateClassCode(schoolClass.id);
+                if (!context.mounted) return;
+                if (result.isSuccess) {
+                  ref.invalidate(schoolOverviewProvider);
+                  context.showSuccessSnackbar('Class code ready.');
+                } else {
+                  context.showErrorSnackbar(
+                    result.error ?? 'Could not make a class code.',
+                  );
+                }
+              },
+              icon: const Icon(Icons.vpn_key_rounded),
+              label: const Text('Make a class code'),
+            ),
+          ],
           if (code.isNotEmpty) ...[
             const SizedBox(height: 16),
             Row(
@@ -1058,6 +1086,166 @@ class _SelectedRoster extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Home for a teacher with no school yet: their class, its code, roster.
+class _SoloTeacherHome extends ConsumerWidget {
+  const _SoloTeacherHome();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final info = ref.watch(teacherClassInfoProvider);
+    return ShellScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      children: [
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1080),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PageIntro(
+                  eyebrow: 'Your class',
+                  title: 'Share your class code',
+                  body:
+                      'Students open Me, tap Join your class, and type this code.',
+                ),
+                const SizedBox(height: 16),
+                DashboardGuide.teacher(),
+                const SizedBox(height: 18),
+                info.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: LoadingIndicator(message: 'Opening your class…'),
+                  ),
+                  error: (_, _) => ErrorDisplay(
+                    message: 'Your class code could not be loaded.',
+                    onRetry: () => ref.invalidate(teacherClassInfoProvider),
+                  ),
+                  data: (value) => value == null
+                      ? ErrorDisplay(
+                          message: 'Your class could not be set up yet.',
+                          onRetry: () =>
+                              ref.invalidate(teacherClassInfoProvider),
+                        )
+                      : _SoloClassCard(
+                          id: value.id,
+                          name: value.name,
+                          code: value.code,
+                        ),
+                ),
+                const SizedBox(height: 22),
+                const SectionHeader(
+                  title: 'Learners in this class',
+                  subtitle: 'Students who joined with your code',
+                ),
+                const SizedBox(height: 12),
+                const _SelectedRoster(canEdit: true),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SoloClassCard extends ConsumerWidget {
+  final String id;
+  final String name;
+  final String code;
+
+  const _SoloClassCard({
+    required this.id,
+    required this.name,
+    required this.code,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
+    Future<void> regenerate() async {
+      final result = await SupabaseService.instance.regenerateClassCode(id);
+      if (!context.mounted) return;
+      if (result.isSuccess) {
+        ref.invalidate(teacherClassInfoProvider);
+        context.showSuccessSnackbar('New class code generated.');
+      } else {
+        context.showErrorSnackbar(result.error ?? 'Could not make a new code.');
+      }
+    }
+
+    return GlassCard(
+      gradient: AppColors.brandGradient,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            name,
+            style: text.titleLarge?.copyWith(color: Colors.white, fontSize: 20),
+          ),
+          const SizedBox(height: 16),
+          if (code.isEmpty)
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.primary,
+              ),
+              onPressed: regenerate,
+              icon: const Icon(Icons.vpn_key_rounded),
+              label: const Text('Make a class code'),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    ),
+                    child: SelectableText(
+                      code,
+                      style: text.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        letterSpacing: 5,
+                        fontSize: 22,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  tooltip: 'Copy code',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: code));
+                    if (context.mounted) {
+                      context.showSuccessSnackbar('Code copied.');
+                    }
+                  },
+                  icon: const Icon(Icons.copy_rounded),
+                ),
+                IconButton.filled(
+                  tooltip: 'New code',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: regenerate,
+                  icon: const Icon(Icons.refresh_rounded),
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }
