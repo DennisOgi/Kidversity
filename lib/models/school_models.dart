@@ -210,3 +210,102 @@ class SchoolOverview {
     entries: [],
   );
 }
+
+/// One teacher or admin in the school, with the classes they teach.
+class SchoolStaffMember {
+  final String userId;
+  final String displayName;
+  final String email;
+  final String role;
+  final DateTime? joinedAt;
+  final DateTime? lastActive;
+  final List<({String id, String name})> classes;
+
+  const SchoolStaffMember({
+    required this.userId,
+    required this.displayName,
+    required this.email,
+    required this.role,
+    this.joinedAt,
+    this.lastActive,
+    this.classes = const [],
+  });
+
+  bool get isAdmin => role == 'admin';
+
+  factory SchoolStaffMember.fromJson(Map<String, dynamic> json) =>
+      SchoolStaffMember(
+        userId: json['user_id'] as String? ?? '',
+        displayName: json['display_name'] as String? ?? 'Teacher',
+        email: json['email'] as String? ?? '',
+        role: json['role'] as String? ?? 'teacher',
+        joinedAt: DateTime.tryParse(json['joined_at'] as String? ?? ''),
+        lastActive: DateTime.tryParse(json['last_active'] as String? ?? ''),
+        classes: [
+          for (final item in json['classes'] as List? ?? const [])
+            if (item is Map)
+              (
+                id: item['id'] as String? ?? '',
+                name: item['name'] as String? ?? 'Class',
+              ),
+        ],
+      );
+}
+
+/// An invite for someone who has not signed up yet.
+class SchoolInvite {
+  final String id;
+  final String email;
+  final String role;
+  final DateTime? createdAt;
+
+  const SchoolInvite({
+    required this.id,
+    required this.email,
+    required this.role,
+    this.createdAt,
+  });
+
+  factory SchoolInvite.fromJson(Map<String, dynamic> json) => SchoolInvite(
+    id: json['id'] as String? ?? '',
+    email: json['email'] as String? ?? '',
+    role: json['role'] as String? ?? 'teacher',
+    createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+  );
+}
+
+/// What only a school admin sees: the staff code, staff, and open invites.
+class SchoolAdminInfo {
+  final String schoolId;
+  final String schoolName;
+  final String staffCode;
+  final List<SchoolStaffMember> staff;
+  final List<SchoolInvite> invites;
+
+  const SchoolAdminInfo({
+    required this.schoolId,
+    required this.schoolName,
+    required this.staffCode,
+    this.staff = const [],
+    this.invites = const [],
+  });
+
+  int get adminCount => staff.where((s) => s.isAdmin).length;
+
+  factory SchoolAdminInfo.fromJson(Map<String, dynamic> json) =>
+      SchoolAdminInfo(
+        schoolId: json['school_id'] as String? ?? '',
+        schoolName: json['school_name'] as String? ?? 'School',
+        staffCode: json['staff_code'] as String? ?? '',
+        staff: [
+          for (final item in json['staff'] as List? ?? const [])
+            if (item is Map)
+              SchoolStaffMember.fromJson(Map<String, dynamic>.from(item)),
+        ],
+        invites: [
+          for (final item in json['invites'] as List? ?? const [])
+            if (item is Map)
+              SchoolInvite.fromJson(Map<String, dynamic>.from(item)),
+        ],
+      );
+}

@@ -6,11 +6,12 @@ import 'rope_arena.dart';
 /// Display-only win cap so kit position stays in [-1, 1].
 /// Does not change server scoring or finish rules.
 int ropePullWinCap(RopePullRoom room) {
-  if (room.isExamMatch) {
-    final n = math.max(1, room.roundCount);
-    if (room.isSplit) return math.max(10, math.min(20, n));
-    return math.min(40, n);
-  }
+  // Mirrors the server's cap in submit_rope_pull_answer: split decks cap at
+  // half the questions (10 to 20); a long shared deck caps at its length (up
+  // to 40); everything else at 10.
+  final questions = room.questions.length;
+  if (room.isSplit) return math.max(10, math.min(20, questions ~/ 2));
+  if (questions > 10) return math.min(40, questions);
   return 10;
 }
 

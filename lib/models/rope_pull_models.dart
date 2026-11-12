@@ -297,10 +297,15 @@ class RopePullSnapshot {
   final List<RopePullPlayer> players;
   final List<RopePullAnswer> answers;
 
+  /// The database clock when this snapshot was made. Round timers use it so a
+  /// phone whose clock runs fast or slow still times rounds like the server.
+  final DateTime? serverNow;
+
   const RopePullSnapshot({
     required this.room,
     required this.players,
     required this.answers,
+    this.serverNow,
   });
 
   factory RopePullSnapshot.fromJson(Map<String, dynamic> json) {
@@ -319,7 +324,14 @@ class RopePullSnapshot {
               RopePullAnswer.fromJson(Map<String, dynamic>.from(item as Map)),
         )
         .toList();
-    return RopePullSnapshot(room: room, players: players, answers: answers);
+    return RopePullSnapshot(
+      room: room,
+      players: players,
+      answers: answers,
+      serverNow: DateTime.tryParse(
+        json['server_now'] as String? ?? '',
+      )?.toUtc(),
+    );
   }
 
   List<RopePullPlayer> get blue =>
@@ -509,4 +521,32 @@ class RopePullLadderEntry {
         correct: (json['correct'] as num?)?.toInt() ?? 0,
         isYou: json['is_you'] == true,
       );
+}
+
+/// What the host asks the server for. The server picks the questions itself,
+/// so the host's device never sees the answers.
+class RopePullDeckOptions {
+  /// Questions in the deck. Words stay at 10 or fewer; maths and past
+  /// questions take up to 40 and give each team its own question.
+  final int count;
+
+  /// Past questions only: exam, subject, and university for post-UTME papers.
+  final String? exam;
+  final String? subject;
+  final String? university;
+
+  const RopePullDeckOptions({
+    this.count = 10,
+    this.exam,
+    this.subject,
+    this.university,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'count': count,
+    if (exam != null && exam!.isNotEmpty) 'exam': exam,
+    if (subject != null && subject!.isNotEmpty) 'subject': subject,
+    if (university != null && university!.trim().isNotEmpty)
+      'university': university!.trim(),
+  };
 }

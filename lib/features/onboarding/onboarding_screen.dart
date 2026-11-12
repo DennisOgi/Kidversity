@@ -8,6 +8,7 @@ import '../../data/auth_state.dart';
 import '../../models/models.dart';
 import '../../router/navigation.dart';
 import '../../services/family_service.dart';
+import '../../services/school_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -36,9 +37,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _classCode = TextEditingController();
   final _familyCode = TextEditingController();
   final _className = TextEditingController();
+  final _schoolName = TextEditingController();
+  final _staffCode = TextEditingController();
   int _step = 0;
   String _emoji = '🦊';
   UserRole? _role;
+
+  /// A school leader is a teacher account that creates the school and
+  /// becomes its admin.
+  bool _schoolLeader = false;
   bool _busy = false;
 
   @override
@@ -70,6 +77,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (familyCode != null && familyCode.isNotEmpty) {
         _familyCode.text = familyCode;
       }
+      // Staff invite links: /join/staff/ABCD-2345, or ?staff=ABCD-2345.
+      final staffCode =
+          query?['staff'] ?? staffCodeFromPath(query?['redirect']);
+      if (staffCode != null && staffCode.isNotEmpty) {
+        setState(() {
+          _staffCode.text = staffCode;
+          _role = UserRole.teacher;
+          _schoolLeader = false;
+        });
+      }
     });
   }
 
@@ -79,6 +96,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _classCode.dispose();
     _familyCode.dispose();
     _className.dispose();
+    _schoolName.dispose();
+    _staffCode.dispose();
     super.dispose();
   }
 
@@ -100,6 +119,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       case 2:
         return _emoji.isNotEmpty;
       case 3:
+        return !_schoolLeader || _schoolName.text.trim().length >= 2;
       case 4:
         return true;
       default:
@@ -155,6 +175,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       final redirect = _redirect;
       final role = _role ?? roleFromPath(redirect);
 
+      final staffCode = _staffCode.text.trim();
+      final joiningSchool =
+          role == UserRole.teacher && !_schoolLeader && staffCode.isNotEmpty;
+
       await ref
           .read(authControllerProvider)
           .completeOnboarding(
@@ -162,6 +186,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             emoji: _emoji,
             selectedRole: role,
             className: role == UserRole.teacher ? _className.text : null,
+            // A school leader makes the school first; a teacher with a staff
+            // code gets their class inside the school instead.
+            createSoloClass: !_schoolLeader && !joiningSchool,
           );
 
       if (role != null) {
@@ -169,6 +196,46 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       }
 
       final notes = <String>[];
+      String? destinationOverride;
+
+      if (role == UserRole.teacher && _schoolLeader) {
+        final created = await SchoolService.instance.createSchool(
+          _schoolName.text,
+        );
+        if (created.isSuccess) {
+          notes.add(
+            '${created.data!.name} is ready. Invite your teachers next.',
+          );
+          destinationOverride = AppRoutes.schoolHome;
+        } else {
+          notes.add(
+            'The school could not be created: ${created.error}. Try again from your class page.',
+          );
+          await SupabaseService.instance.ensureTeacherClass(
+            className: '$name\'s Class',
+          );
+        }
+      } else if (joiningSchool) {
+        final joined = await SchoolService.instance.joinWithStaffCode(
+          staffCode,
+        );
+        final className = _className.text.trim();
+        if (joined.isSuccess) {
+          notes.add('You joined ${joined.data}.');
+          if (className.isNotEmpty) {
+            await SchoolService.instance.createClass(className);
+          }
+        } else {
+          notes.add(
+            '${joined.error} You can enter it later on your class page.',
+          );
+          await SupabaseService.instance.ensureTeacherClass(
+            className: className.isNotEmpty ? className : '$name\'s Class',
+          );
+        }
+        destinationOverride = AppRoutes.teacherDashboard;
+      }
+      ref.invalidate(schoolOverviewProvider);
       if (role == UserRole.student) {
         final classCode = _classCode.text.trim();
         if (classCode.isNotEmpty) {
@@ -195,7 +262,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (!mounted) return;
       if (notes.isNotEmpty) context.showSuccessSnackbar(notes.join(' '));
 
-      final destination = redirect ?? homeForRole(role);
+      // A staff invite link redirects back to itself; onboarding has already
+      // used the code, so go home instead.
+      final usableRedirect = staffCodeFromPath(redirect) == null
+          ? redirect
+          : null;
+      final destination =
+          destinationOverride ?? usableRedirect ?? homeForRole(role);
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -221,6 +294,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         );
       case 1:
         return switch (_role) {
+          UserRole.teacher when _schoolLeader => (
+            'Your name',
+            'Teachers and parents see it on school pages.',
+          ),
           UserRole.teacher => (
             'How should learners address you?',
             'This is how your name appears to your class.',
@@ -248,6 +325,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             'Join your class and family',
             'Both are optional — you can add them later under Me.',
           ),
+          UserRole.teacher when _schoolLeader => (
+            'Name your school',
+            'You become its admin. Next you invite teachers and create classes.',
+          ),
           UserRole.teacher => (
             'Name your first class',
             'You will get a join code to share with learners.',
@@ -264,6 +345,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         };
       default:
         return switch (_role) {
+          UserRole.teacher when _schoolLeader => (
+            'Your school workspace',
+            'Three steps get every class running.',
+          ),
           UserRole.teacher => (
             'Your class workspace',
             'Invite learners, set the work, and run a quiz you write yourself.',
@@ -298,10 +383,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           classCode: _classCode,
           familyCode: _familyCode,
         );
+      case UserRole.teacher when _schoolLeader:
+        return _SchoolLeaderSetupStep(
+          key: const ValueKey('leader-setup'),
+          schoolName: _schoolName,
+          onChanged: () => setState(() {}),
+        );
       case UserRole.teacher:
         return _TeacherSetupStep(
           key: const ValueKey('teacher-setup'),
           className: _className,
+          staffCode: _staffCode,
           onChanged: () => setState(() {}),
         );
       case UserRole.parent:
@@ -406,10 +498,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 0 => _RoleStep(
                   key: const ValueKey('role'),
                   selected: _role,
+                  schoolLeader: _schoolLeader,
                   allowReviewer:
                       ref.watch(authControllerProvider).role ==
                       UserRole.reviewer,
-                  onSelect: (role) => setState(() => _role = role),
+                  onSelect: (role, {leader = false}) => setState(() {
+                    _role = role;
+                    _schoolLeader = leader;
+                  }),
                 ),
                 1 => _NameStep(
                   key: const ValueKey('name'),
@@ -428,7 +524,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   onSelect: (emoji) => setState(() => _emoji = emoji),
                 ),
                 3 => _setupStep(),
-                _ => _HowItWorksStep(key: const ValueKey('howto'), role: _role),
+                _ => _HowItWorksStep(
+                  key: const ValueKey('howto'),
+                  role: _role,
+                  schoolLeader: _schoolLeader,
+                ),
               },
             ),
             const SizedBox(height: 30),
@@ -549,13 +649,58 @@ class _StudentSetupStep extends StatelessWidget {
   }
 }
 
+class _SchoolLeaderSetupStep extends StatelessWidget {
+  final TextEditingController schoolName;
+  final VoidCallback onChanged;
+
+  const _SchoolLeaderSetupStep({
+    super.key,
+    required this.schoolName,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: schoolName,
+          onChanged: (_) => onChanged(),
+          maxLength: 80,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'School name',
+            hintText: 'e.g. Pearls Garden School',
+            prefixIcon: Icon(Icons.apartment_rounded),
+          ),
+        ),
+        const SizedBox(height: 6),
+        const _TipRow(
+          icon: Icons.key_rounded,
+          text:
+              'Your school gets a staff code. Teachers type it when they sign up, and they join your school.',
+        ),
+        const SizedBox(height: 8),
+        const _TipRow(
+          icon: Icons.mail_outline_rounded,
+          text:
+              'Or invite teachers by email. They join your school as soon as they sign up with that email.',
+        ),
+      ],
+    );
+  }
+}
+
 class _TeacherSetupStep extends StatelessWidget {
   final TextEditingController className;
+  final TextEditingController staffCode;
   final VoidCallback onChanged;
 
   const _TeacherSetupStep({
     super.key,
     required this.className,
+    required this.staffCode,
     required this.onChanged,
   });
 
@@ -569,8 +714,21 @@ class _TeacherSetupStep extends StatelessWidget {
           controller: className,
           onChanged: (_) => onChanged(),
           decoration: const InputDecoration(
+            labelText: 'Class name',
             hintText: 'e.g. JSS 1 Gold',
             prefixIcon: Icon(Icons.class_rounded),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text('School staff code (optional)', style: text.titleSmall),
+        const SizedBox(height: 6),
+        TextField(
+          controller: staffCode,
+          onChanged: (_) => onChanged(),
+          textCapitalization: TextCapitalization.characters,
+          decoration: const InputDecoration(
+            hintText: 'e.g. ABCD-2345 from your school admin',
+            prefixIcon: Icon(Icons.apartment_rounded),
           ),
         ),
         const SizedBox(height: 14),
@@ -583,7 +741,7 @@ class _TeacherSetupStep extends StatelessWidget {
         const _TipRow(
           icon: Icons.apartment_rounded,
           text:
-              'Part of a school? Your school admin can add you, and your class joins the school directory.',
+              'No staff code? You can still teach on your own, and join your school later from your class page.',
         ),
         const SizedBox(height: 8),
         Text(
@@ -970,12 +1128,34 @@ class _AvatarStep extends StatelessWidget {
 
 class _HowItWorksStep extends StatelessWidget {
   final UserRole? role;
+  final bool schoolLeader;
 
-  const _HowItWorksStep({super.key, required this.role});
+  const _HowItWorksStep({
+    super.key,
+    required this.role,
+    this.schoolLeader = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final items = switch (role) {
+      UserRole.teacher when schoolLeader => const [
+        (
+          Icons.person_add_alt_1_rounded,
+          'Invite your teachers',
+          'Share the staff code or invite link, or add teachers by email.',
+        ),
+        (
+          Icons.groups_rounded,
+          'Create classes',
+          'Give each class a teacher. Every class gets its own join code for students.',
+        ),
+        (
+          Icons.insights_rounded,
+          'Follow the school',
+          'See which classes are active, place students who joined without a class, and keep setup on track.',
+        ),
+      ],
       UserRole.teacher => const [
         (
           Icons.groups_rounded,
@@ -1117,12 +1297,14 @@ class _HowItWorksStep extends StatelessWidget {
 
 class _RoleStep extends StatelessWidget {
   final UserRole? selected;
+  final bool schoolLeader;
   final bool allowReviewer;
-  final ValueChanged<UserRole> onSelect;
+  final void Function(UserRole role, {bool leader}) onSelect;
 
   const _RoleStep({
     super.key,
     required this.selected,
+    required this.schoolLeader,
     required this.allowReviewer,
     required this.onSelect,
   });
@@ -1151,8 +1333,19 @@ class _RoleStep extends StatelessWidget {
           title: "I'm a Teacher",
           subtitle: 'Set work, follow the class, and run a live quiz',
           gradient: AppColors.mandarinGradient,
-          selected: selected == UserRole.teacher,
+          selected: selected == UserRole.teacher && !schoolLeader,
           onTap: () => onSelect(UserRole.teacher),
+        ),
+        const SizedBox(height: 12),
+        _RoleCard(
+          emoji: '🏫',
+          title: 'I run a school',
+          subtitle: 'Set up your school, invite teachers, and create classes',
+          gradient: const LinearGradient(
+            colors: [Color(0xFF2E2B6B), Color(0xFF20213B)],
+          ),
+          selected: selected == UserRole.teacher && schoolLeader,
+          onTap: () => onSelect(UserRole.teacher, leader: true),
         ),
         const SizedBox(height: 12),
         _RoleCard(

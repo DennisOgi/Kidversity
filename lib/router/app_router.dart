@@ -39,7 +39,10 @@ import '../features/teacher/students_screen.dart';
 import '../features/teacher/teacher_live_compose_screen.dart';
 import '../features/teacher/teacher_live_hub_screen.dart';
 import '../features/teacher/teacher_live_monitor_screen.dart';
-import '../theme/app_colors.dart';
+import '../features/teacher/teacher_home_screen.dart';
+import '../features/teacher/school_home.dart';
+import '../features/school/school_admin_screens.dart';
+import '../theme/role_style.dart';
 import 'navigation.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
@@ -51,6 +54,7 @@ const _studentNav = [
     'Home',
     '/student/path',
     'Your next step',
+    AppTint.violet,
   ),
   NavItem(
     Icons.school_outlined,
@@ -58,6 +62,7 @@ const _studentNav = [
     'Practice',
     '/student/practice',
     'Review, exams, and drills',
+    AppTint.sky,
   ),
   NavItem(
     Icons.sports_esports_outlined,
@@ -65,6 +70,7 @@ const _studentNav = [
     'Play',
     '/student/play',
     'Rope Pull with friends',
+    AppTint.sun,
   ),
   NavItem(
     Icons.person_outline_rounded,
@@ -72,16 +78,26 @@ const _studentNav = [
     'Me',
     '/student/profile',
     'Class and learning settings',
+    AppTint.pink,
   ),
 ];
 
 const _teacherNav = [
+  NavItem(
+    Icons.home_outlined,
+    Icons.home_rounded,
+    'Home',
+    '/teacher/home',
+    'Today in your class',
+    AppTint.mint,
+  ),
   NavItem(
     Icons.groups_outlined,
     Icons.groups_rounded,
     'Class',
     '/teacher/class',
     'Create a class and share the join code',
+    AppTint.violet,
   ),
   NavItem(
     Icons.insights_outlined,
@@ -89,6 +105,7 @@ const _teacherNav = [
     'Progress',
     '/teacher/progress',
     'Learning movement & check-ins',
+    AppTint.sky,
   ),
   NavItem(
     Icons.assignment_outlined,
@@ -96,6 +113,7 @@ const _teacherNav = [
     'Assign',
     '/teacher/assign',
     'Set work and see who finished',
+    AppTint.sun,
   ),
   NavItem(
     Icons.bolt_outlined,
@@ -103,6 +121,7 @@ const _teacherNav = [
     'Live',
     '/teacher/live',
     'Timed quizzes',
+    AppTint.coral,
   ),
 ];
 
@@ -113,6 +132,7 @@ const _parentNav = [
     'Family',
     '/parent/family',
     'Your children and what is due',
+    AppTint.coral,
   ),
   if (Features.payments)
     NavItem(
@@ -121,6 +141,7 @@ const _parentNav = [
       'Packs',
       '/parent/packs',
       'Pathway, pack contents, and prices',
+      AppTint.sun,
     ),
 ];
 
@@ -131,6 +152,7 @@ const _reviewerNav = [
     'Review',
     '/reviewer/queue',
     'Review Mandarin lessons',
+    AppTint.sky,
   ),
 ];
 
@@ -176,38 +198,79 @@ const _adminNav = [
 Widget _studentShell(String path, Widget page) => AppShell(
   currentPath: path,
   items: _studentNav,
-  accent: AppColors.primary,
+  style: RoleStyle.student,
   child: page,
 );
 
 Widget _teacherShell(String path, Widget page) => AppShell(
   currentPath: path,
   items: _teacherNav,
-  accent: AppColors.secondary,
+  style: RoleStyle.teacher,
   child: page,
 );
 
 Widget _parentShell(String path, Widget page) => AppShell(
   currentPath: path,
   items: _parentNav,
-  accent: AppColors.success,
+  style: RoleStyle.parent,
   child: page,
 );
 
 Widget _reviewerShell(String path, Widget page) => AppShell(
   currentPath: path,
   items: _reviewerNav,
-  accent: AppColors.jade,
+  style: RoleStyle.reviewer,
   child: page,
 );
 
 Widget _adminShell(String path, Widget page) => AppShell(
   currentPath: path,
   items: _adminNav,
-  accent: AppColors.ink,
+  style: RoleStyle.admin,
   child: page,
 );
 
+const _schoolNav = [
+  NavItem(
+    Icons.dashboard_outlined,
+    Icons.dashboard_rounded,
+    'Overview',
+    '/school',
+    'Classes and setup',
+    AppTint.violet,
+  ),
+  NavItem(
+    Icons.co_present_outlined,
+    Icons.co_present_rounded,
+    'Teachers',
+    '/school/teachers',
+    'Invite and manage staff',
+    AppTint.sky,
+  ),
+  NavItem(
+    Icons.school_outlined,
+    Icons.school_rounded,
+    'Students',
+    '/school/students',
+    'Place students in classes',
+    AppTint.mint,
+  ),
+  NavItem(
+    Icons.settings_outlined,
+    Icons.settings_rounded,
+    'Settings',
+    '/school/settings',
+    'School name and staff code',
+    AppTint.sun,
+  ),
+];
+
+Widget _schoolShell(String path, Widget page) => AppShell(
+  currentPath: path,
+  items: _schoolNav,
+  style: RoleStyle.school,
+  child: page,
+);
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.read(authControllerProvider);
 
@@ -275,6 +338,37 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashScreen()),
       GoRoute(path: AppRoutes.auth, builder: (_, _) => const AuthScreen()),
+      GoRoute(
+        path: AppRoutes.schoolHome,
+        builder: (_, _) =>
+            _schoolShell(AppRoutes.schoolHome, const SchoolHome()),
+      ),
+      GoRoute(
+        path: AppRoutes.schoolTeachers,
+        builder: (_, _) => _schoolShell(
+          AppRoutes.schoolTeachers,
+          const SchoolTeachersScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.schoolStudents,
+        builder: (_, _) => _schoolShell(
+          AppRoutes.schoolStudents,
+          const SchoolStudentsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.schoolSettings,
+        builder: (_, _) => _schoolShell(
+          AppRoutes.schoolSettings,
+          const SchoolSettingsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/join/staff/:code',
+        redirect: (_, state) =>
+            '${AppRoutes.onboarding}?staff=${state.pathParameters['code']}',
+      ),
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (_, _) => const OnboardingScreen(),
@@ -477,7 +571,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) =>
             TeacherLiveMonitorScreen(testId: state.pathParameters['id']!),
       ),
-      GoRoute(path: '/teacher/home', redirect: (_, _) => AppRoutes.teacherHome),
+      GoRoute(
+        path: AppRoutes.teacherDashboard,
+        builder: (_, _) => _teacherShell(
+          AppRoutes.teacherDashboard,
+          const TeacherHomeScreen(),
+        ),
+      ),
       GoRoute(
         path: '/teacher/create',
         redirect: (_, _) => AppRoutes.teacherProgress,

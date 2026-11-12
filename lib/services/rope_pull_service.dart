@@ -36,6 +36,7 @@ class RopePullService {
     }
     if (text.contains('INVALID_BANK')) return 'INVALID_BANK';
     if (text.contains('INVALID_QUESTIONS')) return 'INVALID_QUESTIONS';
+    if (text.contains('NOT_ENOUGH_QUESTIONS')) return 'NOT_ENOUGH_QUESTIONS';
     return 'Could not update the rope pull.';
   }
 
@@ -74,18 +75,21 @@ class RopePullService {
     }
   }
 
+  /// Opens a match whose questions the server picks, so no device ever holds
+  /// the answers. [deck] says how many questions and, for past questions,
+  /// which paper.
   Future<app_errors.Result<RopePullSnapshot>> createRoom({
     required RopePullBank bank,
-    required List<RopePullQuestion> questions,
+    RopePullDeckOptions deck = const RopePullDeckOptions(),
     required bool hostPlays,
     required String displayName,
     required String avatar,
     String? challengedUserId,
     String? classId,
   }) {
-    return _rpc('create_rope_pull_room', {
+    return _rpc('create_rope_pull_match', {
       'p_bank': bank.wire,
-      'p_questions': questions.map((item) => item.toJson()).toList(),
+      'p_options': deck.toJson(),
       'p_host_plays': hostPlays,
       'p_display_name': displayName,
       'p_avatar': avatar,
@@ -152,13 +156,13 @@ class RopePullService {
   /// a room that the next classmate drops into. The pull starts on its own.
   Future<app_errors.Result<RopePullSnapshot>> quickMatch({
     required RopePullBank bank,
-    required List<RopePullQuestion> questions,
+    RopePullDeckOptions deck = const RopePullDeckOptions(),
     required String displayName,
     required String avatar,
   }) {
-    return _rpc('rope_pull_quick_match', {
+    return _rpc('rope_pull_quick_match_v2', {
       'p_bank': bank.wire,
-      'p_questions': questions.map((item) => item.toJson()).toList(),
+      'p_options': deck.toJson(),
       'p_display_name': displayName,
       'p_avatar': avatar,
     });
@@ -217,10 +221,42 @@ class RopePullService {
     final controller = StreamController<RopePullSnapshot?>();
     RealtimeChannel? channel;
     Timer? timer;
+    Timer? debounce;
+    var inFlight = false;
+    var again = false;
 
+    // One fetch at a time. Events that land while a fetch runs ask for one
+    // more fetch afterwards, never one each, so a class of 30 answering does
+    // not turn into 30 reloads on every phone.
     Future<void> refresh() async {
-      final result = await fetch(roomId);
-      if (!controller.isClosed) controller.add(result.data);
+      if (inFlight) {
+        again = true;
+        return;
+      }
+      inFlight = true;
+      try {
+        do {
+          again = false;
+          final result = await fetch(roomId);
+          if (controller.isClosed) return;
+          controller.add(result.data);
+        } while (again);
+      } finally {
+        inFlight = false;
+      }
+    }
+
+    // Realtime events often arrive in bursts (room row + player rows).
+    void soon() {
+      debounce?.cancel();
+      debounce = Timer(const Duration(milliseconds: 150), refresh);
+    }
+
+    void poll(Duration every) {
+      timer?.cancel();
+      // A late subscribe status after the screen closed must not restart it.
+      if (controller.isClosed) return;
+      timer = Timer.periodic(every, (_) => refresh());
     }
 
     refresh();
@@ -237,7 +273,7 @@ class RopePullService {
               column: 'id',
               value: roomId,
             ),
-            callback: (_) => refresh(),
+            callback: (_) => soon(),
           )
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
@@ -248,16 +284,26 @@ class RopePullService {
               column: 'room_id',
               value: roomId,
             ),
-            callback: (_) => refresh(),
+            callback: (_) => soon(),
           )
           // Every answer touches the room row, so rooms + players are enough.
           // rope_pull_answers is not published: picks stay secret mid-round.
-          .subscribe();
-      timer = Timer.periodic(const Duration(seconds: 2), (_) => refresh());
+          .subscribe((status, _) {
+            // Live: a slow safety poll is enough. Not live: poll quickly so
+            // the match still moves.
+            poll(
+              status == RealtimeSubscribeStatus.subscribed
+                  ? const Duration(seconds: 8)
+                  : const Duration(seconds: 2),
+            );
+            if (status == RealtimeSubscribeStatus.subscribed) refresh();
+          });
+      poll(const Duration(seconds: 2));
     }
 
     controller.onCancel = () async {
       timer?.cancel();
+      debounce?.cancel();
       if (channel != null && client != null) {
         await client.removeChannel(channel);
       }

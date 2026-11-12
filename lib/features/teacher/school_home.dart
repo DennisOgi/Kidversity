@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/app_state.dart';
 import '../../models/school_models.dart';
+import '../../router/navigation.dart';
 import '../../services/school_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_colors.dart';
@@ -12,8 +14,9 @@ import '../../widgets/common.dart';
 import '../../widgets/dashboard_guide.dart';
 import '../../widgets/empty_panel.dart';
 import '../../widgets/error_boundary.dart';
-import '../../widgets/stat_grid.dart';
 import '../../widgets/surfaces.dart';
+import '../../widgets/kv_ui.dart';
+import '../../theme/role_style.dart';
 
 class SchoolHome extends ConsumerWidget {
   const SchoolHome({super.key});
@@ -71,55 +74,56 @@ class SchoolHome extends ConsumerWidget {
           children: [
             Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1080),
+                constraints: const BoxConstraints(maxWidth: 1200),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    PageIntro(
-                      eyebrow: overview.isAdmin ? 'School' : 'Your classes',
-                      title: overview.schoolName ?? 'School',
-                      body: overview.isAdmin
-                          ? 'Create a class, assign a teacher from people already on Kidversity, then let that teacher share a code with the class.'
-                          : 'Create your class, then share the code. Students open Me and join with it.',
-                    ),
-                    const SizedBox(height: 16),
-                    DashboardGuide.teacher(),
-                    if (overview.memberships.length > 1) ...[
-                      const SizedBox(height: 12),
-                      _SchoolSwitcher(overview: overview),
-                    ],
-                    const SizedBox(height: 18),
-                    _StatRow(overview: overview),
-                    if (overview.canManageClasses) ...[
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          FilledButton.icon(
-                            onPressed: () => _createClass(context, ref),
-                            icon: const Icon(Icons.add_rounded),
-                            label: const Text('New class'),
-                          ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: HeroBanner(
+                        colors: overview.isAdmin
+                            ? HeroColors.school
+                            : HeroColors.teacher,
+                        eyebrow: overview.isAdmin
+                            ? 'School admin'
+                            : 'Your classes',
+                        title: overview.schoolName ?? 'School',
+                        body: overview.isAdmin
+                            ? 'Create classes, give each one a teacher, and help every student into a class.'
+                            : 'Create your class, then share the code. Students open Me and join with it.',
+                        actions: [
+                          if (overview.canManageClasses)
+                            SunButton(
+                              label: 'New class',
+                              icon: Icons.add_rounded,
+                              onPressed: () => _createClass(context, ref),
+                            ),
                           if (overview.isAdmin)
-                            OutlinedButton.icon(
+                            HeroGhostButton(
+                              label: 'Invite teachers',
+                              icon: Icons.person_add_alt_1_rounded,
                               onPressed: () =>
-                                  _addTeacher(context, ref, overview.schoolId),
-                              icon: const Icon(Icons.person_add_alt_1_rounded),
-                              label: const Text('Add a teacher'),
+                                  context.go(AppRoutes.schoolTeachers),
                             ),
                         ],
                       ),
+                    ),
+                    if (overview.memberships.length > 1) ...[
+                      const SizedBox(height: 16),
+                      _SchoolSwitcher(overview: overview),
                     ],
                     if (overview.isAdmin) ...[
-                      const SizedBox(height: 28),
-                      const SectionHeader(
-                        title: 'People at this school',
-                        subtitle:
-                            'Accounts already on Kidversity. Pick from here when you add a teacher or create a class.',
-                      ),
-                      const SizedBox(height: 12),
-                      const _OnboardedPeopleList(),
+                      const SizedBox(height: 20),
+                      _SetupChecklist(overview: overview),
+                    ] else ...[
+                      const SizedBox(height: 16),
+                      DashboardGuide.teacher(),
+                    ],
+                    const SizedBox(height: 20),
+                    _StatRow(overview: overview),
+                    if (overview.isAdmin) ...[
+                      const SizedBox(height: 20),
+                      const _AdminShortcuts(),
                     ],
                     const SizedBox(height: 28),
                     const SectionHeader(
@@ -230,40 +234,6 @@ class SchoolHome extends ConsumerWidget {
     );
   }
 
-  Future<void> _addTeacher(
-    BuildContext context,
-    WidgetRef ref,
-    String? schoolId,
-  ) async {
-    final directory =
-        ref.read(schoolDirectoryProvider).asData?.value ??
-        SchoolDirectory.empty;
-    final candidates = directory.people
-        .where((person) => person.role != 'teacher' && person.role != 'admin')
-        .toList();
-    final email = await _pickPerson(
-      context,
-      title: 'Add a teacher',
-      people: candidates.isEmpty ? directory.people : candidates,
-      allowEmail: true,
-    );
-    if (email == null || email.isEmpty || !context.mounted) return;
-    final result = await SchoolService.instance.addTeacher(
-      email,
-      schoolId: schoolId,
-    );
-    if (!context.mounted) return;
-    if (result.isFailure) {
-      context.showErrorSnackbar(result.error ?? 'Could not add that teacher.');
-      return;
-    }
-    ref.invalidate(schoolOverviewProvider);
-    ref.invalidate(schoolDirectoryProvider);
-    context.showSuccessSnackbar(
-      '${result.data} is a teacher at this school. Assign them a class next.',
-    );
-  }
-
   Future<void> _assignTeacher(
     BuildContext context,
     WidgetRef ref,
@@ -272,34 +242,27 @@ class SchoolHome extends ConsumerWidget {
     final directory =
         ref.read(schoolDirectoryProvider).asData?.value ??
         SchoolDirectory.empty;
-    final unique = <String, SchoolPerson>{};
+    // Only staff can teach a class. New teachers are invited on Teachers.
+    final staff = <String, SchoolPerson>{};
     for (final person in [...directory.teachers, ...directory.people]) {
-      if (person.email.isNotEmpty && person.role != 'admin') {
-        unique[person.email] = person;
+      if (person.email.isNotEmpty &&
+          (person.role == 'teacher' || person.role == 'admin')) {
+        staff[person.email] = person;
       }
     }
-    final picked = await _pickPerson(
+    if (staff.isEmpty) {
+      context.showErrorSnackbar(
+        'No teachers at this school yet. Invite one on the Teachers page first.',
+      );
+      return;
+    }
+    final email = await _pickPerson(
       context,
       title: 'Assign a teacher',
-      people: unique.values.toList(),
-      allowEmail: true,
+      people: staff.values.toList(),
+      allowEmail: false,
     );
-    final email = picked;
     if (email == null || email.isEmpty || !context.mounted) return;
-    final chosen = unique[email.trim().toLowerCase()] ?? unique[email.trim()];
-    if (chosen == null || chosen.role != 'teacher') {
-      final promoted = await SchoolService.instance.addTeacher(
-        email,
-        schoolId: ref.read(schoolOverviewProvider).asData?.value.schoolId,
-      );
-      if (!context.mounted) return;
-      if (promoted.isFailure) {
-        context.showErrorSnackbar(
-          promoted.error ?? 'Could not make them a teacher.',
-        );
-        return;
-      }
-    }
     final result = await SchoolService.instance.assignTeacherToClass(
       classId: classId,
       email: email,
@@ -500,103 +463,191 @@ class _StatRow extends StatelessWidget {
     final classes = overview.classes;
     final withTeacher = classes.where((item) => item.hasTeacher).length;
     final seated = classes.fold<int>(0, (sum, item) => sum + item.memberCount);
-    return StatGrid(
-      tiles: [
-        StatTile.count(
-          label: 'Students',
-          count: overview.studentCount,
-          icon: Icons.school_rounded,
-          caption: '$seated seated in a class',
-        ),
-        StatTile.count(
-          label: 'Classes',
-          count: classes.length,
-          icon: Icons.groups_rounded,
-          color: AppColors.worldLanguage,
-          caption: classes.isEmpty ? 'Create the first one' : null,
-        ),
-        if (overview.isAdmin)
-          StatTile(
-            label: 'With a teacher',
-            value: '$withTeacher/${classes.length}',
-            icon: Icons.person_rounded,
-            color: AppColors.worldExams,
-            caption: withTeacher < classes.length
-                ? '${classes.length - withTeacher} need a teacher'
-                : 'All covered',
+    final teachers = {
+      for (final item in classes)
+        if (item.hasTeacher) item.teacherId,
+    }.length;
+    return SizedBox(
+      width: double.infinity,
+      child: AdaptiveGrid(
+        minTileWidth: 150,
+        children: [
+          MetricTile(
+            tint: AppTint.violet,
+            icon: Icons.school_rounded,
+            label: 'Students',
+            value: '${overview.studentCount}',
+            caption: '$seated seated in a class',
           ),
-      ],
-      maxColumns: 3,
+          MetricTile(
+            tint: AppTint.mint,
+            icon: Icons.groups_rounded,
+            label: 'Classes',
+            value: '${classes.length}',
+            caption: classes.isEmpty ? 'Create the first one' : 'This school',
+          ),
+          if (overview.isAdmin) ...[
+            MetricTile(
+              tint: withTeacher < classes.length
+                  ? StatusChip.alert
+                  : AppTint.sky,
+              icon: Icons.person_rounded,
+              label: 'With a teacher',
+              value: '$withTeacher / ${classes.length}',
+              caption: withTeacher < classes.length
+                  ? '${classes.length - withTeacher} need a teacher'
+                  : 'All covered',
+            ),
+            MetricTile(
+              tint: AppTint.sun,
+              icon: Icons.co_present_rounded,
+              label: 'Teachers with a class',
+              value: '$teachers',
+              caption: 'Assigned to at least one',
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
 
-class _OnboardedPeopleList extends ConsumerWidget {
-  const _OnboardedPeopleList();
+/// Setup steps a school admin works through. Hidden once all are done.
+class _SetupChecklist extends ConsumerWidget {
+  final SchoolOverview overview;
+
+  const _SetupChecklist({required this.overview});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final directory = ref.watch(schoolDirectoryProvider);
-    final text = Theme.of(context).textTheme;
-    return directory.when(
-      loading: () => const LinearProgressIndicator(minHeight: 3),
-      error: (_, _) => const SizedBox.shrink(),
-      data: (value) {
-        final people = value.people.isEmpty
-            ? [...value.teachers, ...value.students]
-            : value.people;
-        if (people.isEmpty) {
-          return const EmptyPanel(
-            icon: Icons.person_outline_rounded,
-            title: 'No accounts yet',
-            body:
-                'When someone from the school signs in, they appear here. Pick them when you add a teacher.',
-          );
-        }
-        return GlassCard(
-          child: Column(
-            children: [
-              for (final person in people.take(40))
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(person.displayName, style: text.titleMedium),
-                            Text(person.email, style: text.bodyMedium),
-                          ],
+    final classes = overview.classes;
+    final directory = ref.watch(schoolDirectoryProvider).asData?.value;
+    final teachers = directory?.teachers.length ?? 0;
+    final unplaced =
+        directory?.students.where((s) => s.classIds.isEmpty).length ?? 0;
+    final steps = [
+      (
+        'Invite teachers',
+        teachers == 0
+            ? 'Share the staff code'
+            : '$teachers teacher${teachers == 1 ? '' : 's'} joined',
+        teachers > 0,
+        AppRoutes.schoolTeachers,
+      ),
+      (
+        'Create classes',
+        classes.isEmpty
+            ? 'Tap New class above'
+            : '${classes.length} class${classes.length == 1 ? '' : 'es'}',
+        classes.isNotEmpty,
+        null,
+      ),
+      (
+        'Give every class a teacher',
+        classes.isEmpty
+            ? 'After the first class'
+            : '${classes.where((c) => !c.hasTeacher).length} without one',
+        classes.isNotEmpty && classes.every((c) => c.hasTeacher),
+        null,
+      ),
+      (
+        'Every student in a class',
+        directory == null
+            ? 'Checking…'
+            : unplaced == 0
+            ? 'All ${overview.studentCount} placed'
+            : '$unplaced not in a class',
+        directory != null && overview.studentCount > 0 && unplaced == 0,
+        AppRoutes.schoolStudents,
+      ),
+    ];
+    final done = steps.where((s) => s.$3).length;
+    if (done == steps.length) return const SizedBox.shrink();
+
+    return SizedBox(
+      width: double.infinity,
+      child: KvCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            KvSectionTitle(
+              title: 'Finish setting up',
+              subtitle:
+                  '$done of ${steps.length} done. This card goes away when every step is done.',
+            ),
+            KvBar(value: done / steps.length, tint: AppTint.mint, height: 10),
+            const SizedBox(height: 16),
+            AdaptiveGrid(
+              minTileWidth: 210,
+              maxColumns: 4,
+              gap: 12,
+              children: [
+                for (var i = 0; i < steps.length; i++)
+                  KvCard(
+                    tint: steps[i].$3 ? AppTint.mint : AppTint.sun,
+                    padding: const EdgeInsets.all(14),
+                    onTap: steps[i].$3 || steps[i].$4 == null
+                        ? null
+                        : () => context.go(steps[i].$4!),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 30,
+                          height: 30,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: steps[i].$3
+                                ? AppTint.mint.ink
+                                : AppColors.surface,
+                            shape: BoxShape.circle,
+                            border: steps[i].$3
+                                ? null
+                                : Border.all(color: AppTint.sun.ink, width: 2),
+                          ),
+                          child: steps[i].$3
+                              ? const Icon(
+                                  Icons.check_rounded,
+                                  color: Colors.white,
+                                  size: 18,
+                                  semanticLabel: 'Done',
+                                )
+                              : Text(
+                                  '${i + 1}',
+                                  style: TextStyle(
+                                    color: AppTint.sun.ink,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                         ),
-                      ),
-                      Text(
-                        person.role == 'admin'
-                            ? 'Admin'
-                            : person.role == 'teacher'
-                            ? (person.classIds.isEmpty
-                                  ? 'Teacher · no class'
-                                  : 'Teacher')
-                            : (person.classIds.isEmpty
-                                  ? 'Student · no class'
-                                  : 'Student'),
-                        style: text.bodyMedium,
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                steps[i].$1,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                steps[i].$2,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.inkSoft,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              if (people.length > 40)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    '${people.length - 40} more people. Search when you add a teacher.',
-                    style: text.bodyMedium,
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1243,6 +1294,85 @@ class _SoloClassCard extends ConsumerWidget {
                   icon: const Icon(Icons.refresh_rounded),
                 ),
               ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Big tappable cards to the admin pages.
+class _AdminShortcuts extends ConsumerWidget {
+  const _AdminShortcuts();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final directory = ref.watch(schoolDirectoryProvider).asData?.value;
+    final teachers = directory?.teachers.length;
+    final unplaced = directory?.students
+        .where((s) => s.classIds.isEmpty)
+        .length;
+    final items = [
+      (
+        AppTint.sky,
+        Icons.co_present_rounded,
+        'Teachers',
+        teachers == null ? 'Invite and manage staff' : '$teachers on staff',
+        AppRoutes.schoolTeachers,
+      ),
+      (
+        AppTint.violet,
+        Icons.school_rounded,
+        'Students',
+        unplaced == null || unplaced == 0
+            ? 'Find and place students'
+            : '$unplaced need a class',
+        AppRoutes.schoolStudents,
+      ),
+      (
+        AppTint.sun,
+        Icons.settings_rounded,
+        'Settings',
+        'School name and staff code',
+        AppRoutes.schoolSettings,
+      ),
+    ];
+    return SizedBox(
+      width: double.infinity,
+      child: AdaptiveGrid(
+        minTileWidth: 200,
+        maxColumns: 3,
+        children: [
+          for (final item in items)
+            KvCard(
+              tint: item.$1,
+              onTap: () => context.go(item.$5),
+              semanticLabel: 'Open ${item.$3}. ${item.$4}',
+              child: Row(
+                children: [
+                  TintIcon(tint: item.$1, icon: item.$2),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.$3,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          item.$4,
+                          style: TextStyle(fontSize: 13, color: item.$1.ink),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_rounded, color: item.$1.ink),
+                ],
+              ),
             ),
         ],
       ),

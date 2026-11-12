@@ -30,6 +30,12 @@ abstract final class AppRoutes {
   static const studentRewards = '/student/rewards';
   static const studentExplore = '/student/explore';
   static const teacherHome = '/teacher/class';
+  static const teacherDashboard = '/teacher/home';
+  static const schoolHome = '/school';
+  static const schoolTeachers = '/school/teachers';
+  static const schoolStudents = '/school/students';
+  static const schoolSettings = '/school/settings';
+  static String joinStaff(String code) => '/join/staff/$code';
   static const teacherProgress = '/teacher/progress';
   static const teacherCreate = '/teacher/create';
   static const teacherLive = '/teacher/live';
@@ -62,9 +68,17 @@ abstract final class AppRoutes {
       '/teacher/live/$testId/monitor';
 }
 
+/// The staff code in a `/join/staff/CODE` path, if [path] is one.
+String? staffCodeFromPath(String? path) {
+  if (path == null) return null;
+  final match = RegExp(r'^/join/staff/([A-Za-z0-9-]{4,12})').firstMatch(path);
+  return match?.group(1)?.toUpperCase();
+}
+
 bool isProtectedRoute(String path) =>
     path.startsWith('/student') ||
     path.startsWith('/teacher') ||
+    path.startsWith('/school') ||
     path.startsWith('/parent') ||
     path.startsWith('/reviewer') ||
     path.startsWith('/admin');
@@ -77,7 +91,10 @@ String onboardingWithRedirect(String destination) =>
 
 UserRole? roleFromPath(String? path) {
   if (path == null) return null;
-  if (path.startsWith('/teacher')) return UserRole.teacher;
+  // School admins are teacher accounts with an admin school membership.
+  if (path.startsWith('/teacher') || path.startsWith('/school')) {
+    return UserRole.teacher;
+  }
   if (path.startsWith('/student')) return UserRole.student;
   if (path.startsWith('/parent')) return UserRole.parent;
   if (path.startsWith('/reviewer')) return UserRole.reviewer;
@@ -88,7 +105,7 @@ UserRole? roleFromPath(String? path) {
 /// Where each role lands after sign-in.
 String homeForRole(UserRole? role) => switch (role) {
   UserRole.student => AppRoutes.studentPath,
-  UserRole.teacher => AppRoutes.teacherHome,
+  UserRole.teacher => AppRoutes.teacherDashboard,
   UserRole.parent => AppRoutes.parentHome,
   UserRole.reviewer => AppRoutes.reviewerHome,
   UserRole.platformAdmin => AppRoutes.adminHome,
@@ -100,7 +117,7 @@ void enterStudentSpace(BuildContext context, WidgetRef ref) =>
     enterRoleSpace(context, ref, UserRole.student, AppRoutes.studentPath);
 
 void enterTeacherSpace(BuildContext context, WidgetRef ref) =>
-    enterRoleSpace(context, ref, UserRole.teacher, AppRoutes.teacherHome);
+    enterRoleSpace(context, ref, UserRole.teacher, AppRoutes.teacherDashboard);
 
 void enterParentSpace(BuildContext context, WidgetRef ref) =>
     enterRoleSpace(context, ref, UserRole.parent, AppRoutes.parentHome);

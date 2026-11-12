@@ -1,8 +1,10 @@
+import os
+WORK = os.environ.get('ROPE_PULL_WORK', 'rp_work')  # scratch folder for renders
 import json, math, sys
 from PIL import Image, ImageDraw
-kids=json.load(open('/root/rp/out/kids.json')); court=json.load(open('/root/rp/scn/court.json'))
-BG=Image.open('/root/rp/scn/court.png').convert('RGBA')
-sheets={k:Image.open(f'/root/rp/out/{k}.png').convert('RGBA') for k in kids['kids']}
+kids=json.load(open(f'{WORK}/out/kids.json')); court=json.load(open(f'{WORK}/scn/court.json'))
+BG=Image.open(f'{WORK}/scn/court.png').convert('RGBA')
+sheets={k:Image.open(f'{WORK}/out/{k}.png').convert('RGBA') for k in kids['kids']}
 CELL=kids['cell']; COLS=kids['cols']; PPM_C=CELL/1.9
 WMIN,HMIN=5.6,3.4; VC=0.9
 VBOT=(court['ground'][1]-court['height'])/court['px_per_m']*-1  # bottom v (negative)

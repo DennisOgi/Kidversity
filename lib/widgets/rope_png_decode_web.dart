@@ -40,7 +40,7 @@ extension type _Canvas._(JSObject _) implements JSObject {
 }
 
 extension type _Context._(JSObject _) implements JSObject {
-  external void drawImage(_DomImage image, num x, num y);
+  external void drawImage(_DomImage image, num x, num y, num w, num h);
   external _ImageData getImageData(int x, int y, int width, int height);
 }
 
@@ -50,7 +50,7 @@ extension type _ImageData._(JSObject _) implements JSObject {
 
 /// Browser decode. CanvasKit's PNG codec throws EncodingError on these files,
 /// while an HTML image loads them.
-Future<ui.Image> decodeRopePng(Uint8List bytes) async {
+Future<ui.Image> decodeRopePng(Uint8List bytes, {int? targetWidth}) async {
   final blob = _Blob([bytes.toJS].toJS, _BlobOptions(type: 'image/png'));
   final url = _createObjectUrl(blob);
   try {
@@ -66,19 +66,32 @@ Future<ui.Image> decodeRopePng(Uint8List bytes) async {
     }).toJS;
     image.src = url;
     await loaded.future;
-    final width = image.naturalWidth;
-    final height = image.naturalHeight;
-    if (width == 0 || height == 0) {
+    final naturalWidth = image.naturalWidth;
+    final naturalHeight = image.naturalHeight;
+    if (naturalWidth == 0 || naturalHeight == 0) {
       throw StateError('browser image decode failed');
     }
+    // Scaling here, before the pixels are copied, keeps both the canvas and
+    // the copy small on phones.
+    final width = targetWidth == null || targetWidth >= naturalWidth
+        ? naturalWidth
+        : targetWidth;
+    final height = (naturalHeight * width / naturalWidth).round();
     final canvas = _Canvas._(_createElement('canvas'));
     canvas.width = width;
     canvas.height = height;
     final context = canvas.getContext('2d');
-    context.drawImage(image, 0, 0);
-    final pixels = Uint8List.fromList(
-      context.getImageData(0, 0, width, height).data.toDart,
-    );
+    context.drawImage(image, 0, 0, width, height);
+    // getImageData already returns a fresh buffer; view it instead of copying.
+    final pixels = context
+        .getImageData(0, 0, width, height)
+        .data
+        .toDart
+        .buffer
+        .asUint8List();
+    // Free the canvas backing store now rather than at the next GC.
+    canvas.width = 0;
+    canvas.height = 0;
     final completer = Completer<ui.Image>();
     ui.decodeImageFromPixels(
       pixels,

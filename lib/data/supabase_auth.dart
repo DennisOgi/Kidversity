@@ -431,6 +431,7 @@ class SupabaseAuthController extends ChangeNotifier {
     required String emoji,
     UserRole? selectedRole,
     String? className,
+    bool createSoloClass = true,
     bool notify = true,
   }) async {
     displayName = name;
@@ -463,7 +464,7 @@ class SupabaseAuthController extends ChangeNotifier {
       'updated_at': DateTime.now().toIso8601String(),
     });
 
-    if (selectedRole == UserRole.teacher) {
+    if (selectedRole == UserRole.teacher && createSoloClass) {
       final school = await SupabaseService.instance.client
           .from('school_members')
           .select('school_id')

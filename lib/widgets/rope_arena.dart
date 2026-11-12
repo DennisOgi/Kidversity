@@ -3,6 +3,7 @@
 // its projected hand and foot points, so the rope always runs through the
 // fists. The camera adapts to the box: phones get a tighter, taller view,
 // classroom screens a wide one, and nothing is ever stretched.
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -221,6 +222,7 @@ class _SceneArt {
     required this.kids,
     required this.cell,
     required this.columns,
+    this.sheetScale = 1,
     this.dust,
   });
 
@@ -229,6 +231,10 @@ class _SceneArt {
   final Map<String, _KidSheet> kids;
   final double cell;
   final int columns;
+
+  /// Decoded sheet pixels per authored pixel. Below 1 on phones, where the
+  /// full 448 px cells would never be shown at that size.
+  final double sheetScale;
   final ui.Image? dust;
 
   /// Sprite pixels per metre (cells cover 1.9 m).
@@ -241,6 +247,72 @@ class _SceneArt {
     }
     dust?.dispose();
   }
+}
+
+/// Authored sprite cell size; kids.json can override it.
+const _authoredCell = 448.0;
+
+/// Decode scale for the sprite sheets: just enough pixels for this screen.
+/// A kid cell covers 1.9 m and every view is at least [_minViewWidth] wide,
+/// so a phone never shows a cell near its full 448 px. Steps of a quarter
+/// keep the cache to a few sizes.
+double ropeSheetScaleFor(double logicalWidth, double devicePixelRatio) {
+  final devicePx = logicalWidth * devicePixelRatio;
+  final cellOnScreen = devicePx / _minViewWidth * 1.9;
+  final needed = cellOnScreen / _authoredCell;
+  return ((needed * 4).round().clamp(2, 4)) / 4;
+}
+
+/// Decoded arena art shared by every arena on screen (lobby, play, finish
+/// and the class board), so a match decodes the sheets once. Art is freed a
+/// little after the last arena closes, so moving between screens is instant.
+class _ArtCache {
+  static final _entries = <String, _ArtEntry>{};
+  static const _linger = Duration(seconds: 30);
+
+  static Future<_SceneArt> acquire(
+    String root,
+    double scale,
+    Future<_SceneArt> Function() load,
+  ) {
+    final key = '$root@$scale';
+    final entry = _entries.putIfAbsent(key, () {
+      final created = _ArtEntry(load());
+      // A failed load must not stick: the next arena tries again.
+      created.art.then(
+        (_) {},
+        onError: (Object _) {
+          if (identical(_entries[key], created)) _entries.remove(key);
+        },
+      );
+      return created;
+    });
+    entry.refs++;
+    entry.release?.cancel();
+    entry.release = null;
+    return entry.art;
+  }
+
+  static void release(String root, double scale) {
+    final key = '$root@$scale';
+    final entry = _entries[key];
+    if (entry == null) return;
+    entry.refs--;
+    if (entry.refs > 0) return;
+    entry.release?.cancel();
+    entry.release = Timer(_linger, () {
+      if (!identical(_entries[key], entry) || entry.refs > 0) return;
+      _entries.remove(key);
+      entry.art.then((art) => art.dispose(), onError: (_) {});
+    });
+  }
+}
+
+class _ArtEntry {
+  _ArtEntry(this.art);
+  final Future<_SceneArt> art;
+  int refs = 0;
+  Timer? release;
 }
 
 /// Arena aspect for a given width when the parent leaves height open.
@@ -286,7 +358,14 @@ class _RopeArenaState extends State<RopeArena>
       }
     });
     widget.controller.summary.addListener(_syncTicker);
-    _loadAssets();
+  }
+
+  /// The cache key this arena holds, released on dispose or reload.
+  (String, double)? _held;
+
+  double _scaleForScreen() {
+    final media = MediaQuery.of(context);
+    return ropeSheetScaleFor(media.size.width, media.devicePixelRatio);
   }
 
   @override
@@ -295,6 +374,10 @@ class _RopeArenaState extends State<RopeArena>
     widget.controller.setReducedMotion(
       MediaQuery.of(context).disableAnimations,
     );
+    // First load, or the screen grew enough to need sharper sheets.
+    final scale = _scaleForScreen();
+    final held = _held;
+    if (held == null || scale > held.$2) _loadAssets();
     _syncTicker();
   }
 
@@ -339,63 +422,102 @@ class _RopeArenaState extends State<RopeArena>
     }
   }
 
-  Future<ui.Image> _image(String path) async {
-    final data = await rootBundle.load('${widget.assetRoot}/$path');
+  static Future<ui.Image> _image(
+    String root,
+    String path, {
+    int? targetWidth,
+  }) async {
+    final data = await rootBundle.load('$root/$path');
     return decodeRopePng(
       data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      targetWidth: targetWidth,
     );
   }
 
-  Future<void> _loadAssets() async {
-    final generation = ++_generation;
+  /// Decodes the court, the four kid sheets and the dust strip at [scale].
+  static Future<_SceneArt> _decodeArt(String root, double scale) async {
     final loaded = <ui.Image>[];
-    if (mounted) setState(() => _error = null);
     try {
       final manifest =
-          jsonDecode(
-                await rootBundle.loadString(
-                  '${widget.assetRoot}/scene/kids.json',
-                ),
-              )
+          jsonDecode(await rootBundle.loadString('$root/scene/kids.json'))
               as Map<String, dynamic>;
-      final court = await _image('scene/court.jpg');
+      final cell = (manifest['cell'] as num?)?.toDouble() ?? _authoredCell;
+      final columns = (manifest['cols'] as num).toInt();
+      final court = await _image(
+        root,
+        'scene/court.jpg',
+        targetWidth: scale < 1 ? (_Court.width * scale).round() : null,
+      );
       loaded.add(court);
       final sheets = <String, ui.Image>{};
       final kids = <String, _KidSheet>{};
       final kidJson = manifest['kids'] as Map<String, dynamic>;
       for (final id in _kidIds) {
-        final sheet = await _image('scene/$id.png');
+        final sheet = await _image(
+          root,
+          'scene/$id.png',
+          targetWidth: scale < 1 ? (cell * columns * scale).round() : null,
+        );
         loaded.add(sheet);
         sheets[id] = sheet;
         kids[id] = _KidSheet.fromJson(kidJson[id] as Map<String, dynamic>);
       }
       ui.Image? dust;
       try {
-        dust = await _image('ui/dust-sheet.png');
+        dust = await _image(root, 'ui/dust-sheet.png');
         loaded.add(dust);
       } catch (_) {
         // Dust is decoration; the arena works without it.
       }
-      final art = _SceneArt(
+      final first = sheets.values.first;
+      return _SceneArt(
         court: court,
         sheets: sheets,
         kids: kids,
-        cell: (manifest['cell'] as num).toDouble(),
-        columns: (manifest['cols'] as num).toInt(),
+        cell: cell,
+        columns: columns,
+        // The real ratio, in case the decoder rounded the width.
+        sheetScale: first.width / (cell * columns),
         dust: dust,
       );
-      if (!mounted || generation != _generation) {
-        art.dispose();
-        return;
-      }
-      final previous = _art;
-      setState(() => _art = art);
-      previous?.dispose();
-      _syncTicker();
-    } catch (error) {
+    } catch (_) {
       for (final image in loaded) {
         image.dispose();
       }
+      rethrow;
+    }
+  }
+
+  void _releaseHeld() {
+    final held = _held;
+    if (held == null) return;
+    _held = null;
+    _ArtCache.release(held.$1, held.$2);
+  }
+
+  Future<void> _loadAssets() async {
+    final generation = ++_generation;
+    if (mounted) setState(() => _error = null);
+    final root = widget.assetRoot;
+    final scale = _scaleForScreen();
+    try {
+      final art = await _ArtCache.acquire(
+        root,
+        scale,
+        () => _decodeArt(root, scale),
+      );
+      if (!mounted || generation != _generation) {
+        _ArtCache.release(root, scale);
+        return;
+      }
+      // Hold the new art before letting go of the old one.
+      final previous = _held;
+      _held = (root, scale);
+      setState(() => _art = art);
+      if (previous != null) _ArtCache.release(previous.$1, previous.$2);
+      _syncTicker();
+    } catch (error) {
+      _ArtCache.release(root, scale);
       debugPrint('RopeArena assets: $error');
       if (mounted && generation == _generation) {
         final missing = error.toString().contains('Unable to load asset');
@@ -414,7 +536,9 @@ class _RopeArenaState extends State<RopeArena>
     WidgetsBinding.instance.removeObserver(this);
     widget.controller.summary.removeListener(_syncTicker);
     _ticker.dispose();
-    _art?.dispose();
+    // The art is shared; give it back to the cache instead of disposing it.
+    _releaseHeld();
+    _art = null;
     super.dispose();
   }
 
@@ -625,7 +749,12 @@ class _ArenaPainter extends CustomPainter {
     final s = _k / _Court.pxPerM;
     c.drawImageRect(
       art.court,
-      const Rect.fromLTWH(0, 0, _Court.width, _Court.height),
+      Rect.fromLTWH(
+        0,
+        0,
+        art.court.width.toDouble(),
+        art.court.height.toDouble(),
+      ),
       Rect.fromLTWH(
         origin.dx - _Court.groundX * s,
         origin.dy - _Court.groundY * s,
@@ -740,12 +869,10 @@ class _ArenaPainter extends CustomPainter {
 
     final col = index % art.columns;
     final row = index ~/ art.columns;
-    final src = Rect.fromLTWH(
-      col * art.cell,
-      row * art.cell,
-      art.cell,
-      art.cell,
-    );
+    // Sheets may be decoded smaller than authored; cut cells at that size and
+    // draw them into the authored cell so anchors and grips still line up.
+    final cs = art.cell * art.sheetScale;
+    final src = Rect.fromLTWH(col * cs, row * cs, cs, cs);
     c.save();
     c.translate(root.dx, root.dy);
     c.scale(dir * s, s);

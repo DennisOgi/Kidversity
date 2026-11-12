@@ -174,6 +174,19 @@ final schoolDirectoryProvider = FutureProvider.autoDispose<SchoolDirectory>((
   return result.data ?? SchoolDirectory.empty;
 });
 
+/// Staff code, staff and open invites. Only school admins can load it.
+final schoolAdminProvider = FutureProvider.autoDispose<SchoolAdminInfo>((
+  ref,
+) async {
+  ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
+  final schoolId = ref.watch(selectedSchoolIdProvider);
+  final result = await SchoolService.instance.fetchAdmin(schoolId: schoolId);
+  if (result.isFailure) {
+    throw StateError(result.error ?? 'The school could not be loaded.');
+  }
+  return result.data!;
+});
+
 final schoolOverviewProvider = FutureProvider.autoDispose<SchoolOverview>((
   ref,
 ) async {

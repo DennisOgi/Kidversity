@@ -1,3 +1,5 @@
+import os
+WORK = os.environ.get('ROPE_PULL_WORK', 'rp_work')  # scratch folder for renders
 """Python port of lib/widgets/rope_arena.dart's painter, used to preview the
 arena as animated GIFs at phone / tablet / classroom sizes."""
 import json
@@ -6,10 +8,10 @@ import sys
 
 from PIL import Image, ImageDraw, ImageFilter
 
-ROOT = sys.argv[1] if len(sys.argv) > 1 else '/root/rp/out'
+ROOT = sys.argv[1] if len(sys.argv) > 1 else f'{WORK}/out'
 kids = json.load(open(f'{ROOT}/kids.json'))
 COURT = dict(width=2881.0, height=1783.0, ppm=342.976, gx=1440.5, gy=1298.0)
-BG = Image.open('/root/rp/scn/court.png').convert('RGBA')
+BG = Image.open(f'{WORK}/scn/court.png').convert('RGBA')
 SHEETS = {k: Image.open(f'{ROOT}/{k}.png').convert('RGBA') for k in kids['kids']}
 CELL = kids['cell']
 COLS = kids['cols']

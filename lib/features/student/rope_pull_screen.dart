@@ -13,7 +13,6 @@ import '../../models/past_questions_models.dart';
 import '../../models/rope_pull_models.dart';
 import '../../router/navigation.dart';
 import '../../services/mandarin_audio_service.dart';
-import '../../services/rope_pull_questions.dart';
 import '../../services/sdash_api_service.dart';
 import 'past_questions_hub_screen.dart';
 import '../../services/rope_pull_cue_service.dart';
@@ -27,7 +26,6 @@ import '../../widgets/rope_arena.dart';
 import '../../widgets/rope_pull_arena.dart';
 import '../../widgets/rope_pull_stage.dart';
 import '../../widgets/rope_pull_visual_adapter.dart';
-import 'maths_bank.dart';
 import 'project_board.dart';
 
 final ropePullRoomProvider = StreamProvider.autoDispose
@@ -101,35 +99,36 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
       await _createMathsMatch(challengedUserId: challengedUserId);
       return;
     }
-    final course = ref.read(mandarinCourseProvider).whenOrNull(data: (c) => c);
-    final completed =
-        ref
-            .read(foundationCompletedLessonIdsProvider)
-            .whenOrNull(data: (ids) => ids) ??
-        const <String>{};
-    if (course == null) {
-      context.showErrorSnackbar('Load the path first, then try again.');
-      return;
-    }
-    final words = vocabForRopeBank(
-      course: course,
+    // The server picks the words, so nothing here knows the answers.
+    await _startMatch(
       bank: _bank,
-      completedLessonIds: completed,
-    );
-    final questions = buildRopePullQuestions(words);
-    if (questions.length < 4) {
-      context.showErrorSnackbar('Need a few more unlocked words first.');
-      return;
-    }
-    setState(() => _busy = true);
-    final auth = ref.read(authControllerProvider);
-    final result = await _openRoom(
-      bank: _bank,
-      questions: questions,
-      displayName: auth.displayName.isEmpty ? 'Host' : auth.displayName,
-      avatar: auth.avatarEmoji.isEmpty ? '🦊' : auth.avatarEmoji,
+      deck: const RopePullDeckOptions(count: 10),
       challengedUserId: challengedUserId,
     );
+  }
+
+  /// Opens a match with a server-built deck and goes to it.
+  Future<void> _startMatch({
+    required RopePullBank bank,
+    required RopePullDeckOptions deck,
+    String? challengedUserId,
+    Future<void> Function()? warmUp,
+  }) async {
+    setState(() => _busy = true);
+    var result = await _openRoom(
+      bank: bank,
+      deck: deck,
+      challengedUserId: challengedUserId,
+    );
+    // Too few stored questions for this paper: fill the bank once, retry.
+    if (result.error == 'NOT_ENOUGH_QUESTIONS' && warmUp != null) {
+      await warmUp();
+      result = await _openRoom(
+        bank: bank,
+        deck: deck,
+        challengedUserId: challengedUserId,
+      );
+    }
     if (!mounted) return;
     setState(() => _busy = false);
     if (result.isFailure || result.data == null) {
@@ -201,92 +200,49 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
     );
   }
 
-  Future<void> _createMathsMatch({String? challengedUserId}) async {
-    setState(() => _busy = true);
-    final questions = buildMathsRopeDeck(count: _deckLimit);
-    debugPrint('[Kidversity] Rope Pull maths deck ${questions.length}');
-    if (questions.length < 4) {
-      setState(() => _busy = false);
-      context.showErrorSnackbar('Could not build a maths match.');
-      return;
-    }
-    final auth = ref.read(authControllerProvider);
-    final result = await _openRoom(
-      bank: RopePullBank.maths,
-      questions: questions,
-      displayName: auth.displayName.isEmpty ? 'Host' : auth.displayName,
-      avatar: auth.avatarEmoji.isEmpty ? '🦊' : auth.avatarEmoji,
-      challengedUserId: challengedUserId,
-    );
-    if (!mounted) return;
-    setState(() => _busy = false);
-    if (result.isFailure || result.data == null) {
-      context.showErrorSnackbar(_roomError(result.error));
-      return;
-    }
-    ref.invalidate(ropePullSchoolPlayProvider);
-    final id = result.data!.room.id;
-    context.go(
-      widget.boardByDefault
-          ? AppRoutes.teacherRope(id)
-          : AppRoutes.studentRope(id),
-    );
-  }
+  Future<void> _createMathsMatch({String? challengedUserId}) => _startMatch(
+    bank: RopePullBank.maths,
+    deck: RopePullDeckOptions(count: _deckLimit),
+    challengedUserId: challengedUserId,
+  );
 
   Future<app_errors.Result<RopePullSnapshot>> _openRoom({
     required RopePullBank bank,
-    required List<RopePullQuestion> questions,
-    required String displayName,
-    required String avatar,
+    required RopePullDeckOptions deck,
     String? challengedUserId,
-  }) async {
+  }) {
+    final auth = ref.read(authControllerProvider);
+    final displayName = auth.displayName.isEmpty
+        ? (_quick ? 'Learner' : 'Host')
+        : auth.displayName;
+    final avatar = auth.avatarEmoji.isEmpty ? '🦊' : auth.avatarEmoji;
     if (_quick) {
       return RopePullService.instance.quickMatch(
         bank: bank,
-        questions: questions,
+        deck: deck,
         displayName: displayName,
         avatar: avatar,
       );
     }
-    var useBank = bank;
-    var deck = questions;
-    app_errors.Result<RopePullSnapshot>? result;
-    for (var attempt = 0; attempt < 3; attempt++) {
-      result = await RopePullService.instance.createRoom(
-        bank: useBank,
-        questions: deck,
-        hostPlays: widget.hostPlays,
-        displayName: displayName,
-        avatar: avatar,
-        challengedUserId: challengedUserId,
-        classId: _classId,
-      );
-      final error = result.error ?? '';
-      if (result.isSuccess) return result;
-      // A rejection means the class-board migration is missing. That server
-      // grades every answer against one shared question per round.
-      if (error == 'INVALID_BANK' && useBank != RopePullBank.lessons15) {
-        debugPrint('[Kidversity] Rope Pull bank ${useBank.wire} rejected');
-        useBank = RopePullBank.lessons15;
-        deck = sharedRopeDeck(deck);
-        continue;
-      }
-      if (error == 'INVALID_QUESTIONS' &&
-          (deck.length > 10 || deck.first.split)) {
-        debugPrint(
-          '[Kidversity] Rope Pull deck ${deck.length} rejected; sharing 10',
-        );
-        deck = sharedRopeDeck(deck);
-        continue;
-      }
-      return result;
-    }
-    return result!;
+    return RopePullService.instance.createRoom(
+      bank: bank,
+      deck: deck,
+      hostPlays: widget.hostPlays,
+      displayName: displayName,
+      avatar: avatar,
+      challengedUserId: challengedUserId,
+      classId: _classId,
+    );
   }
 
   String _roomError(String? error) {
+    if (error == 'NOT_ENOUGH_QUESTIONS') {
+      return _examMatch
+          ? 'This paper does not have enough questions for a match yet. Try another subject or year.'
+          : 'Finish a few more lessons to unlock words for a match.';
+    }
     if (error == 'INVALID_BANK' || error == 'INVALID_QUESTIONS') {
-      return 'This match could not be opened. Try a shorter paper.';
+      return 'This match could not be opened. Try again in a moment.';
     }
     return error ?? 'Could not open a room.';
   }
@@ -333,53 +289,27 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
       context.showErrorSnackbar('Pick an exam and a subject first.');
       return;
     }
-    setState(() => _busy = true);
-    final fetched = await SdashApiService.instance.fetchQuestions(
-      examSlug: exam.slug,
-      subjectSlug: subject.slug,
-      limit: 10,
-      university: exam.isUniversityFamily ? _university.text : null,
-    );
-    if (!mounted) return;
-    if (fetched.isFailure || fetched.data == null) {
-      setState(() => _busy = false);
-      context.showErrorSnackbar(fetched.error ?? 'Could not load questions.');
-      return;
-    }
-    final questions = buildPastQuestionRopeDeck(
-      fetched.data!,
-      limit: _deckLimit,
-    );
-    debugPrint(
-      '[Kidversity] Rope Pull exam deck ${questions.length} from ${fetched.data!.length} ${exam.slug}/${subject.slug}',
-    );
-    if (questions.length < 4) {
-      setState(() => _busy = false);
-      context.showErrorSnackbar(
-        'This paper is too short for a match. Try another subject.',
-      );
-      return;
-    }
-    final auth = ref.read(authControllerProvider);
-    final result = await _openRoom(
+    final university = exam.isUniversityFamily ? _university.text : null;
+    // The server draws from the stored question bank. Only when a paper has
+    // never been stored does this device fetch it once to fill the bank, the
+    // same way practice does.
+    await _startMatch(
       bank: RopePullBank.pastQuestions,
-      questions: questions,
-      displayName: auth.displayName.isEmpty ? 'Host' : auth.displayName,
-      avatar: auth.avatarEmoji.isEmpty ? '🦊' : auth.avatarEmoji,
+      deck: RopePullDeckOptions(
+        count: _deckLimit,
+        exam: exam.slug,
+        subject: subject.slug,
+        university: university,
+      ),
       challengedUserId: challengedUserId,
-    );
-    if (!mounted) return;
-    setState(() => _busy = false);
-    if (result.isFailure || result.data == null) {
-      context.showErrorSnackbar(_roomError(result.error));
-      return;
-    }
-    ref.invalidate(ropePullSchoolPlayProvider);
-    final id = result.data!.room.id;
-    context.go(
-      widget.boardByDefault
-          ? AppRoutes.teacherRope(id)
-          : AppRoutes.studentRope(id),
+      warmUp: () async {
+        await SdashApiService.instance.fetchQuestions(
+          examSlug: exam.slug,
+          subjectSlug: subject.slug,
+          limit: math.max(_deckLimit, 10),
+          university: university,
+        );
+      },
     );
   }
 
@@ -1007,8 +937,23 @@ class _RopePullRoomScreenState extends ConsumerState<RopePullRoomScreen> {
     );
     _tick = Timer.periodic(const Duration(milliseconds: 200), (_) {
       if (!mounted) return;
-      setState(() => _now = DateTime.now().toUtc());
+      setState(() => _now = _serverClock());
     });
+  }
+
+  /// How far the database clock is ahead of this device. Learned from each
+  /// snapshot so round timers match the server even on a phone with the wrong
+  /// time.
+  Duration _clockOffset = Duration.zero;
+
+  DateTime _serverClock() => DateTime.now().toUtc().add(_clockOffset);
+
+  void _learnClock(RopePullSnapshot snap) {
+    final server = snap.serverNow;
+    if (server == null) return;
+    final offset = server.difference(DateTime.now().toUtc());
+    // Ignore wild values from a slow response; keep the newest sane one.
+    if (offset.abs() < const Duration(hours: 12)) _clockOffset = offset;
   }
 
   @override
@@ -1061,10 +1006,24 @@ class _RopePullRoomScreenState extends ConsumerState<RopePullRoomScreen> {
     // host who drops out never stalls the match.
     if (!(elapsed >= limit || (allIn && elapsed >= 1.2))) return;
     if (_advanceRound == snap.room.currentRound) return;
-    _advanceRound = snap.room.currentRound;
+    final round = snap.room.currentRound;
+    _advanceRound = round;
     _advancing = true;
-    await RopePullService.instance.advance(widget.roomId);
+    final result = await RopePullService.instance.advance(widget.roomId);
     _advancing = false;
+    // The server says "not yet" when its clock disagrees. Allow another try
+    // a moment later instead of leaving the round stuck.
+    final after = result.data;
+    final stillHere =
+        after == null ||
+        (after.room.status == RopePullStatus.playing &&
+            after.room.currentRound == round);
+    if (stillHere) {
+      if (after != null) _learnClock(after);
+      Timer(const Duration(milliseconds: 800), () {
+        if (mounted && _advanceRound == round) _advanceRound = -1;
+      });
+    }
   }
 
   void _maybeSpeak(RopePullSnapshot snap) {
@@ -1122,6 +1081,7 @@ class _RopePullRoomScreenState extends ConsumerState<RopePullRoomScreen> {
             body: const Center(child: Text('Room not found.')),
           );
         }
+        if (!identical(_lastSnap, snap)) _learnClock(snap);
         _lastSnap = snap;
         _maybeSpeak(snap);
         WidgetsBinding.instance.addPostFrameCallback((_) {

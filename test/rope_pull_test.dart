@@ -181,4 +181,32 @@ void main() {
     expect(shared, hasLength(10));
     expect(shared.any((question) => question.split), isFalse);
   });
+
+  test('snapshot keeps the server clock for round timers', () {
+    final snap = RopePullSnapshot.fromJson({
+      'room': {'id': 'r1', 'status': 'playing', 'questions': []},
+      'players': [],
+      'answers': [],
+      'server_now': '2026-11-12T10:00:05.250Z',
+    });
+    expect(snap.serverNow, DateTime.utc(2026, 11, 12, 10, 0, 5, 250));
+
+    final older = RopePullSnapshot.fromJson({
+      'room': {'id': 'r1', 'status': 'lobby', 'questions': []},
+    });
+    expect(older.serverNow, isNull);
+  });
+
+  test('match requests carry settings, never questions or answers', () {
+    expect(const RopePullDeckOptions().toJson(), {'count': 10});
+    final exam = const RopePullDeckOptions(
+      count: 20,
+      exam: 'utme',
+      subject: 'biology',
+      university: '  ',
+    ).toJson();
+    expect(exam, {'count': 20, 'exam': 'utme', 'subject': 'biology'});
+    expect(exam.keys, isNot(contains('answer')));
+    expect(exam.keys, isNot(contains('questions')));
+  });
 }

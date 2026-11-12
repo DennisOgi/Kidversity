@@ -165,4 +165,38 @@ void main() {
     expect(controller.phase, RopePhase.finished);
     expect(controller.winner, isNull);
   });
+
+  test('display cap matches the server for long and split decks', () {
+    RopePullQuestion q(int i, {bool split = false}) => RopePullQuestion(
+      id: 'q$i',
+      simplified: '',
+      pinyin: '',
+      english: '',
+      options: const ['a', 'b'],
+      answer: 'a',
+      split: split,
+    );
+    // A 30-question shared deck: the server caps at 30, so the rope must not
+    // reach the edge at 10.
+    final long = _snap(questions: [for (var i = 0; i < 30; i++) q(i)]);
+    expect(ropePullWinCap(long.room), 30);
+    expect(
+      ropePullKitPosition(
+        _snap(questions: [for (var i = 0; i < 30; i++) q(i)], score: 15),
+      ),
+      0.5,
+    );
+    // Split decks: half the questions, between 10 and 20.
+    final split = _snap(
+      questions: [for (var i = 0; i < 50; i++) q(i, split: true)],
+    );
+    expect(ropePullWinCap(split.room), 20);
+  });
+
+  test('sprite sheets decode only as large as the screen needs', () {
+    expect(ropeSheetScaleFor(360, 2), 0.5); // budget phone
+    expect(ropeSheetScaleFor(412, 2.6), 0.75); // larger phone
+    expect(ropeSheetScaleFor(1440, 1), 1.0); // laptop or class board
+    expect(ropeSheetScaleFor(1920, 2), 1.0); // never above full size
+  });
 }

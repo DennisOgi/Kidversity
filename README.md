@@ -43,13 +43,16 @@ Real-time tug-of-war between two teams (Indigo vs Teal).
   game; the pull starts as soon as the second player arrives.
 * **Codes** (4 letters) for any group, plus school challenges and a projected
   class board for teachers.
-* **Fair play:** answer keys live in `private.rope_pull_keys`. A player only
+* **Fair play:** the server builds every deck (`create_rope_pull_match`), so
+  no device, the host's included, gets the answers. Answer keys live in
+  `private.rope_pull_keys`; answers after the round's time do not count. A player only
   sees a round's answer after answering or when the round closes, and other
   players' picks stay hidden mid-round.
 * **Weekly ladder** of wins per school (`rope_pull_ladder`).
-* Art: illustrated cutouts with a split torso/legs rig, a Blender-rendered
-  braided rope tile, and a Blender dust-puff sprite sheet
-  (`assets/rope_pull/environment/rope-tile.png`, `assets/rope_pull/ui/dust-sheet.png`).
+* Art: a Blender-rendered school field and four rigged kids rendered to sprite
+  sheets (idle, pull, slip, win, lose), with per-frame hand and foot points so
+  the rope (drawn in code) runs through their fists. Dust puffs come from
+  `assets/rope_pull/ui/dust-sheet.png`. Pipeline: `tool/rope_pull_blender/`.
 
 ## Architecture
 
