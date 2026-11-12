@@ -714,26 +714,28 @@ class _Worlds extends ConsumerWidget {
           body:
               'Every subject has its own colour, so children always know where they are. Progress follows them across all of it.',
         ),
-        // Phones swipe sideways through the worlds instead of a tall stack.
+        // Phones: a tidy 2 x 2 grid of compact tiles, so every world is
+        // visible at once without a clipped sideways row.
         if (MediaQuery.sizeOf(context).width < 600)
-          SizedBox(
-            height: 318,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
-              itemCount: worlds.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 14),
-              itemBuilder: (context, i) => SizedBox(
-                width: 250,
-                child: _WorldCard(
-                  tint: worlds[i].$1,
-                  asset: worlds[i].$2,
-                  title: worlds[i].$3,
-                  body: worlds[i].$4,
-                  onTap: worlds[i].$5,
+          AdaptiveGrid(
+            minTileWidth: 140,
+            maxColumns: 2,
+            gap: 12,
+            children: [
+              for (final (i, world) in worlds.indexed)
+                _WorldTileCompact(
+                  tint: world.$1,
+                  asset: world.$2,
+                  title: world.$3,
+                  caption: const [
+                    '30 short lessons',
+                    'WAEC, UTME, NECO',
+                    '20 levels',
+                    'Live with classmates',
+                  ][i],
+                  onTap: world.$5,
                 ),
-              ),
-            ),
+            ],
           )
         else
           AdaptiveGrid(
@@ -782,7 +784,9 @@ class _Worlds extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      'Hands-on physics and chemistry experiments that run right in the browser.',
+                      MediaQuery.sizeOf(context).width < 600
+                          ? 'Experiments that run in the browser.'
+                          : 'Hands-on physics and chemistry experiments that run right in the browser.',
                       style: TextStyle(fontSize: 15, color: AppTint.sun.ink),
                     ),
                   ],
@@ -793,6 +797,77 @@ class _Worlds extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Phone tile for one learning world: picture, name and one short line.
+class _WorldTileCompact extends StatelessWidget {
+  final AppTint tint;
+  final String asset;
+  final String title;
+  final String caption;
+  final VoidCallback onTap;
+
+  const _WorldTileCompact({
+    required this.tint,
+    required this.asset,
+    required this.title,
+    required this.caption,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return KvCard(
+      tint: tint,
+      onTap: onTap,
+      padding: const EdgeInsets.all(8),
+      semanticLabel: 'Open $title. $caption',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: ColoredBox(
+                color: tint.strong.withValues(alpha: 0.25),
+                child: Image.asset(asset, fit: BoxFit.cover),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 10, 6, 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: tint.ink,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
