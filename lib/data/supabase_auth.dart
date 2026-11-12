@@ -385,7 +385,11 @@ class SupabaseAuthController extends ChangeNotifier {
       );
       if (signInResult.isSuccess && signInResult.data != null) {
         await _applyUser(signInResult.data!);
-        await _saveRegistrationDetails(gender: gender, age: age);
+        try {
+          await _saveRegistrationDetails(gender: gender, age: age);
+        } catch (e) {
+          debugPrint('Post-signup profile write failed: $e');
+        }
         notifyListeners();
         return;
       }
@@ -420,10 +424,16 @@ class SupabaseAuthController extends ChangeNotifier {
       existingPrefs,
     ).copyWith(gender: gender, age: age);
 
-    await SupabaseService.instance.upsertUserProfile({
-      'user_id': userId,
-      'preferences': merged.toJson(),
-    });
+    // The row already exists (sign-up trigger or _ensureProfile). An upsert
+    // here would fail: Postgres checks NOT NULL display_name on the insert
+    // half even when the row is there.
+    await client
+        .from('user_profiles')
+        .update({
+          'preferences': merged.toJson(),
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('user_id', userId);
   }
 
   Future<void> completeOnboarding({
