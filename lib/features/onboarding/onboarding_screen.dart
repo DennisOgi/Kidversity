@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/features.dart';
+import '../../core/error_handler.dart';
 import '../../data/app_state.dart';
 import '../../data/auth_state.dart';
 import '../../models/models.dart';
@@ -12,6 +14,8 @@ import '../../services/school_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/role_style.dart';
+import '../../widgets/kv_ui.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
 import '../../widgets/motion.dart';
@@ -66,7 +70,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               provisionedRole == UserRole.reviewer) &&
           (preset != UserRole.platformAdmin ||
               provisionedRole == UserRole.platformAdmin)) {
-        setState(() => _role = preset);
+        setState(() {
+          _role = preset;
+          // "Set up my school" sends people here on their way to /school.
+          _schoolLeader =
+              query?['redirect']?.startsWith(AppRoutes.schoolHome) ?? false;
+        });
       }
       // Invite links can carry codes: /onboarding?class=ABC123&family=FAM-XXXXX
       final classCode = query?['class'];
@@ -274,10 +283,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         if (!mounted) return;
         context.go(destination);
       });
-    } catch (_) {
+    } catch (error, stack) {
+      await ErrorHandler.reportError(
+        error,
+        stack,
+        context: 'onboarding.finish',
+      );
       if (mounted) {
+        final text = error.toString();
+        // A rejected sign-in token (401 / PGRST30x) is not something trying
+        // again fixes, so say what actually happened.
+        final authProblem =
+            text.contains('PGRST30') ||
+            text.contains('JWT') ||
+            text.contains('401');
+        final offline =
+            text.contains('SocketException') ||
+            text.contains('Failed host lookup') ||
+            text.contains('XMLHttpRequest');
         context.showErrorSnackbar(
-          'We could not save your choices. Please try again.',
+          authProblem
+              ? 'We could not confirm your sign-in. Sign out, sign in again, and finish setting up.'
+              : offline
+              ? 'You seem to be offline. Check your connection and try again.'
+              : 'We could not save your choices. Please try again.',
         );
       }
     } finally {
@@ -413,7 +442,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final setupCard = ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 570),
       child: GlassCard(
-        color: AppColors.surface.withValues(alpha: 0.96),
+        color: AppColors.surface,
         padding: EdgeInsets.fromLTRB(wide ? 32 : 22, 26, wide ? 32 : 22, 28),
         shadow: AppTheme.softShadow,
         child: Column(
@@ -422,22 +451,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             Row(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 44,
+                  height: 44,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppColors.cinnabar,
+                    color: AppTint.violet.soft,
                     borderRadius: BorderRadius.circular(13),
                   ),
-                  child: const Text(
-                    'KV',
-                    style: TextStyle(
-                      color: AppColors.paper,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+                  child: const KidversityMark(size: 26),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
@@ -465,7 +486,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                 ),
                 Text(
-                  '${_step + 1} / $_stepCount',
+                  'Step ${_step + 1} of $_stepCount',
                   style: text.labelLarge?.copyWith(color: AppColors.muted),
                 ),
               ],
@@ -584,6 +605,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                   step: _step,
                                   avatar: _emoji,
                                   role: _role,
+                                  schoolLeader: _schoolLeader,
                                 ),
                               ),
                               const SizedBox(width: 54),
@@ -846,92 +868,187 @@ class _TipRow extends StatelessWidget {
   }
 }
 
+/// Violet gradient with the brand's playful shapes, behind the setup card.
 class _OnboardingBackdrop extends StatelessWidget {
   final Widget child;
 
   const _OnboardingBackdrop({required this.child});
 
   @override
-  Widget build(BuildContext context) =>
-      ColoredBox(color: AppColors.paper, child: child);
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    Widget blob(double size, Color color, {double radius = 999}) => Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2A1F8F), Color(0xFF4433CC), Color(0xFF7B4FE8)],
+        ),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ExcludeSemantics(
+            child: Stack(
+              children: [
+                Positioned(
+                  right: compact ? -90 : -140,
+                  top: compact ? -110 : -160,
+                  child: blob(compact ? 240 : 420, const Color(0xFFFFC845)),
+                ),
+                Positioned(
+                  left: -100,
+                  bottom: -120,
+                  child: blob(compact ? 220 : 320, const Color(0x99FF6B5B)),
+                ),
+                Positioned(
+                  left: compact ? 24 : 80,
+                  top: compact ? 80 : 120,
+                  child: blob(18, const Color(0xFF7CC4FF)),
+                ),
+                Positioned(
+                  right: compact ? 30 : 120,
+                  bottom: compact ? 60 : 110,
+                  child: Transform.rotate(
+                    angle: 0.4,
+                    child: blob(
+                      compact ? 36 : 60,
+                      const Color(0xFF22B07D),
+                      radius: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          child,
+        ],
+      ),
+    );
+  }
 }
 
+/// Left panel on wide screens: a welcome, the learner's chosen avatar and
+/// role, and the learning worlds waiting for them.
 class _OnboardingPreview extends StatelessWidget {
   final int step;
   final String avatar;
   final UserRole? role;
+  final bool schoolLeader;
 
   const _OnboardingPreview({
     required this.step,
     required this.avatar,
     required this.role,
+    this.schoolLeader = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final roleLabel = switch (role) {
-      UserRole.student => 'Learner path',
-      UserRole.teacher => 'Class coach',
-      UserRole.parent => 'Family',
+      UserRole.student => 'Learner',
+      UserRole.teacher when schoolLeader => 'School leader',
+      UserRole.teacher => 'Teacher',
+      UserRole.parent => 'Parent',
       UserRole.reviewer => 'Language reviewer',
       UserRole.platformAdmin => 'Platform admin',
       null => 'Choose your role',
     };
+    final roleTint = switch (role) {
+      UserRole.student => AppTint.violet,
+      UserRole.teacher when schoolLeader => AppTint.sky,
+      UserRole.teacher => AppTint.mint,
+      UserRole.parent => AppTint.coral,
+      _ => AppTint.sun,
+    };
+    final caption = step == 0
+        ? 'Tell us who is joining.'
+        : step == 1
+        ? 'Nice to meet you.'
+        : step == 2
+        ? 'Looking good.'
+        : switch (role) {
+            UserRole.teacher when schoolLeader =>
+              'Your school, your staff, and every class.',
+            UserRole.teacher =>
+              'Your class, assignments, live quizzes, and progress.',
+            UserRole.parent => 'Your children and their learning week.',
+            UserRole.reviewer => 'The review queue is ready.',
+            UserRole.platformAdmin => 'Schools, users, and platform analytics.',
+            _ => 'Lessons, practice, labs, maths and Rope Pull.',
+          };
+    const worlds = [
+      (AppTint.coral, Icons.translate_rounded, 'Mandarin'),
+      (AppTint.sky, Icons.menu_book_rounded, 'Past questions'),
+      (AppTint.mint, Icons.calculate_rounded, 'Mental maths'),
+      (AppTint.sun, Icons.science_rounded, 'Labs'),
+      (AppTint.pink, Icons.sports_esports_rounded, 'Rope Pull'),
+    ];
+
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 540),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'WELCOME',
-            style: TextStyle(
-              color: AppColors.cinnabar,
-              fontWeight: FontWeight.w900,
-              fontSize: 12,
-              letterSpacing: 2.2,
-            ),
-          ),
-          const SizedBox(height: 14),
+          const KidversityBrandMark(reversed: true),
+          const SizedBox(height: 40),
           Text(
             'Many paths.\nOne curious home.',
-            style: Theme.of(context).textTheme.displayMedium?.copyWith(
-              color: AppColors.ink,
-              fontSize: 44,
-              height: 1.03,
+            style: GoogleFonts.plusJakartaSans(
+              color: Colors.white,
+              fontSize: 48,
+              fontWeight: FontWeight.w800,
+              height: 1.05,
+              letterSpacing: -1.2,
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            'Students practise Mandarin, past questions, labs, and mental maths, '
-            'and play Rope Pull. Teachers set the work and can run a live quiz they write themselves.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: AppColors.inkSoft,
+          const Text(
+            'A minute of setup, then a home built around you: lessons, '
+            'practice and play for learners, and clear dashboards for '
+            'teachers, schools and parents.',
+            style: TextStyle(
+              color: Color(0xFFEDEAFF),
+              fontSize: 17,
               height: 1.55,
             ),
           ),
-          const SizedBox(height: 26),
+          const SizedBox(height: 30),
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              gradient: AppColors.mandarinGradient,
-              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-              boxShadow: AppTheme.softShadow,
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF14085A).withValues(alpha: 0.3),
+                  blurRadius: 40,
+                  offset: const Offset(0, 18),
+                ),
+              ],
             ),
             child: Row(
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 320),
-                  width: 76,
-                  height: 76,
+                  width: 72,
+                  height: 72,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppColors.paper,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppColors.gold, width: 2),
+                    color: roleTint.soft,
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 260),
-                    child: EmojiText(avatar, key: ValueKey(avatar), size: 38),
+                    child: EmojiText(avatar, key: ValueKey(avatar), size: 36),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -939,75 +1056,52 @@ class _OnboardingPreview extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      StatusChip(label: roleLabel, tint: roleTint),
+                      const SizedBox(height: 6),
                       Text(
-                        roleLabel,
+                        caption,
                         style: const TextStyle(
-                          color: AppColors.paper,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        step == 0
-                            ? 'Tell us who is joining.'
-                            : step == 1
-                            ? 'Nice to meet you.'
-                            : step == 2
-                            ? 'Looking good.'
-                            : switch (role) {
-                                UserRole.teacher =>
-                                  'Class, assignments, a quiz you write, and progress.',
-                                UserRole.parent =>
-                                  'Your children, their pathway, and packs.',
-                                UserRole.reviewer =>
-                                  'The review queue is ready.',
-                                UserRole.platformAdmin =>
-                                  'Schools, users, and platform analytics.',
-                                _ =>
-                                  'Path, Practice, Play, labs, and maths are open.',
-                              },
-                        style: TextStyle(
-                          color: AppColors.paper.withValues(alpha: 0.76),
+                          color: AppColors.ink,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_rounded, color: AppColors.gold),
               ],
             ),
           ),
           const SizedBox(height: 22),
-          const Wrap(
+          Wrap(
             spacing: 10,
             runSpacing: 10,
             children: [
-              Pill(
-                label: 'Mandarin path',
-                icon: Icons.translate_rounded,
-                color: AppColors.cinnabar,
-              ),
-              Pill(
-                label: 'Exam practice',
-                icon: Icons.menu_book_rounded,
-                color: Color(0xFF1B7A4E),
-              ),
-              Pill(
-                label: 'Labs',
-                icon: Icons.science_rounded,
-                color: Color(0xFF0F766E),
-              ),
-              Pill(
-                label: 'Mental maths',
-                icon: Icons.calculate_rounded,
-                color: Color(0xFF6751B5),
-              ),
-              Pill(
-                label: 'Rope Pull',
-                icon: Icons.sports_esports_rounded,
-                color: Color(0xFF916015),
-              ),
+              for (final w in worlds)
+                Container(
+                  padding: const EdgeInsets.fromLTRB(6, 6, 14, 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.28),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TintIcon(tint: w.$1, icon: w.$2, size: 28),
+                      const SizedBox(width: 8),
+                      Text(
+                        w.$3,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ],
@@ -1016,30 +1110,43 @@ class _OnboardingPreview extends StatelessWidget {
   }
 }
 
+/// One coloured segment per step; done and current steps fill in.
 class _StepDots extends StatelessWidget {
   final int step;
   final int count;
   const _StepDots({required this.step, required this.count});
 
+  static const _tints = [
+    AppTint.violet,
+    AppTint.coral,
+    AppTint.sun,
+    AppTint.mint,
+    AppTint.sky,
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (int i = 0; i < count; i++) ...[
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: i == step ? 28 : 10,
-            height: 10,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: i <= step ? AppColors.brandGradient : null,
-              color: i <= step ? null : AppColors.line,
+    return Semantics(
+      label: 'Step ${step + 1} of $count',
+      child: Row(
+        children: [
+          for (int i = 0; i < count; i++) ...[
+            Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 240),
+                height: 8,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: i <= step
+                      ? _tints[i % _tints.length].strong
+                      : const Color(0xFFECEAF5),
+                ),
+              ),
             ),
-          ),
-          if (i != count - 1) const SizedBox(width: 8),
+            if (i != count - 1) const SizedBox(width: 6),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -1320,51 +1427,49 @@ class _RoleStep extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         _RoleCard(
-          emoji: '🧒',
+          icon: Icons.backpack_rounded,
           title: "I'm a Student",
           subtitle: 'Mandarin, exams, labs, maths, and Rope Pull',
-          gradient: AppColors.brandGradient,
+          tint: AppTint.violet,
           selected: selected == UserRole.student,
           onTap: () => onSelect(UserRole.student),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         _RoleCard(
-          emoji: '🧑‍🏫',
+          icon: Icons.co_present_rounded,
           title: "I'm a Teacher",
           subtitle: 'Set work, follow the class, and run a live quiz',
-          gradient: AppColors.mandarinGradient,
+          tint: AppTint.mint,
           selected: selected == UserRole.teacher && !schoolLeader,
           onTap: () => onSelect(UserRole.teacher),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         _RoleCard(
-          emoji: '🏫',
+          icon: Icons.apartment_rounded,
           title: 'I run a school',
           subtitle: 'Set up your school, invite teachers, and create classes',
-          gradient: const LinearGradient(
-            colors: [Color(0xFF2E2B6B), Color(0xFF20213B)],
-          ),
+          tint: AppTint.sky,
           selected: selected == UserRole.teacher && schoolLeader,
           onTap: () => onSelect(UserRole.teacher, leader: true),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         _RoleCard(
-          emoji: '👪',
+          icon: Icons.family_restroom_rounded,
           title: "I'm a Parent",
-          subtitle: 'Follow your child and unlock lesson packs',
-          gradient: const LinearGradient(
-            colors: [AppColors.success, Color(0xFF0E5536)],
-          ),
+          subtitle: Features.payments
+              ? 'Follow your child and unlock lesson packs'
+              : 'Follow your child and see their learning week',
+          tint: AppTint.coral,
           selected: selected == UserRole.parent,
           onTap: () => onSelect(UserRole.parent),
         ),
         if (allowReviewer) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _RoleCard(
-            emoji: '校',
+            icon: Icons.fact_check_rounded,
             title: "I'm a Reviewer",
             subtitle: 'Review Mandarin lessons before they are published',
-            gradient: AppColors.mandarinGradient,
+            tint: AppTint.sun,
             selected: selected == UserRole.reviewer,
             onTap: () => onSelect(UserRole.reviewer),
           ),
@@ -1374,62 +1479,117 @@ class _RoleStep extends StatelessWidget {
   }
 }
 
+/// A role choice: tinted when idle, filled with its colour when chosen.
 class _RoleCard extends StatelessWidget {
-  final String emoji, title, subtitle;
-  final Gradient gradient;
+  final IconData icon;
+  final String title, subtitle;
+  final AppTint tint;
   final bool selected;
   final VoidCallback onTap;
 
   const _RoleCard({
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.subtitle,
-    required this.gradient,
+    required this.tint,
     required this.selected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedScale(
-      scale: selected ? 1.018 : 1,
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutBack,
-      child: GlassCard(
-        onTap: onTap,
-        gradient: gradient,
-        padding: const EdgeInsets.all(16),
-        border: selected ? Border.all(color: Colors.white, width: 2.5) : null,
-        child: Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 28)),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final onFill = tint == AppTint.sun ? AppColors.ink : Colors.white;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: selected ? tint.strong : tint.soft,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: selected
+                ? tint.ink
+                : Color.alphaBlend(
+                    tint.strong.withValues(alpha: 0.25),
+                    tint.soft,
+                  ),
+            width: selected ? 2 : 1,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: tint.strong.withValues(alpha: 0.35),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
                 children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontSize: 16,
+                  Container(
+                    width: 46,
+                    height: 46,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: selected ? Colors.white : tint.strong,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: selected
+                          ? tint.ink
+                          : (tint == AppTint.sun
+                                ? AppColors.ink
+                                : Colors.white),
                     ),
                   ),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 12.5,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: selected ? onFill : AppColors.ink,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: selected
+                                ? onFill.withValues(alpha: 0.92)
+                                : tint.ink,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    selected
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    color: selected ? onFill : tint.ink,
                   ),
                 ],
               ),
             ),
-            Icon(
-              selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-              color: Colors.white,
-            ),
-          ],
+          ),
         ),
       ),
     );

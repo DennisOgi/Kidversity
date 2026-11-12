@@ -108,39 +108,85 @@
       width: 100%;
       height: 100%;
       padding: 32px;
-      font-family: "Segoe UI", system-ui, sans-serif;
-      color: #20213b;
-      background: #f5f6fb;
+      overflow: hidden;
+      font-family: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+      color: #ffffff;
+      background: linear-gradient(140deg, #2a1f8f 0%, #4433cc 55%, #7b4fe8 100%);
       text-align: center;
-      transition: opacity 180ms cubic-bezier(0.23, 1, 0.32, 1), visibility 180ms cubic-bezier(0.23, 1, 0.32, 1);
+      transition: opacity 220ms cubic-bezier(0.23, 1, 0.32, 1), visibility 220ms cubic-bezier(0.23, 1, 0.32, 1);
     }
     #loading.loaded {
       opacity: 0;
       visibility: hidden;
     }
+    /* Playful brand shapes, same as the landing page hero. */
+    #loading::before,
+    #loading::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    #loading::before {
+      width: 360px; height: 360px;
+      right: -120px; top: -140px;
+      background: #ffc845;
+    }
+    #loading::after {
+      width: 240px; height: 240px;
+      left: -90px; bottom: -100px;
+      background: rgba(255, 107, 91, 0.6);
+    }
+    .splash-tile {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 96px;
+      height: 96px;
+      border-radius: 28px;
+      background: #ffffff;
+      box-shadow: 0 24px 50px rgba(20, 8, 90, 0.35);
+      animation: splash-float 2.4s ease-in-out infinite;
+    }
     .splash-mark { width: 56px; height: 56px; }
-    .splash-bar {
+    .splash-name {
+      position: relative;
+      margin-top: 22px;
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.6px;
+    }
+    .splash-tagline {
+      position: relative;
+      margin-top: 6px;
+      font-size: 15px;
+      color: #edeaff;
+    }
+    .splash-dots {
+      position: relative;
+      display: flex;
+      gap: 10px;
       margin-top: 28px;
-      width: 72px;
-      height: 3px;
-      border-radius: 99px;
-      background: #daddea;
-      overflow: hidden;
     }
-    .splash-bar i {
-      display: block;
-      width: 40%;
-      height: 100%;
-      border-radius: 99px;
-      background: #4433cc;
-      animation: splash-load 900ms linear infinite;
+    .splash-dots i {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      animation: splash-bounce 1.1s ease-in-out infinite;
     }
-    @keyframes splash-load {
-      0% { transform: translateX(-120%); }
-      100% { transform: translateX(320%); }
+    .splash-dots i:nth-child(1) { background: #ffc845; }
+    .splash-dots i:nth-child(2) { background: #ff6b5b; animation-delay: 0.15s; }
+    .splash-dots i:nth-child(3) { background: #22b07d; animation-delay: 0.3s; }
+    @keyframes splash-bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.7; }
+      40% { transform: translateY(-10px); opacity: 1; }
+    }
+    @keyframes splash-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .splash-bar i { animation: none; width: 100%; }
+      .splash-tile, .splash-dots i { animation: none; }
     }
     noscript {
       display: block;
@@ -157,10 +203,14 @@
   <script src="passkeys/bundle.js"></script>
 
   <div id="loading" role="status" aria-label="Loading Kidversity">
-    <svg class="splash-mark" viewBox="0 0 64 64" aria-hidden="true">
-      <path fill="#4433CC" fill-rule="evenodd" d="M8 60V28C8 14.745 18.745 4 32 4C45.255 4 56 14.745 56 28V60Z M26 60V29C26 23.477 30.477 19 36 19C41.523 19 46 23.477 46 29V60Z"/>
-    </svg>
-    <div class="splash-bar"><i></i></div>
+    <div class="splash-tile">
+      <svg class="splash-mark" viewBox="0 0 64 64" aria-hidden="true">
+        <path fill="#4433CC" fill-rule="evenodd" d="M8 60V28C8 14.745 18.745 4 32 4C45.255 4 56 14.745 56 28V60Z M26 60V29C26 23.477 30.477 19 36 19C41.523 19 46 23.477 46 29V60Z"/>
+      </svg>
+    </div>
+    <div class="splash-name">kidversity</div>
+    <div class="splash-tagline">Learning that feels like play</div>
+    <div class="splash-dots" aria-hidden="true"><i></i><i></i><i></i></div>
   </div>
 
   <noscript>
