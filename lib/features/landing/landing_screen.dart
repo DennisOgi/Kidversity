@@ -160,7 +160,6 @@ class _Hero extends ConsumerWidget {
     final copy = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!compact) ...[_newPill(), const SizedBox(height: 22)],
         Text(
           'Learning that\nfeels like play.',
           style: GoogleFonts.plusJakartaSans(
@@ -241,46 +240,6 @@ class _Hero extends ConsumerWidget {
       copy: copy,
     );
   }
-
-  Widget _newPill() => Container(
-    padding: const EdgeInsets.fromLTRB(6, 6, 14, 6),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.14),
-      borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: AppTint.sun.strong,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: const Text(
-            'NEW',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 11,
-              color: AppColors.ink,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        const Flexible(
-          child: Text(
-            'School spaces for admins, teachers and parents',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
 
   Widget _heroFrame(
     BuildContext context, {
