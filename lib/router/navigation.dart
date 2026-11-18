@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../data/app_state.dart';
 import '../data/auth_state.dart';
+import '../data/products.dart';
 import '../models/models.dart';
 
 /// Central route paths — keep in sync with [app_router.dart].
@@ -185,7 +186,7 @@ void openLandingFeature(BuildContext context, WidgetRef ref, int featureIndex) {
     case 0:
       enterRoleSpace(context, ref, UserRole.student, AppRoutes.studentMandarin);
     case 1:
-      enterRoleSpace(context, ref, UserRole.student, AppRoutes.studentExams);
+      enterRoleSpace(context, ref, UserRole.student, AppRoutes.studentMaths);
     case 2:
       enterRoleSpace(context, ref, UserRole.student, AppRoutes.studentPlay);
     case 3:
@@ -208,4 +209,16 @@ void openStudentLesson(BuildContext context, WidgetRef ref, String lessonId) {
   }
   ref.read(roleProvider.notifier).state = UserRole.student;
   context.go(route);
+}
+
+/// The product a student page belongs to, if any.
+Product? productForPath(String path) {
+  if (path.startsWith(AppRoutes.studentMandarin) ||
+      path.startsWith('/student/foundation/') ||
+      path.startsWith('/student/lesson/')) {
+    return Product.mandarin;
+  }
+  if (path.startsWith(AppRoutes.studentMaths)) return Product.maths;
+  if (path.startsWith(AppRoutes.studentLabs)) return Product.labs;
+  return null;
 }

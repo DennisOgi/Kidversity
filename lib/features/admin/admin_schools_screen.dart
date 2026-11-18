@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/app_state.dart';
+import '../../data/products.dart';
 import '../../models/admin_models.dart';
 import '../../services/admin_service.dart';
 import '../../theme/app_colors.dart';
@@ -296,6 +297,8 @@ class _SchoolDetailPanel extends ConsumerWidget {
                 label: const Text('Assign admin'),
               ),
             ),
+            _SchoolProducts(schoolId: schoolId),
+            const SizedBox(height: 16),
             Text('Classes', style: text.titleSmall),
             const SizedBox(height: 8),
             if (school.classes.isEmpty)
@@ -396,6 +399,77 @@ class _SchoolDetailPanel extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// What the school has paid for. Staff, students and parents only see these.
+class _SchoolProducts extends ConsumerStatefulWidget {
+  final String schoolId;
+
+  const _SchoolProducts({required this.schoolId});
+
+  @override
+  ConsumerState<_SchoolProducts> createState() => _SchoolProductsState();
+}
+
+class _SchoolProductsState extends ConsumerState<_SchoolProducts> {
+  bool _saving = false;
+
+  Future<void> _toggle(Set<Product> current, Product product, bool on) async {
+    final next = {...current};
+    on ? next.add(product) : next.remove(product);
+    setState(() => _saving = true);
+    try {
+      await setSchoolProducts(widget.schoolId, next);
+      ref.invalidate(adminSchoolProductsProvider);
+    } catch (e) {
+      if (mounted) context.showErrorSnackbar('Could not save: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final all = ref.watch(adminSchoolProductsProvider);
+    final current = all.value?[widget.schoolId] ?? const <Product>{};
+    return GlassCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Products', style: text.titleSmall),
+          const SizedBox(height: 4),
+          Text(
+            'Only these show for this school\'s staff, students and parents. '
+            'Rope Pull uses questions from these only.',
+            style: text.bodySmall?.copyWith(color: AppColors.inkSoft),
+          ),
+          const SizedBox(height: 10),
+          if (all.hasError)
+            Text(
+              'Products could not be loaded.',
+              style: text.bodyMedium?.copyWith(color: AppColors.inkSoft),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final product in Product.values)
+                  FilterChip(
+                    label: Text(product.label),
+                    selected: current.contains(product),
+                    onSelected: _saving || all.value == null
+                        ? null
+                        : (on) => _toggle(current, product, on),
+                  ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }

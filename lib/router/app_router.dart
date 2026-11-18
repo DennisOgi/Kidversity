@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../config/features.dart';
 import '../data/app_state.dart';
 import '../data/auth_state.dart';
+import '../data/products.dart';
 import '../features/auth/auth_screen.dart';
 import '../features/landing/landing_screen.dart';
 import '../features/legal/legal_screen.dart';
@@ -28,12 +29,9 @@ import '../features/student/mandarin_lesson_player.dart';
 import '../features/student/labs/lab_screen.dart';
 import '../features/student/labs/labs_hub_screen.dart';
 import '../features/student/maths_path_screen.dart';
-import '../features/student/past_questions_hub_screen.dart';
-import '../features/student/past_questions_session_screen.dart';
 import '../features/student/profile_screen.dart';
 import '../features/student/rope_pull_screen.dart';
 import '../features/student/student_live_test_screen.dart';
-import '../models/past_questions_models.dart';
 import '../features/teacher/foundation_progress_screen.dart';
 import '../features/teacher/students_screen.dart';
 import '../features/teacher/teacher_live_compose_screen.dart';
@@ -61,7 +59,7 @@ const _studentNav = [
     Icons.school_rounded,
     'Practice',
     '/student/practice',
-    'Review, exams, and drills',
+    'Review and drills',
     AppTint.sky,
   ),
   NavItem(
@@ -331,6 +329,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (role != null && requiredRole != null && role != requiredRole) {
           return homeForRole(role);
         }
+        // Subjects the school has not bought stay closed. The server enforces
+        // this too; here it just keeps people off empty pages.
+        final product = productForPath(path);
+        final owned = ref.read(myProductsProvider).value;
+        if (product != null && owned != null && !owned.contains(product)) {
+          return AppRoutes.studentPath;
+        }
       }
 
       return null;
@@ -420,19 +425,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           const FoundationPracticeScreen(),
         ),
       ),
-      GoRoute(
-        path: AppRoutes.studentExams,
-        builder: (_, _) => const PastQuestionsHubScreen(),
-      ),
+      // Exam practice moved to ACE.
       GoRoute(
         path: AppRoutes.studentExamSession,
-        builder: (_, state) {
-          final config = state.extra;
-          if (config is! PastQuestionsSessionConfig) {
-            return const PastQuestionsHubScreen();
-          }
-          return PastQuestionsSessionScreen(config: config);
-        },
+        redirect: (_, _) => AppRoutes.studentPath,
+      ),
+      GoRoute(
+        path: AppRoutes.studentExams,
+        redirect: (_, _) => AppRoutes.studentPath,
       ),
       GoRoute(
         path: AppRoutes.studentLabs,

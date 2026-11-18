@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/error_handler.dart' as app_errors;
+import '../../data/products.dart';
 import '../../data/app_state.dart';
 import '../../data/auth_state.dart';
 import '../../models/past_questions_models.dart';
@@ -241,6 +242,9 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
           ? 'This paper does not have enough questions for a match yet. Try another subject or year.'
           : 'Finish a few more lessons to unlock words for a match.';
     }
+    if (error == 'PRODUCT_NOT_AVAILABLE') {
+      return 'Your school does not have this subject yet.';
+    }
     if (error == 'INVALID_BANK' || error == 'INVALID_QUESTIONS') {
       return 'This match could not be opened. Try again in a moment.';
     }
@@ -315,6 +319,26 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Only the school's products: Mandarin words and/or mental maths. Exam
+    // matches moved to ACE.
+    final owned = ref.watch(myProductsProvider).value ?? const <Product>{};
+    final hasMandarin = owned.contains(Product.mandarin);
+    final hasMaths = owned.contains(Product.maths);
+    _examMatch = false;
+    if (!hasMandarin && hasMaths) _mathsMatch = true;
+    if (!hasMaths) _mathsMatch = false;
+    if (!hasMandarin && !hasMaths) {
+      return ShellScrollView(
+        children: [
+          const RopePullHubBanner(),
+          const SizedBox(height: 18),
+          Text(
+            'Rope Pull opens when your school adds Mandarin or Mental maths.',
+            style: ropePullText(size: 15, color: AppColors.inkSoft),
+          ),
+        ],
+      );
+    }
     return ShellScrollView(
       children: [
         const RopePullHubBanner(),
@@ -384,42 +408,26 @@ class _RopePullHubScreenState extends ConsumerState<RopePullHubScreen> {
           style: ropePullText(size: 18, weight: FontWeight.w800),
         ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _MatchKindButton(
-                label: 'Mandarin',
-                selected: !_examMatch && !_mathsMatch,
-                onTap: () => setState(() {
-                  _examMatch = false;
-                  _mathsMatch = false;
-                }),
+        if (hasMandarin && hasMaths)
+          Row(
+            children: [
+              Expanded(
+                child: _MatchKindButton(
+                  label: 'Mandarin',
+                  selected: !_mathsMatch,
+                  onTap: () => setState(() => _mathsMatch = false),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _MatchKindButton(
-                label: 'Exams',
-                selected: _examMatch,
-                onTap: () => setState(() {
-                  _examMatch = true;
-                  _mathsMatch = false;
-                }),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _MatchKindButton(
+                  label: 'Maths',
+                  selected: _mathsMatch,
+                  onTap: () => setState(() => _mathsMatch = true),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _MatchKindButton(
-                label: 'Maths',
-                selected: _mathsMatch,
-                onTap: () => setState(() {
-                  _mathsMatch = true;
-                  _examMatch = false;
-                }),
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
         const SizedBox(height: 12),
         if (_examMatch || _mathsMatch) ...[
           Wrap(

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../data/app_state.dart';
+import '../../data/products.dart';
 import '../../models/school_models.dart';
 import '../../router/navigation.dart';
 import '../../services/school_service.dart';
@@ -940,6 +941,7 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
         return KvPage(
           maxWidth: 820,
           children: [
+            const _SubjectsCard(),
             KvCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1020,6 +1022,45 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> {
           ],
         );
       },
+    );
+  }
+}
+
+/// The subjects this school has. Changing them goes through Kidversity.
+class _SubjectsCard extends ConsumerWidget {
+  const _SubjectsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final owned = ref.watch(myProductsProvider).value;
+    return KvCard(
+      tint: AppTint.mint,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const KvSectionTitle(
+            title: 'Your subjects',
+            subtitle:
+                'Teachers, students and parents see these subjects, and Rope '
+                'Pull uses their questions. To add one, contact Kidversity.',
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final product in Product.values)
+                StatusChip(
+                  label: owned?.contains(product) ?? false
+                      ? '${product.label} · active'
+                      : '${product.label} · not included',
+                  tint: owned?.contains(product) ?? false
+                      ? AppTint.mint
+                      : AppTint.slate,
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

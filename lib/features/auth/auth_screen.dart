@@ -269,7 +269,7 @@ class _HeroPanel extends StatelessWidget {
       (
         AppTint.coral,
         Icons.translate_rounded,
-        'Mandarin, maths and past questions',
+        'Mandarin, maths and science labs',
       ),
       (
         AppTint.pink,

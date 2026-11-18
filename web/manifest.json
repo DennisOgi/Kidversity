@@ -8,7 +8,7 @@
   "display_override": ["standalone", "browser"],
   "background_color": "#F5F6FB",
   "theme_color": "#4433CC",
-  "description": "Mandarin lessons, Nigerian past questions, mental maths, science labs, and live class quizzes for students and teachers.",
+  "description": "Mandarin lessons, mental maths, science labs, and live class quizzes for primary to JSS3.",
   "orientation": "any",
   "lang": "en",
   "dir": "ltr",

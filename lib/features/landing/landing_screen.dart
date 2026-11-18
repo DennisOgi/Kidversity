@@ -180,11 +180,11 @@ class _Hero extends ConsumerWidget {
           constraints: const BoxConstraints(maxWidth: 540),
           child: Text(
             compact
-                ? 'Mandarin, maths, WAEC and UTME past questions, science labs '
-                      'and live Rope Pull, on any phone.'
-                : 'Mandarin, mental maths, WAEC and UTME past questions, science '
-                      'labs and live Rope Pull matches. On any phone or computer, for '
-                      'every learner in your school.',
+                ? 'Mandarin, mental maths, science labs and live Rope Pull, '
+                      'for primary to JSS3.'
+                : 'Mandarin, mental maths, science labs and live Rope Pull '
+                      'matches for primary to JSS3. Schools choose the subjects '
+                      'they need, on any phone or computer.',
             style: TextStyle(
               fontSize: compact ? 16 : 18,
               height: 1.55,
@@ -638,13 +638,6 @@ class _Worlds extends ConsumerWidget {
         () => openLandingFeature(context, ref, 0),
       ),
       (
-        AppTint.exams,
-        'assets/illustrations/world-exams.png',
-        'Past questions',
-        'UTME, WASSCE, NECO and Post-UTME. Every answer comes with the working.',
-        () => openLandingFeature(context, ref, 1),
-      ),
-      (
         AppTint.maths,
         'assets/illustrations/world-maths.png',
         'Mental maths',
@@ -654,6 +647,18 @@ class _Worlds extends ConsumerWidget {
           ref,
           UserRole.student,
           AppRoutes.studentMaths,
+        ),
+      ),
+      (
+        AppTint.sun,
+        null,
+        'Science labs',
+        'Hands-on physics and chemistry experiments that run in the browser.',
+        () => enterRoleSpace(
+          context,
+          ref,
+          UserRole.student,
+          AppRoutes.studentLabs,
         ),
       ),
       (
@@ -669,9 +674,9 @@ class _Worlds extends ConsumerWidget {
       children: [
         const _SectionHead(
           eyebrow: 'Learning worlds',
-          title: 'Five worlds. One learning home.',
+          title: 'Choose your learning worlds.',
           body:
-              'Every subject has its own colour, so children always know where they are. Progress follows them across all of it.',
+              'Schools pick the subjects they need. Each has its own colour, so children always know where they are, and Rope Pull plays with questions from those subjects.',
         ),
         // Phones: a tidy 2 x 2 grid of compact tiles, so every world is
         // visible at once without a clipped sideways row.
@@ -688,8 +693,8 @@ class _Worlds extends ConsumerWidget {
                   title: world.$3,
                   caption: const [
                     '30 short lessons',
-                    'WAEC, UTME, NECO',
                     '20 levels',
+                    'Experiments',
                     'Live with classmates',
                   ][i],
                   onTap: world.$5,
@@ -712,49 +717,6 @@ class _Worlds extends ConsumerWidget {
                 ),
             ],
           ),
-        const SizedBox(height: 18),
-        KvCard(
-          tint: AppTint.sun,
-          onTap: () => enterRoleSpace(
-            context,
-            ref,
-            UserRole.student,
-            AppRoutes.studentLabs,
-          ),
-          padding: const EdgeInsets.all(22),
-          child: Row(
-            children: [
-              const TintIcon(
-                tint: AppTint.sun,
-                icon: Icons.science_rounded,
-                size: 52,
-              ),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Science labs',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                    Text(
-                      MediaQuery.sizeOf(context).width < 600
-                          ? 'Experiments that run in the browser.'
-                          : 'Hands-on physics and chemistry experiments that run right in the browser.',
-                      style: TextStyle(fontSize: 15, color: AppTint.sun.ink),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_forward_rounded, color: AppTint.sun.ink),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -763,7 +725,7 @@ class _Worlds extends ConsumerWidget {
 /// Phone tile for one learning world: picture, name and one short line.
 class _WorldTileCompact extends StatelessWidget {
   final AppTint tint;
-  final String asset;
+  final String? asset;
   final String title;
   final String caption;
   final VoidCallback onTap;
@@ -792,7 +754,7 @@ class _WorldTileCompact extends StatelessWidget {
               aspectRatio: 4 / 3,
               child: ColoredBox(
                 color: tint.strong.withValues(alpha: 0.25),
-                child: Image.asset(asset, fit: BoxFit.cover),
+                child: _worldArt(asset, tint),
               ),
             ),
           ),
@@ -833,7 +795,7 @@ class _WorldTileCompact extends StatelessWidget {
 
 class _WorldCard extends StatelessWidget {
   final AppTint tint;
-  final String asset;
+  final String? asset;
   final String title;
   final String body;
   final VoidCallback onTap;
@@ -864,7 +826,7 @@ class _WorldCard extends StatelessWidget {
                 aspectRatio: 16 / 10,
                 child: ColoredBox(
                   color: tint.strong.withValues(alpha: 0.25),
-                  child: Image.asset(asset, fit: BoxFit.cover),
+                  child: _worldArt(asset, tint),
                 ),
               ),
             ),
@@ -1461,3 +1423,75 @@ class _Footer extends StatelessWidget {
     );
   }
 }
+
+/// A world's picture, or for worlds without one a bright tinted panel.
+Widget _worldArt(String? asset, AppTint tint) {
+  if (asset != null) return Image.asset(asset, fit: BoxFit.cover);
+  return DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [tint.soft, tint.strong.withValues(alpha: 0.55)],
+      ),
+    ),
+    child: LayoutBuilder(
+      builder: (context, box) {
+        final size = box.maxHeight;
+        return Stack(
+          children: [
+            Positioned(
+              right: -size * 0.12,
+              top: -size * 0.18,
+              child: _bubble(size * 0.55, Colors.white.withValues(alpha: 0.35)),
+            ),
+            Positioned(
+              left: size * 0.12,
+              bottom: size * 0.1,
+              child: _bubble(
+                size * 0.18,
+                AppTint.sky.strong.withValues(alpha: 0.4),
+              ),
+            ),
+            Positioned(
+              left: size * 0.38,
+              top: size * 0.16,
+              child: _bubble(
+                size * 0.1,
+                AppTint.coral.strong.withValues(alpha: 0.5),
+              ),
+            ),
+            Center(
+              child: Container(
+                width: size * 0.5,
+                height: size * 0.5,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(size * 0.14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: tint.ink.withValues(alpha: 0.18),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.science_rounded,
+                  size: size * 0.3,
+                  color: tint.ink,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
+
+Widget _bubble(double size, Color color) => Container(
+  width: size,
+  height: size,
+  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+);

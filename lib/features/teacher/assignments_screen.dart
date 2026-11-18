@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/app_state.dart';
+import '../../data/products.dart';
 import '../../data/records_providers.dart';
 import '../../models/learning_records_models.dart';
 import '../../models/past_questions_models.dart';
@@ -16,7 +17,6 @@ import '../../widgets/surfaces.dart';
 import '../student/exam_topics.dart';
 import '../student/maths_bank.dart';
 import '../student/past_questions_hub_screen.dart';
-import 'exam_bank_card.dart';
 
 class AssignmentsScreen extends ConsumerWidget {
   const AssignmentsScreen({super.key});
@@ -89,8 +89,6 @@ class AssignmentsScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    const ExamBankCard(),
                     const SizedBox(height: 20),
                     const _AssignmentList(),
                   ],
@@ -286,7 +284,8 @@ class _NewAssignmentDialog extends ConsumerStatefulWidget {
 }
 
 class _NewAssignmentDialogState extends ConsumerState<_NewAssignmentDialog> {
-  AssignmentKind _kind = AssignmentKind.exam;
+  // Exam papers moved to ACE: teachers set work in their school's products.
+  AssignmentKind _kind = AssignmentKind.lesson;
   PastExamType? _exam;
   PastSubject? _subject;
   int? _year;
@@ -299,6 +298,15 @@ class _NewAssignmentDialogState extends ConsumerState<_NewAssignmentDialog> {
   final _title = TextEditingController();
   bool _titleEdited = false;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final owned = ref.read(myProductsProvider).value ?? const <Product>{};
+    if (!owned.contains(Product.mandarin) && owned.contains(Product.maths)) {
+      _kind = AssignmentKind.maths;
+    }
+  }
 
   @override
   void dispose() {
@@ -379,6 +387,27 @@ class _NewAssignmentDialogState extends ConsumerState<_NewAssignmentDialog> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final owned = ref.watch(myProductsProvider).value ?? const <Product>{};
+    final kinds = [
+      if (owned.contains(Product.mandarin)) AssignmentKind.lesson,
+      if (owned.contains(Product.maths)) AssignmentKind.maths,
+    ];
+    if (kinds.isEmpty) {
+      return AlertDialog(
+        title: const Text('New assignment'),
+        content: const Text(
+          'Your school has not added Mandarin or Mental maths yet, so there '
+          'is nothing to set. Ask your school admin.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      );
+    }
+    if (!kinds.contains(_kind)) _kind = kinds.first;
     return AlertDialog(
       title: const Text('New assignment'),
       content: SizedBox(
@@ -388,27 +417,23 @@ class _NewAssignmentDialogState extends ConsumerState<_NewAssignmentDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SegmentedButton<AssignmentKind>(
-                segments: const [
-                  ButtonSegment(
-                    value: AssignmentKind.exam,
-                    label: Text('Past paper'),
-                  ),
-                  ButtonSegment(
-                    value: AssignmentKind.lesson,
-                    label: Text('Mandarin'),
-                  ),
-                  ButtonSegment(
-                    value: AssignmentKind.maths,
-                    label: Text('Maths'),
-                  ),
-                ],
-                selected: {_kind},
-                onSelectionChanged: (value) {
-                  setState(() => _kind = value.first);
-                  _refreshTitle();
-                },
-              ),
+              if (kinds.length > 1)
+                SegmentedButton<AssignmentKind>(
+                  segments: [
+                    for (final kind in kinds)
+                      ButtonSegment(
+                        value: kind,
+                        label: Text(
+                          kind == AssignmentKind.lesson ? 'Mandarin' : 'Maths',
+                        ),
+                      ),
+                  ],
+                  selected: {_kind},
+                  onSelectionChanged: (value) {
+                    setState(() => _kind = value.first);
+                    _refreshTitle();
+                  },
+                ),
               const SizedBox(height: 18),
               switch (_kind) {
                 AssignmentKind.exam => _examFields(text),

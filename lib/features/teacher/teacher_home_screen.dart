@@ -446,7 +446,7 @@ class _OpenAssignments extends StatelessWidget {
                 solid: false,
               ),
               title: 'Nothing set yet',
-              detail: 'Set a lesson, a maths level, or past questions.',
+              detail: 'Set a lesson or a maths level for the class.',
             )
           else
             for (var i = 0; i < sorted.length && i < 4; i++)

@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/features.dart';
 import '../../data/app_state.dart';
 import '../../data/auth_state.dart';
+import '../../data/products.dart';
 import '../../data/records_providers.dart';
 import '../../models/learning_records_models.dart';
 import '../../models/mandarin_content.dart';
@@ -44,32 +45,103 @@ class _StudentHomeScreenState extends ConsumerState<StudentHomeScreen> {
     ref.invalidate(myAssignmentsProvider);
     ref.invalidate(myMistakeGroupsProvider);
     ref.invalidate(myMathsResultsProvider);
-    ref.invalidate(myExamAttemptsProvider);
     ref.invalidate(foundationCompletedLessonIdsProvider);
+    ref.invalidate(myProductsProvider);
     await ref.read(authControllerProvider).reloadProfile();
   }
 
   @override
   Widget build(BuildContext context) {
+    final products = ref.watch(myProductsProvider);
+    final owned = products.value ?? const <Product>{};
+    final ropePull =
+        owned.contains(Product.mandarin) || owned.contains(Product.maths);
+    final Widget hero = owned.contains(Product.mandarin)
+        ? const _NextStepHero()
+        : _ProductHero(owned: owned, loading: products.value == null);
     return KvPage(
       onRefresh: _refresh,
       children: [
-        const Column(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            StudentLiveQuizBanner(),
+            const StudentLiveQuizBanner(),
             AdaptiveRow(
-              flex: [17, 10],
+              flex: const [17, 10],
               breakpoint: 900,
-              children: [_NextStepHero(), _ProgressCard()],
+              children: [hero, const _ProgressCard()],
             ),
           ],
         ),
         DashboardGuide.student(),
         const _TodayList(),
-        const _LearningAreas(),
-        const AdaptiveRow(children: [_SchoolCard(), _RopePullCard()]),
+        if (owned.isNotEmpty) const _LearningAreas(),
+        AdaptiveRow(
+          children: [const _SchoolCard(), if (ropePull) const _RopePullCard()],
+        ),
       ],
+    );
+  }
+}
+
+/// The hero when the school has no Mandarin: the first product it does have.
+class _ProductHero extends ConsumerWidget {
+  final Set<Product> owned;
+  final bool loading;
+
+  const _ProductHero({required this.owned, required this.loading});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name = firstName(ref.watch(authControllerProvider).displayName);
+    final greeting = name.isEmpty ? timeGreeting() : '${timeGreeting()}, $name';
+    if (loading) {
+      return HeroBanner(
+        colors: HeroColors.student,
+        eyebrow: greeting,
+        title: 'Getting your learning ready...',
+      );
+    }
+    if (owned.contains(Product.maths)) {
+      final maths = ref.watch(myMathsResultsProvider).asData?.value ?? const [];
+      final best = maths.fold<int>(0, (b, r) => r.level > b ? r.level : b);
+      final next = (best + 1).clamp(1, _mathsLevels);
+      return HeroBanner(
+        colors: HeroColors.student,
+        eyebrow: greeting,
+        title: best == 0
+            ? 'Start mental maths at level 1.'
+            : 'Mental maths level $next is ready.',
+        body:
+            '$_mathsLevels short levels, from number facts to simple algebra.',
+        actions: [
+          SunButton(
+            label: 'Play level $next',
+            onPressed: () =>
+                context.go('${AppRoutes.studentMaths}?level=$next'),
+          ),
+        ],
+      );
+    }
+    if (owned.contains(Product.labs)) {
+      return HeroBanner(
+        colors: HeroColors.student,
+        eyebrow: greeting,
+        title: 'Try a science experiment.',
+        body: 'Hands-on labs that run right in your browser.',
+        actions: [
+          SunButton(
+            label: 'Open science labs',
+            onPressed: () => context.go(AppRoutes.studentLabs),
+          ),
+        ],
+      );
+    }
+    return HeroBanner(
+      colors: HeroColors.student,
+      eyebrow: greeting,
+      title: 'Your school is setting up.',
+      body: 'Subjects appear here as soon as your school adds them.',
     );
   }
 }
@@ -143,7 +215,7 @@ class _NextStepHero extends ConsumerWidget {
       body: lockedByPack
           ? 'Ask a parent to unlock the next pack. Practice and Rope Pull stay open.'
           : finished
-          ? 'Keep your words fresh with practice, past questions and Rope Pull.'
+          ? 'Keep your words fresh with practice and Rope Pull.'
           : null,
       actions: [
         SunButton(
@@ -402,11 +474,7 @@ class _TodayList extends ConsumerWidget {
     final lessonsDone =
         ref.watch(foundationCompletedLessonIdsProvider).asData?.value ??
         const <String>{};
-    final mistakes = ref.watch(myMistakeGroupsProvider).asData?.value;
-    final openMistakes = mistakes?.fold<int>(
-      0,
-      (sum, group) => sum + group.items.length,
-    );
+    final owned = ref.watch(myProductsProvider).value ?? const <Product>{};
 
     bool done(ClassAssignment a) => a.kind == AssignmentKind.lesson
         ? lessonsDone.contains(a.lessonId)
@@ -415,7 +483,7 @@ class _TodayList extends ConsumerWidget {
     final open =
         [
           for (final a in data?.assignments ?? const <ClassAssignment>[])
-            if (!done(a)) a,
+            if (!done(a) && _assignmentAvailable(a, owned)) a,
         ]..sort(
           (a, b) =>
               (a.dueAt ?? DateTime(9999)).compareTo(b.dueAt ?? DateTime(9999)),
@@ -424,7 +492,7 @@ class _TodayList extends ConsumerWidget {
     final rows = <Widget>[
       for (final assignment in open.take(4))
         _AssignmentRow(assignment: assignment),
-      if (lessonsDone.isNotEmpty)
+      if (lessonsDone.isNotEmpty && owned.contains(Product.mandarin))
         _ActionRow(
           tint: AppTint.violet,
           icon: Icons.replay_rounded,
@@ -434,29 +502,27 @@ class _TodayList extends ConsumerWidget {
           action: 'Review',
           onPressed: () => context.go(AppRoutes.studentPractice),
         ),
-      if ((openMistakes ?? 0) > 0)
-        _ActionRow(
-          tint: AppTint.exams,
-          icon: Icons.menu_book_rounded,
-          title: 'Past questions to try again',
-          detail:
-              '$openMistakes question${openMistakes == 1 ? '' : 's'} you got wrong',
-          chip: null,
-          action: 'Try again',
-          onPressed: () => context.push(AppRoutes.studentExams),
-        ),
     ];
 
     if (rows.isEmpty) {
+      final (label, route) = owned.contains(Product.maths)
+          ? ('Mental maths', AppRoutes.studentMaths)
+          : owned.contains(Product.mandarin)
+          ? ('Mandarin', AppRoutes.studentMandarin)
+          : owned.contains(Product.labs)
+          ? ('Science labs', AppRoutes.studentLabs)
+          : (null, null);
       rows.add(
         _ActionRow(
           tint: AppTint.mint,
           icon: Icons.check_rounded,
           title: 'Nothing waiting',
-          detail: 'Work from your teacher shows up here. Try a maths level?',
+          detail: 'Work from your teacher shows up here.',
           chip: null,
-          action: 'Mental maths',
-          onPressed: () => context.go(AppRoutes.studentMaths),
+          action: label ?? 'Refresh',
+          onPressed: () => route == null
+              ? ref.invalidate(myProductsProvider)
+              : context.go(route),
         ),
       );
     }
@@ -559,10 +625,8 @@ class _AssignmentRow extends StatelessWidget {
   void _open(BuildContext context) {
     switch (assignment.kind) {
       case AssignmentKind.exam:
-        final config = assignment.examConfig;
-        if (config != null) {
-          context.push(AppRoutes.studentExamSession, extra: config);
-        }
+        // Exam practice moved to ACE; these rows are filtered out.
+        break;
       case AssignmentKind.lesson:
         final id = assignment.lessonId;
         if (id != null) context.go(AppRoutes.mandarinLesson(id));
@@ -615,58 +679,48 @@ class _LearningAreas extends ConsumerWidget {
       (best, r) => r.level > best ? r.level : best,
     );
 
-    final attempts =
-        ref.watch(myExamAttemptsProvider).asData?.value ?? const [];
-    final answered = attempts.fold<int>(0, (s, a) => s + a.total);
-    final correct = attempts.fold<int>(0, (s, a) => s + a.correct);
+    final owned = ref.watch(myProductsProvider).value ?? const <Product>{};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const KvSectionTitle(
           title: 'Your learning',
-          subtitle: 'Every area in one place. Open one to see its full path.',
+          subtitle: 'Every subject your school has, in one place.',
         ),
         AdaptiveGrid(
           minTileWidth: 150,
           children: [
-            _AreaCard(
-              tint: AppTint.mandarin,
-              glyph: '中',
-              title: 'Mandarin',
-              detail: total == 0
-                  ? 'Foundation path'
-                  : '$done of $total lessons',
-              progress: total == 0 ? 0 : done / total,
-              onTap: () => context.go(AppRoutes.studentMandarin),
-            ),
-            _AreaCard(
-              tint: AppTint.maths,
-              glyph: '÷',
-              title: 'Mental maths',
-              detail: bestLevel == 0
-                  ? '$_mathsLevels levels to climb'
-                  : 'Up to level $bestLevel of $_mathsLevels',
-              progress: bestLevel / _mathsLevels,
-              onTap: () => context.go(AppRoutes.studentMaths),
-            ),
-            _AreaCard(
-              tint: AppTint.exams,
-              icon: Icons.menu_book_rounded,
-              title: 'Past questions',
-              detail: answered == 0
-                  ? 'BECE, WAEC, NECO, UTME'
-                  : '$answered answered · ${percentOf(correct, answered)}% right',
-              progress: answered == 0 ? 0 : correct / answered,
-              onTap: () => context.push(AppRoutes.studentExams),
-            ),
-            _AreaCard(
-              tint: AppTint.labs,
-              icon: Icons.science_rounded,
-              title: 'Science labs',
-              detail: 'Hands-on experiments',
-              onTap: () => context.go(AppRoutes.studentLabs),
-            ),
+            if (owned.contains(Product.mandarin))
+              _AreaCard(
+                tint: AppTint.mandarin,
+                glyph: '中',
+                title: 'Mandarin',
+                detail: total == 0
+                    ? 'Foundation path'
+                    : '$done of $total lessons',
+                progress: total == 0 ? 0 : done / total,
+                onTap: () => context.go(AppRoutes.studentMandarin),
+              ),
+            if (owned.contains(Product.maths))
+              _AreaCard(
+                tint: AppTint.maths,
+                glyph: '÷',
+                title: 'Mental maths',
+                detail: bestLevel == 0
+                    ? '$_mathsLevels levels to climb'
+                    : 'Up to level $bestLevel of $_mathsLevels',
+                progress: bestLevel / _mathsLevels,
+                onTap: () => context.go(AppRoutes.studentMaths),
+              ),
+            if (owned.contains(Product.labs))
+              _AreaCard(
+                tint: AppTint.labs,
+                icon: Icons.science_rounded,
+                title: 'Science labs',
+                detail: 'Hands-on experiments',
+                onTap: () => context.go(AppRoutes.studentLabs),
+              ),
           ],
         ),
       ],
@@ -847,3 +901,11 @@ class _RopePullCard extends StatelessWidget {
     );
   }
 }
+
+/// Exam work moved to ACE; lesson and maths work need the school's product.
+bool _assignmentAvailable(ClassAssignment a, Set<Product> owned) =>
+    switch (a.kind) {
+      AssignmentKind.exam => false,
+      AssignmentKind.lesson => owned.contains(Product.mandarin),
+      AssignmentKind.maths => owned.contains(Product.maths),
+    };

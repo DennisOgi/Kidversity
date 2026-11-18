@@ -52,7 +52,7 @@ class DashboardGuide extends StatefulWidget {
         DashboardGuideStep(
           icon: Icons.insights_rounded,
           title: 'Progress',
-          body: 'Watch Mandarin movement and who needs a check-in.',
+          body: 'See who is moving and who needs a check-in.',
         ),
         DashboardGuideStep(
           icon: Icons.assignment_rounded,
@@ -80,12 +80,12 @@ class DashboardGuide extends StatefulWidget {
         DashboardGuideStep(
           icon: Icons.route_rounded,
           title: 'Home',
-          body: 'Continue Mandarin and open the learning worlds.',
+          body: 'Your next step in each subject your school has.',
         ),
         DashboardGuideStep(
           icon: Icons.school_rounded,
           title: 'Practice',
-          body: 'Review words, past questions, and mental maths.',
+          body: 'Short review rounds in your subjects.',
         ),
         DashboardGuideStep(
           icon: Icons.sports_esports_rounded,

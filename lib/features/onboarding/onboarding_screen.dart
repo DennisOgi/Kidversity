@@ -398,7 +398,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           _ => (
             'How learning works here',
-            'Mandarin lessons, exam topics, labs, mental maths, and Rope Pull.',
+            'Mandarin lessons, labs, mental maths, and Rope Pull.',
           ),
         };
     }
@@ -987,7 +987,6 @@ class _OnboardingPreview extends StatelessWidget {
           };
     const worlds = [
       (AppTint.coral, Icons.translate_rounded, 'Mandarin'),
-      (AppTint.sky, Icons.menu_book_rounded, 'Past questions'),
       (AppTint.mint, Icons.calculate_rounded, 'Mental maths'),
       (AppTint.sun, Icons.science_rounded, 'Labs'),
       (AppTint.pink, Icons.sports_esports_rounded, 'Rope Pull'),
@@ -1272,7 +1271,7 @@ class _HowItWorksStep extends StatelessWidget {
         (
           Icons.assignment_rounded,
           'Assign',
-          'Set a Mandarin lesson, an exam topic, or a mental-maths level.',
+          'Set a Mandarin lesson or a mental-maths level.',
         ),
         (
           Icons.bolt_rounded,
@@ -1333,7 +1332,7 @@ class _HowItWorksStep extends StatelessWidget {
         (
           Icons.people_rounded,
           'Users and performance',
-          'Browse accounts and open per-learner Mandarin, exam, and maths stats.',
+          'Browse accounts and open per-learner Mandarin and maths stats.',
         ),
       ],
       _ => const [
@@ -1343,11 +1342,6 @@ class _HowItWorksStep extends StatelessWidget {
           'Each lesson warms up words you already know, then you look, listen, and finish the quest to unlock the next one.',
         ),
         (
-          Icons.menu_book_rounded,
-          'Exam topics',
-          'Work through Biology, Chemistry, Physics, and Government in short topics, and practise past questions when you want a full paper.',
-        ),
-        (
           Icons.science_rounded,
           'Labs and mental maths',
           'Labs are experiments you can change and watch. Mental maths is twenty levels, from number facts up to simple algebra.',
@@ -1355,7 +1349,7 @@ class _HowItWorksStep extends StatelessWidget {
         (
           Icons.sports_esports_rounded,
           'Rope Pull and word review',
-          'Play is its own place: Indigo and Teal pull on words, past questions, or maths. Practice keeps a short daily review of Mandarin words you have unlocked.',
+          'Play is its own place: Indigo and Teal pull on words or maths. Practice keeps a short daily review of Mandarin words you have unlocked.',
         ),
       ],
     };
@@ -1429,7 +1423,7 @@ class _RoleStep extends StatelessWidget {
         _RoleCard(
           icon: Icons.backpack_rounded,
           title: "I'm a Student",
-          subtitle: 'Mandarin, exams, labs, maths, and Rope Pull',
+          subtitle: 'Mandarin, labs, maths, and Rope Pull',
           tint: AppTint.violet,
           selected: selected == UserRole.student,
           onTap: () => onSelect(UserRole.student),

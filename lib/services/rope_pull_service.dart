@@ -37,6 +37,7 @@ class RopePullService {
     if (text.contains('INVALID_BANK')) return 'INVALID_BANK';
     if (text.contains('INVALID_QUESTIONS')) return 'INVALID_QUESTIONS';
     if (text.contains('NOT_ENOUGH_QUESTIONS')) return 'NOT_ENOUGH_QUESTIONS';
+    if (text.contains('PRODUCT_NOT_AVAILABLE')) return 'PRODUCT_NOT_AVAILABLE';
     return 'Could not update the rope pull.';
   }
 
