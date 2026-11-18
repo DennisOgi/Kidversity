@@ -11,6 +11,10 @@ import '../features/landing/landing_screen.dart';
 import '../features/legal/legal_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/reports/progress_report_screen.dart';
+import '../features/results/class_results_screen.dart';
+import '../features/results/pupil_profile_screen.dart';
+import '../services/supabase_service.dart';
+import '../widgets/kv_ui.dart';
 import '../features/teacher/assignments_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../features/splash/splash_screen.dart';
@@ -104,6 +108,14 @@ const _teacherNav = [
     '/teacher/progress',
     'Learning movement & check-ins',
     AppTint.sky,
+  ),
+  NavItem(
+    Icons.flag_outlined,
+    Icons.flag_rounded,
+    'Results',
+    '/teacher/results',
+    'Targets and school scores',
+    AppTint.coral,
   ),
   NavItem(
     Icons.assignment_outlined,
@@ -522,6 +534,54 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => _teacherShell(
           '/teacher/progress',
           const FoundationProgressScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.teacherResults,
+        builder: (_, _) => _teacherShell(
+          AppRoutes.teacherResults,
+          const ClassResultsScreen(profileRoute: AppRoutes.teacherPupil),
+        ),
+      ),
+      GoRoute(
+        path: '/teacher/pupil/:id',
+        builder: (_, state) => _teacherShell(
+          AppRoutes.teacherResults,
+          PupilProfileScreen(
+            studentId: state.pathParameters['id']!,
+            heroColors: HeroColors.teacher,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/school/pupil/:id',
+        builder: (_, state) => _schoolShell(
+          AppRoutes.schoolStudents,
+          PupilProfileScreen(
+            studentId: state.pathParameters['id']!,
+            heroColors: HeroColors.school,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/parent/child/:id',
+        builder: (_, state) => _parentShell(
+          AppRoutes.parentHome,
+          PupilProfileScreen(
+            studentId: state.pathParameters['id']!,
+            heroColors: HeroColors.parent,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.studentResults,
+        builder: (_, _) => _studentShell(
+          '/student/path',
+          PupilProfileScreen(
+            studentId: SupabaseService.instance.currentUser?.id ?? '',
+            heroColors: HeroColors.student,
+            self: true,
+          ),
         ),
       ),
       GoRoute(

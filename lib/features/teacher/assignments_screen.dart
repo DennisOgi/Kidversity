@@ -48,7 +48,7 @@ class AssignmentsScreen extends ConsumerWidget {
                         eyebrow: 'Assign',
                         title: 'Set the work',
                         body:
-                            'A past paper, a Mandarin lesson, or a maths level shows up first on each learner’s home.',
+                            'A Mandarin lesson or a maths level shows up first on each learner’s home.',
                       ),
                       SizedBox(height: 18),
                       _NeedsClass(),
@@ -68,7 +68,7 @@ class AssignmentsScreen extends ConsumerWidget {
                               Text('Assignments', style: text.headlineSmall),
                               const SizedBox(height: 4),
                               Text(
-                                'Set a past paper, a Mandarin lesson, or a maths level for ${classInfo.name}. '
+                                'Set a Mandarin lesson or a maths level for ${classInfo.name}. '
                                 'It appears first on each student\'s home screen.',
                                 style: text.bodyLarge?.copyWith(
                                   color: AppColors.inkSoft,
@@ -138,7 +138,7 @@ class _AssignmentList extends ConsumerWidget {
                 icon: Icons.assignment_outlined,
                 title: 'Nothing set yet',
                 body:
-                    'Try an exam topic due Friday, the next Mandarin lesson, or a mental-maths level. Learners see it on their home screen.',
+                    'Try the next Mandarin lesson or a mental-maths level due Friday. Learners see it on their home screen.',
               );
             }
             return Column(

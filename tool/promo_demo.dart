@@ -16,6 +16,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kidversity/data/app_state.dart';
 import 'package:kidversity/data/auth_state.dart';
+import 'package:kidversity/data/products.dart';
+import 'package:kidversity/features/results/class_results_screen.dart';
+import 'package:kidversity/features/results/pupil_profile_screen.dart';
+import 'package:kidversity/models/results_models.dart';
+import 'package:kidversity/services/results_service.dart';
+import 'package:kidversity/widgets/kv_ui.dart';
 import 'package:kidversity/data/records_providers.dart';
 import 'package:kidversity/data/supabase_auth.dart';
 import 'package:kidversity/features/auth/auth_screen.dart';
@@ -586,6 +592,40 @@ void main() {
         ),
       ),
       GoRoute(
+        path: '/teacher/results',
+        builder: (_, _) => _shell(
+          '/teacher/results',
+          _teacherNav,
+          RoleStyle.teacher,
+          ClassResultsScreen(profileRoute: (id) => '/teacher/pupil/$id'),
+        ),
+      ),
+      GoRoute(
+        path: '/teacher/pupil/:id',
+        builder: (_, state) => _shell(
+          '/teacher/results',
+          _teacherNav,
+          RoleStyle.teacher,
+          PupilProfileScreen(
+            studentId: state.pathParameters['id']!,
+            heroColors: HeroColors.teacher,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/student/results',
+        builder: (_, _) => _shell(
+          '/student',
+          _studentNav,
+          RoleStyle.student,
+          const PupilProfileScreen(
+            studentId: 'me',
+            heroColors: HeroColors.student,
+            self: true,
+          ),
+        ),
+      ),
+      GoRoute(
         path: '/parent',
         builder: (_, _) => _shell(
           '/parent',
@@ -635,6 +675,12 @@ void main() {
         familyOverviewProvider.overrideWith((ref) async => _family),
         familyCodeProvider.overrideWith((ref) async => 'FMY8K2'),
         paymentCatalogProvider.overrideWith((ref) => Future.error('offline')),
+        myProductsProvider.overrideWith((ref) async => Product.values.toSet()),
+        classResultsProvider('c1').overrideWith((ref) async => _classResults),
+        for (final id in const ['tomi', 'kemi', 'ada', 'me'])
+          pupilProfileProvider(
+            id,
+          ).overrideWith((ref) async => _pupil(id, canEdit: id != 'me')),
       ],
       child: MaterialApp.router(
         title: 'Kidversity',
@@ -645,3 +691,139 @@ void main() {
     ),
   );
 }
+
+// Results sample data -------------------------------------------------------
+
+const _english = 'subj-english';
+const _maths = 'subj-maths';
+const _science = 'subj-science';
+
+const _classResults = ClassResults(
+  termLabel: 'First term 2026/2027',
+  subjects: [
+    SchoolSubject(_science, 'Basic Science'),
+    SchoolSubject(_english, 'English'),
+    SchoolSubject(_maths, 'Mathematics'),
+  ],
+  pupils: [
+    ClassPupilResults(
+      studentId: 'ada',
+      displayName: 'Ada Eze',
+      avatarEmoji: '🐼',
+      scores: {
+        _science: ScoreCell(target: 70, latest: 74),
+        _english: ScoreCell(target: 75, latest: 81),
+        _maths: ScoreCell(target: 70, latest: 72),
+      },
+    ),
+    ClassPupilResults(
+      studentId: 'kemi',
+      displayName: 'Kemi Okafor',
+      avatarEmoji: '🦁',
+      scores: {
+        _science: ScoreCell(target: 65, latest: 61),
+        _english: ScoreCell(target: 70, latest: 72),
+        _maths: ScoreCell(target: 65, latest: 58),
+      },
+    ),
+    ClassPupilResults(
+      studentId: 'tomi',
+      displayName: 'Tomi Okafor',
+      avatarEmoji: '🦊',
+      scores: {
+        _science: ScoreCell(target: 60, latest: 66),
+        _english: ScoreCell(target: 65),
+        _maths: ScoreCell(target: 70, latest: 69),
+      },
+    ),
+  ],
+);
+
+PupilProfile _pupil(String id, {required bool canEdit}) => PupilProfile(
+  studentId: id,
+  displayName: switch (id) {
+    'ada' => 'Ada Eze',
+    'tomi' || 'me' => 'Tomi Okafor',
+    _ => 'Kemi Okafor',
+  },
+  avatarEmoji: '🦁',
+  schoolName: 'Pearls Garden',
+  className: 'JSS 2A',
+  termLabel: 'First term 2026/2027',
+  canEdit: canEdit,
+  xp: 1240,
+  level: 3,
+  streakDays: 12,
+  lessonsCompleted: 23,
+  subjects: [
+    SubjectProgress(
+      subjectId: _science,
+      name: 'Basic Science',
+      target: 65,
+      baseline: 52,
+      latest: 61,
+      results: [
+        ResultEntry(
+          id: 's1',
+          kind: ResultKind.baseline,
+          title: 'Start of term',
+          score: 52,
+          assessedOn: DateTime(2026, 9, 15),
+        ),
+        ResultEntry(
+          id: 's2',
+          kind: ResultKind.test,
+          title: 'Living things',
+          score: 61,
+          assessedOn: DateTime(2026, 10, 20),
+        ),
+      ],
+    ),
+    SubjectProgress(
+      subjectId: _english,
+      name: 'English',
+      target: 70,
+      baseline: 61,
+      latest: 72,
+      results: [
+        ResultEntry(
+          id: 'e1',
+          kind: ResultKind.baseline,
+          title: 'Start of term',
+          score: 61,
+          assessedOn: DateTime(2026, 9, 15),
+        ),
+        ResultEntry(
+          id: 'e2',
+          kind: ResultKind.test,
+          title: 'Reading comprehension',
+          score: 72,
+          assessedOn: DateTime(2026, 11, 3),
+        ),
+      ],
+    ),
+    SubjectProgress(
+      subjectId: _maths,
+      name: 'Mathematics',
+      target: 65,
+      baseline: 45,
+      latest: 58,
+      results: [
+        ResultEntry(
+          id: 'm1',
+          kind: ResultKind.baseline,
+          title: 'Start of term',
+          score: 45,
+          assessedOn: DateTime(2026, 9, 15),
+        ),
+        ResultEntry(
+          id: 'm2',
+          kind: ResultKind.test,
+          title: 'Fractions test',
+          score: 58,
+          assessedOn: DateTime(2026, 11, 6),
+        ),
+      ],
+    ),
+  ],
+);

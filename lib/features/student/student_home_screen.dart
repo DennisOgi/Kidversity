@@ -79,6 +79,37 @@ class _StudentHomeScreenState extends ConsumerState<StudentHomeScreen> {
         AdaptiveRow(
           children: [const _SchoolCard(), if (ropePull) const _RopePullCard()],
         ),
+        KvCard(
+          tint: AppTint.violet,
+          onTap: () => context.go(AppRoutes.studentResults),
+          semanticLabel: 'Open my school goals',
+          child: Row(
+            children: [
+              const TintIcon(tint: AppTint.violet, icon: Icons.flag_rounded),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'My school goals',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    Text(
+                      'Your teacher\'s targets and your school results.',
+                      style: TextStyle(fontSize: 14, color: AppTint.violet.ink),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_rounded, color: AppTint.violet.ink),
+            ],
+          ),
+        ),
       ],
     );
   }

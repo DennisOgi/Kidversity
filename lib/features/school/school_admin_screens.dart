@@ -795,8 +795,17 @@ class _SchoolStudentsScreenState extends ConsumerState<SchoolStudentsScreen> {
                                   onSelected: (value) =>
                                       value is SchoolClassInfo
                                       ? _place(page[i], value)
+                                      : value == 'profile'
+                                      ? context.push(
+                                          AppRoutes.schoolPupil(page[i].userId),
+                                        )
                                       : _remove(page[i]),
                                   itemBuilder: (_) => [
+                                    const PopupMenuItem<Object>(
+                                      value: 'profile',
+                                      child: Text('Open profile'),
+                                    ),
+                                    const PopupMenuDivider(),
                                     for (final c in classes)
                                       PopupMenuItem<Object>(
                                         value: c,

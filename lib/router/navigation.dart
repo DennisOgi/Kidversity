@@ -38,6 +38,11 @@ abstract final class AppRoutes {
   static const schoolSettings = '/school/settings';
   static String joinStaff(String code) => '/join/staff/$code';
   static const teacherProgress = '/teacher/progress';
+  static const teacherResults = '/teacher/results';
+  static String teacherPupil(String id) => '/teacher/pupil/$id';
+  static String schoolPupil(String id) => '/school/pupil/$id';
+  static String parentChild(String id) => '/parent/child/$id';
+  static const studentResults = '/student/results';
   static const teacherCreate = '/teacher/create';
   static const teacherLive = '/teacher/live';
   static const teacherLiveCompose = '/teacher/live/compose';

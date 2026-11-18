@@ -653,7 +653,7 @@ class _Worlds extends ConsumerWidget {
         AppTint.sun,
         null,
         'Science labs',
-        'Hands-on physics and chemistry experiments that run in the browser.',
+        'Physics and chemistry experiments you can change and watch.',
         () => enterRoleSpace(
           context,
           ref,
@@ -911,7 +911,7 @@ class _Roles extends ConsumerWidget {
         'Teachers',
         'Know who needs you, at a glance',
         [
-          'Set lessons, maths and past papers',
+          'Track targets and school results',
           'Live quizzes on the board',
           'See who is stuck and why',
         ],

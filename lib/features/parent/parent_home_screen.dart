@@ -165,6 +165,47 @@ class _ParentHomeScreenState extends ConsumerState<ParentHomeScreen> {
                 onUseCredit: _useCredit,
                 onOpenPacks: _openPacks,
               ),
+              KvCard(
+                tint: AppTint.violet,
+                onTap: () =>
+                    context.push(AppRoutes.parentChild(selected!.userId)),
+                semanticLabel: 'Open ${selected.displayName}\'s school results',
+                child: Row(
+                  children: [
+                    const TintIcon(
+                      tint: AppTint.violet,
+                      icon: Icons.flag_rounded,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Goals and school results',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                          Text(
+                            'Targets from the teacher and ${firstName(selected.displayName)}\'s official scores this term.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppTint.violet.ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      color: AppTint.violet.ink,
+                    ),
+                  ],
+                ),
+              ),
               _FamilyCodeCard(fallbackCode: family.linkCode, hasChildren: true),
             ],
             if (Features.payments)
