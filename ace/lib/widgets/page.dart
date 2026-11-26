@@ -5,6 +5,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme.dart';
 import 'effects.dart';
 
+/// Back to the previous page if there is one in this session, otherwise to
+/// [fallback] (the page's logical parent, e.g. after opening a shared link).
+void goBack(BuildContext context, String fallback) {
+  if (context.canPop()) {
+    context.pop();
+  } else {
+    context.go(fallback);
+  }
+}
+
 String _initials(String name) {
   final parts = name
       .trim()
@@ -24,11 +34,15 @@ class AcePage extends StatelessWidget {
   final Widget? header;
   final Future<void> Function()? onRefresh;
 
+  /// Shows a back arrow in the top bar. Used when there is no earlier page.
+  final String? backTo;
+
   const AcePage({
     super.key,
     required this.children,
     this.header,
     this.onRefresh,
+    this.backTo,
   });
 
   @override
@@ -65,8 +79,20 @@ class AcePage extends StatelessWidget {
         elevation: 0,
         scrolledUnderElevation: 2,
         shadowColor: Ace.navy.withValues(alpha: 0.2),
-        titleSpacing: side,
+        titleSpacing: backTo == null ? side : 4,
         toolbarHeight: 68,
+        automaticallyImplyLeading: false,
+        leadingWidth: backTo == null ? 0 : side + 40,
+        leading: backTo == null
+            ? null
+            : Padding(
+                padding: EdgeInsets.only(left: side - 8),
+                child: IconButton(
+                  tooltip: 'Back',
+                  icon: const Icon(Icons.arrow_back_rounded, color: Ace.navy),
+                  onPressed: () => goBack(context, backTo!),
+                ),
+              ),
         title: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: () => context.go('/'),

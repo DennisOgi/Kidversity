@@ -81,7 +81,7 @@ class _ChannelScreenState extends State<ChannelScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextButton.icon(
-              onPressed: () => context.go('/'),
+              onPressed: () => goBack(context, '/'),
               style: TextButton.styleFrom(
                 foregroundColor: const Color(0xFFC9D3E6),
                 padding: EdgeInsets.zero,
@@ -133,6 +133,7 @@ class _ChannelScreenState extends State<ChannelScreen> {
         );
 
         return AcePage(
+          backTo: '/',
           onRefresh: () async => _reload(),
           header: HeroBand(
             child: wide
@@ -154,7 +155,7 @@ class _ChannelScreenState extends State<ChannelScreen> {
               Reveal(
                 child: AceCard(
                   onTap: () =>
-                      context.go('/c/${channel['prerequisite_channel']}'),
+                      context.push('/c/${channel['prerequisite_channel']}'),
                   child: Row(
                     children: [
                       Container(
@@ -326,7 +327,7 @@ class _PathStep extends StatelessWidget {
               padding: EdgeInsets.only(bottom: last ? 0 : 16),
               child: AceCard(
                 accent: started ? color : null,
-                onTap: () => context.go('/l/${lesson['id']}'),
+                onTap: () => context.push('/l/${lesson['id']}'),
                 child: Row(
                   children: [
                     Expanded(

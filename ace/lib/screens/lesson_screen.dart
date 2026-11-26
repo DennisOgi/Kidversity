@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 
 import '../data/api.dart';
 import '../theme.dart';
@@ -51,12 +50,13 @@ class _LessonScreenState extends State<LessonScreen> {
             .where((q) => ((q['attempts'] as num?) ?? 0) > 0)
             .length;
         return AcePage(
+          backTo: '/c/${l['channel_id']}',
           header: HeroBand(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextButton.icon(
-                  onPressed: () => context.go('/c/${l['channel_id']}'),
+                  onPressed: () => goBack(context, '/c/${l['channel_id']}'),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFFC9D3E6),
                     padding: EdgeInsets.zero,

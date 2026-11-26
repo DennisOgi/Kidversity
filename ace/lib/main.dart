@@ -20,6 +20,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Clean URLs under the /ace/ base href (e.g. /ace/c/as-mathematics).
   usePathUrlStrategy();
+  // Keep the address bar in step with pushed pages, so links are shareable
+  // and the browser back button walks back through the pages you opened.
+  GoRouter.optionURLReflectsImperativeAPIs = true;
   await Supabase.initialize(
     url: AceConfig.supabaseUrl,
     publishableKey: AceConfig.supabaseKey,

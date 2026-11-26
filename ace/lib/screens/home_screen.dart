@@ -209,7 +209,7 @@ class _Greeting extends StatelessWidget {
         : _ContinueCard(
             title: resume!['title'] as String,
             subtitle: '${resume!['stage']} ${resume!['subject']}',
-            onTap: () => context.go('/l/${resume!['lesson_id']}'),
+            onTap: () => context.push('/l/${resume!['lesson_id']}'),
           );
 
     if (!wide) {
@@ -414,7 +414,7 @@ class _ChannelCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => context.go('/c/${channel['id']}'),
+          onTap: () => context.push('/c/${channel['id']}'),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
