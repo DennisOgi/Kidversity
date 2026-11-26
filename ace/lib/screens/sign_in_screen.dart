@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme.dart';
+import '../widgets/effects.dart';
 
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key});
+  final bool startCreate;
+
+  const SignInScreen({super.key, this.startCreate = false});
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
 }
 
 class _SignInScreenState extends State<SignInScreen> {
-  bool _create = false;
+  late bool _create = widget.startCreate;
   bool _busy = false;
   String? _error;
   String? _notice;
@@ -84,6 +88,15 @@ class _SignInScreenState extends State<SignInScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => context.go('/welcome'),
+                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                  label: const Text('Home'),
+                ),
+              ),
+              const SizedBox(height: 12),
               if (!wide) ...[
                 const Align(
                   alignment: Alignment.centerLeft,
@@ -186,56 +199,60 @@ class _SignInScreenState extends State<SignInScreen> {
 class _Hero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Ace.navy, Ace.navySoft],
+    return AuroraBackdrop(
+      child: Padding(
+        padding: const EdgeInsets.all(56),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AceWordmark(onDark: true),
+            const Spacer(),
+            Reveal(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    const TextSpan(text: 'Advance.\nConquer.\n'),
+                    TextSpan(
+                      text: 'Excel.',
+                      style: TextStyle(color: Ace.amber),
+                    ),
+                  ],
+                ),
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 60,
+                  height: 1.02,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: -1.2,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Reveal(
+              delay: Duration(milliseconds: 150),
+              child: Text(
+                'Cambridge AS and A2 Mathematics and Physics. Study a topic, write out your '
+                'working, check your answer and learn from a worked solution.',
+                style: TextStyle(
+                  color: Color(0xFFC9D3E6),
+                  fontSize: 16,
+                  height: 1.55,
+                ),
+              ),
+            ),
+            const Spacer(),
+            const Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _Pill('AS Mathematics'),
+                _Pill('A2 Mathematics'),
+                _Pill('AS Physics'),
+                _Pill('A2 Physics'),
+              ],
+            ),
+          ],
         ),
-      ),
-      padding: const EdgeInsets.all(56),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const AceWordmark(onDark: true),
-          const Spacer(),
-          Text(
-            'Advance.\nConquer.\nExcel.',
-            style: GoogleFonts.spaceGrotesk(
-              fontSize: 56,
-              height: 1.05,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Cambridge AS and A2 Mathematics and Physics. Study a topic, write '
-            'out your working, check your answer and learn from a worked solution.',
-            style: TextStyle(
-              color: Color(0xFFC9D3E6),
-              fontSize: 16,
-              height: 1.55,
-            ),
-          ),
-          const Spacer(),
-          const Row(
-            children: [
-              _Pill('AS Mathematics'),
-              SizedBox(width: 8),
-              _Pill('A2 Mathematics'),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Row(
-            children: [
-              _Pill('AS Physics'),
-              SizedBox(width: 8),
-              _Pill('A2 Physics'),
-            ],
-          ),
-        ],
       ),
     );
   }

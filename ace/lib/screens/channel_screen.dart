@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../data/api.dart';
 import '../theme.dart';
+import '../widgets/effects.dart';
 import '../widgets/page.dart';
 
-/// One channel (e.g. AS Mathematics): its lessons in teaching order, with
-/// how many questions you have tried in each.
+/// One channel (e.g. AS Mathematics): a hero with progress, then the lessons
+/// as a learning path in teaching order.
 class ChannelScreen extends StatefulWidget {
   final String channelId;
 
@@ -43,157 +45,388 @@ class _ChannelScreenState extends State<ChannelScreen> {
           for (final l in (channel['lessons'] as List? ?? const []))
             Map<String, dynamic>.from(l as Map),
         ];
-        final total = progress['questions'] as int? ?? 0;
-        final tried = progress['attempted'] as int? ?? 0;
+        final total = (progress['questions'] as num?)?.toInt() ?? 0;
+        final tried = (progress['attempted'] as num?)?.toInt() ?? 0;
+        final matched =
+            (progress['final_answer_matched'] as num?)?.toInt() ?? 0;
+        final review = (progress['awaiting_teacher'] as num?)?.toInt() ?? 0;
+        final wide = MediaQuery.sizeOf(context).width >= 760;
+
+        final ring = ProgressRing(
+          value: total == 0 ? 0 : tried / total,
+          size: wide ? 118 : 92,
+          stroke: 10,
+          color: Ace.amber,
+          track: Colors.white12,
+          center: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${total == 0 ? 0 : (tried * 100 / total).round()}%',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: wide ? 28 : 22,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const Text(
+                'tried',
+                style: TextStyle(color: Color(0xFFC9D3E6), fontSize: 12),
+              ),
+            ],
+          ),
+        );
+
+        final title = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextButton.icon(
+              onPressed: () => context.go('/'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFC9D3E6),
+                padding: EdgeInsets.zero,
+              ),
+              icon: const Icon(Icons.arrow_back_rounded, size: 18),
+              label: const Text('My channels'),
+            ),
+            const SizedBox(height: 6),
+            Reveal(
+              child: Text(
+                '${channel['stage']} $subject',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: wide ? 44 : 32,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: -0.8,
+                ),
+              ),
+            ),
+            Text(
+              channel['syllabus'] as String? ?? '',
+              style: const TextStyle(color: Color(0xFFC9D3E6)),
+            ),
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _Pill(
+                  icon: Icons.menu_book_rounded,
+                  text: '${lessons.length} lessons',
+                ),
+                _Pill(
+                  icon: Icons.edit_note_rounded,
+                  text: '$tried of $total questions tried',
+                ),
+                _Pill(
+                  icon: Icons.check_circle_rounded,
+                  text: '$matched correct',
+                ),
+                if (review > 0)
+                  _Pill(
+                    icon: Icons.rate_review_rounded,
+                    text: '$review with your teacher',
+                  ),
+              ],
+            ),
+          ],
+        );
+
         return AcePage(
           onRefresh: () async => _reload(),
+          header: HeroBand(
+            child: wide
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(child: title),
+                      const SizedBox(width: 24),
+                      ring,
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [title, const SizedBox(height: 20), ring],
+                  ),
+          ),
           children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => context.go('/'),
-                icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                label: const Text('All channels'),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(26),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Ace.navy, Color.lerp(Ace.navy, color, 0.55)!],
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    channel['syllabus'] as String? ?? '',
-                    style: const TextStyle(color: Color(0xFFC9D3E6)),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${channel['stage']} $subject',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.headlineMedium?.copyWith(color: Colors.white),
-                  ),
-                  const SizedBox(height: 16),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(99),
-                    child: LinearProgressIndicator(
-                      value: total == 0 ? 0 : tried / total,
-                      minHeight: 8,
-                      backgroundColor: Colors.white24,
-                      color: Ace.amber,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$tried of $total questions tried · '
-                    '${progress['final_answer_matched'] ?? 0} final answers matched · '
-                    '${progress['awaiting_teacher'] ?? 0} waiting for your teacher',
-                    style: const TextStyle(color: Colors.white, fontSize: 13.5),
-                  ),
-                ],
-              ),
-            ),
-            if (channel['route_pending'] == true)
-              const AceCard(
-                accent: Ace.amber,
-                child: Text(
-                  'Your school has not confirmed its Mathematics paper route yet, so '
-                  'every topic in this channel is shown for now.',
-                  style: TextStyle(color: Ace.warn),
-                ),
-              ),
             if (channel['prerequisite_channel'] != null)
-              AceCard(
-                onTap: () =>
-                    context.go('/c/${channel['prerequisite_channel']}'),
-                child: Row(
-                  children: [
-                    const Icon(Icons.history_edu_rounded, color: Ace.inkSoft),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Revisit the AS lessons this channel builds on',
+              Reveal(
+                child: AceCard(
+                  onTap: () =>
+                      context.go('/c/${channel['prerequisite_channel']}'),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Ace.subjectSoft(subject),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.history_edu_rounded, color: color),
                       ),
-                    ),
-                    Icon(Icons.arrow_forward_rounded, color: color),
-                  ],
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Revisit the foundations',
+                              style: TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                            Text(
+                              'The AS lessons this channel builds on',
+                              style: TextStyle(color: Ace.inkSoft),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_rounded, color: color),
+                    ],
+                  ),
                 ),
               ),
-            Text('Lessons', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Your learning path',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             if (lessons.isEmpty)
               const AceCard(
                 child: Text(
-                  'No lessons are available in this channel yet.',
+                  'New lessons are on the way.',
                   style: TextStyle(color: Ace.inkSoft),
                 ),
               ),
             for (final (i, l) in lessons.indexed)
-              AceCard(
-                accent: color,
-                onTap: () => context.go('/l/${l['id']}'),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Ace.subjectSoft(subject),
-                      child: Text(
-                        '${i + 1}',
-                        style: TextStyle(
-                          color: color,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l['title'] as String,
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            [
-                              if (l['topic_ref'] != null)
-                                'Syllabus ${l['topic_ref']}',
-                              if (l['topic'] != null) l['topic'],
-                              if (l['minutes'] != null) '${l['minutes']} min',
-                              '${l['answered']}/${l['questions']} questions tried',
-                            ].join(' · '),
-                            style: const TextStyle(
-                              color: Ace.inkSoft,
-                              fontSize: 13.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (l['review_status'] != 'published') ...[
-                      const SizedBox(width: 8),
-                      const AceChip(
-                        'Draft',
-                        color: Ace.warn,
-                        background: Ace.warnSoft,
-                      ),
-                    ],
-                    const SizedBox(width: 8),
-                    Icon(Icons.arrow_forward_rounded, color: color),
-                  ],
+              Reveal(
+                delay: Duration(milliseconds: 90 * i),
+                child: _PathStep(
+                  index: i,
+                  last: i == lessons.length - 1,
+                  lesson: l,
+                  color: color,
                 ),
               ),
           ],
         );
       },
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _Pill({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Ace.amber),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PathStep extends StatelessWidget {
+  final int index;
+  final bool last;
+  final Map<String, dynamic> lesson;
+  final Color color;
+
+  const _PathStep({
+    required this.index,
+    required this.last,
+    required this.lesson,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final answered = (lesson['answered'] as num?)?.toInt() ?? 0;
+    final questions = (lesson['questions'] as num?)?.toInt() ?? 0;
+    final done = questions > 0 && answered >= questions;
+    final started = answered > 0;
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 52,
+            child: Column(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: done ? color : (started ? Colors.white : Ace.paper),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: started || done ? color : Ace.line,
+                      width: 2.5,
+                    ),
+                    boxShadow: started
+                        ? [
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.3),
+                              blurRadius: 14,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: done
+                      ? const Icon(Icons.check_rounded, color: Colors.white)
+                      : Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: started ? color : Ace.inkSoft,
+                          ),
+                        ),
+                ),
+                if (!last)
+                  Expanded(
+                    child: Container(
+                      width: 3,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(
+                        color: done ? color : Ace.line,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: last ? 0 : 16),
+              child: AceCard(
+                accent: started ? color : null,
+                onTap: () => context.go('/l/${lesson['id']}'),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (lesson['topic'] != null)
+                            Text(
+                              [
+                                if (lesson['topic_ref'] != null)
+                                  lesson['topic_ref'],
+                                lesson['topic'],
+                              ].join(' · ').toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                letterSpacing: 1.1,
+                                fontWeight: FontWeight.w800,
+                                color: color,
+                              ),
+                            ),
+                          const SizedBox(height: 4),
+                          Text(
+                            lesson['title'] as String,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Ace.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              if (lesson['minutes'] != null) ...[
+                                const Icon(
+                                  Icons.schedule_rounded,
+                                  size: 16,
+                                  color: Ace.inkSoft,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${lesson['minutes']} min',
+                                  style: const TextStyle(
+                                    color: Ace.inkSoft,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                              ],
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(99),
+                                  child: LinearProgressIndicator(
+                                    value: questions == 0
+                                        ? 0
+                                        : answered / questions,
+                                    minHeight: 6,
+                                    backgroundColor: Ace.line,
+                                    color: color,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                '$answered/$questions',
+                                style: const TextStyle(
+                                  color: Ace.inkSoft,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: started ? color : Ace.navy,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        done ? 'Review' : (started ? 'Continue' : 'Start'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

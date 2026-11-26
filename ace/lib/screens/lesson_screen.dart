@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../data/api.dart';
 import '../theme.dart';
+import '../widgets/effects.dart';
 import '../widgets/math_text.dart';
 import '../widgets/page.dart';
 
@@ -45,44 +46,64 @@ class _LessonScreenState extends State<LessonScreen> {
             : 'Mathematics';
         final color = Ace.subject(subject);
         const body = TextStyle(fontSize: 16.5, height: 1.65, color: Ace.ink);
+        final qCount = questions.length;
+        final tried = questions
+            .where((q) => ((q['attempts'] as num?) ?? 0) > 0)
+            .length;
         return AcePage(
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => context.go('/c/${l['channel_id']}'),
-                icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                label: Text('${l['stage']} $subject'),
-              ),
-            ),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+          header: HeroBand(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                TextButton.icon(
+                  onPressed: () => context.go('/c/${l['channel_id']}'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFC9D3E6),
+                    padding: EdgeInsets.zero,
+                  ),
+                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                  label: Text('${l['stage']} $subject'),
+                ),
+                const SizedBox(height: 10),
                 if (topic != null)
-                  AceChip(
-                    'Syllabus ${topic['ref']} · ${topic['title']}',
-                    color: color,
-                    background: Ace.subjectSoft(subject),
+                  Text(
+                    'SYLLABUS ${topic['ref']} · ${topic['title']}'
+                        .toUpperCase(),
+                    style: const TextStyle(
+                      color: Ace.amber,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.4,
+                      fontSize: 12.5,
+                    ),
                   ),
-                if (l['minutes'] != null)
-                  AceChip(
-                    '${l['minutes']} min',
-                    color: Ace.inkSoft,
-                    background: Ace.line,
+                const SizedBox(height: 8),
+                Reveal(
+                  child: Text(
+                    l['title'] as String,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: Colors.white,
+                      fontSize: MediaQuery.sizeOf(context).width < 600
+                          ? 28
+                          : 38,
+                      letterSpacing: -0.6,
+                    ),
                   ),
-                if (l['review_status'] != 'published')
-                  const AceChip(
-                    'Draft · awaiting subject review',
-                    color: Ace.warn,
-                    background: Ace.warnSoft,
-                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    if (l['minutes'] != null)
+                      _HeroPill(Icons.schedule_rounded, '${l['minutes']} min'),
+                    _HeroPill(Icons.quiz_rounded, '$qCount practice questions'),
+                    _HeroPill(Icons.edit_note_rounded, '$tried tried'),
+                  ],
+                ),
               ],
             ),
-            Text(
-              l['title'] as String,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+          ),
+          children: [
             if ((l['objectives'] as List?)?.isNotEmpty ?? false)
               _Section(
                 title: 'By the end you can',
@@ -405,7 +426,14 @@ class _QuestionCardState extends State<QuestionCard> {
           if (_result == null)
             ..._form()
           else
-            _Feedback(result: _result!, onRetry: _retry, color: widget.color),
+            Reveal(
+              key: ValueKey(_result!['attempt_id']),
+              child: _Feedback(
+                result: _result!,
+                onRetry: _retry,
+                color: widget.color,
+              ),
+            ),
         ],
       ),
     );
@@ -616,6 +644,40 @@ class _Feedback extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _HeroPill extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _HeroPill(this.icon, this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Ace.amber),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

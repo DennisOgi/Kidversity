@@ -73,3 +73,10 @@ tmp_seed_parts*/
 # never commit them.
 /ACE_A_Level_Integration_Starter/
 /ACE_*Starter*/
+
+# ACE demo credentials (local only)
+/ace/demo/*.local.md
+/ace/demo/.accounts.json
+
+# Local-only notes with test credentials
+*.local.md

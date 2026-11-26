@@ -4,8 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// never reads answer keys: a question's answer and worked solution only
 /// arrive in the response to a submitted practice attempt.
 class AceApi {
-  AceApi._();
-  static final instance = AceApi._();
+  AceApi();
+
+  /// Swappable for previews and tests.
+  static AceApi instance = AceApi();
 
   SupabaseClient get _db => Supabase.instance.client;
 

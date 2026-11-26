@@ -10,8 +10,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
 import 'screens/channel_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/landing_screen.dart';
 import 'screens/lesson_screen.dart';
 import 'screens/sign_in_screen.dart';
+import 'screens/splash_screen.dart';
 import 'theme.dart';
 
 Future<void> main() async {
@@ -44,18 +46,27 @@ class _AuthListenable extends ChangeNotifier {
 
 final _auth = _AuthListenable();
 
+const _public = {'/welcome', '/sign-in'};
+
 final _router = GoRouter(
   refreshListenable: _auth,
   redirect: (context, state) {
     final signedIn = Supabase.instance.client.auth.currentSession != null;
-    final atSignIn = state.matchedLocation == '/sign-in';
-    if (!signedIn && !atSignIn) return '/sign-in';
-    if (signedIn && atSignIn) return '/';
+    final path = state.matchedLocation;
+    if (!signedIn && !_public.contains(path)) return '/welcome';
+    if (signedIn && _public.contains(path)) return '/';
     return null;
   },
   routes: [
     GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
-    GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
+    GoRoute(path: '/welcome', builder: (_, _) => const LandingScreen()),
+    GoRoute(
+      path: '/sign-in',
+      builder: (_, s) => SignInScreen(
+        key: ValueKey(s.uri.queryParameters['create']),
+        startCreate: s.uri.queryParameters['create'] == '1',
+      ),
+    ),
     GoRoute(
       path: '/c/:id',
       builder: (_, s) => ChannelScreen(
@@ -73,8 +84,15 @@ final _router = GoRouter(
   ],
 );
 
-class AceApp extends StatelessWidget {
+class AceApp extends StatefulWidget {
   const AceApp({super.key});
+
+  @override
+  State<AceApp> createState() => _AceAppState();
+}
+
+class _AceAppState extends State<AceApp> {
+  bool _splash = true;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +108,17 @@ class AceApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: Ace.theme(),
       routerConfig: _router,
+      builder: (context, child) => Stack(
+        children: [
+          ?child,
+          if (_splash)
+            Positioned.fill(
+              child: SplashOverlay(
+                onDone: () => setState(() => _splash = false),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
