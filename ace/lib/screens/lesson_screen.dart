@@ -24,6 +24,20 @@ class _LessonScreenState extends State<LessonScreen> {
     widget.lessonId,
   );
 
+  Map<String, dynamic> _reviews = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    // Teacher marks and comments; the lesson still works without them.
+    AceApi.instance
+        .myReviews(widget.lessonId)
+        .then((r) {
+          if (mounted) setState(() => _reviews = r);
+        })
+        .catchError((_) {});
+  }
+
   void _reload() =>
       setState(() => _lesson = AceApi.instance.lesson(widget.lessonId));
 
@@ -173,6 +187,9 @@ class _LessonScreenState extends State<LessonScreen> {
                 number: i + 1,
                 question: q,
                 color: color,
+                review: _reviews[q['id']] == null
+                    ? null
+                    : Map<String, dynamic>.from(_reviews[q['id']] as Map),
               ),
             if (l['exit_check'] != null)
               _Section(
@@ -297,11 +314,15 @@ class QuestionCard extends StatefulWidget {
   final Map<String, dynamic> question;
   final Color color;
 
+  /// The latest teacher review of this learner's work, if any.
+  final Map<String, dynamic>? review;
+
   const QuestionCard({
     super.key,
     required this.number,
     required this.question,
     required this.color,
+    this.review,
   });
 
   @override
@@ -423,6 +444,10 @@ class _QuestionCardState extends State<QuestionCard> {
             ),
           ),
           const SizedBox(height: 16),
+          if (widget.review != null) ...[
+            _TeacherReview(review: widget.review!),
+            const SizedBox(height: 16),
+          ],
           if (_result == null)
             ..._form()
           else
@@ -674,6 +699,73 @@ class _HeroPill extends StatelessWidget {
               color: Colors.white,
               fontSize: 13,
               fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A teacher's marks and comment on this question.
+class _TeacherReview extends StatelessWidget {
+  final Map<String, dynamic> review;
+
+  const _TeacherReview({required this.review});
+
+  String _fmt(Object? n) {
+    final v = n is num ? n : num.tryParse('$n') ?? 0;
+    return v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final comment = (review['comment'] as String?)?.trim() ?? '';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Ace.amberSoft,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Ace.amber.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Ace.navy,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${_fmt(review['awarded'])}/${review['max']}',
+              style: const TextStyle(
+                color: Ace.amber,
+                fontWeight: FontWeight.w800,
+                fontSize: 17,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Marked by ${review['by'] ?? 'your teacher'}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: Ace.ink,
+                  ),
+                ),
+                if (comment.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '"$comment"',
+                    style: const TextStyle(color: Ace.ink, height: 1.45),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

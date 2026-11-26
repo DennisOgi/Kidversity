@@ -51,9 +51,79 @@ class AceApi {
     },
   });
 
+  /// Teacher marks and comments on the learner's work in one lesson,
+  /// keyed by question id.
+  Future<Map<String, dynamic>> myReviews(String lessonId) =>
+      _rpc('ace_my_reviews', {'p_lesson': lessonId});
+
+  // Staff ------------------------------------------------------------------
+
+  Future<Map<String, dynamic>> staffOverview() => _rpc('ace_staff_overview');
+
+  Future<List<Map<String, dynamic>>> _list(
+    String fn, [
+    Map<String, dynamic>? params,
+  ]) async {
+    final raw = await _db.rpc(fn, params: params);
+    return [
+      for (final r in (raw as List? ?? const []))
+        Map<String, dynamic>.from(r as Map),
+    ];
+  }
+
+  Future<List<Map<String, dynamic>>> reviewQueue({
+    String state = 'needs_review',
+    String? channel,
+  }) => _list('ace_review_queue', {'p_state': state, 'p_channel': channel});
+
+  Future<Map<String, dynamic>> attemptDetail(String attemptId) =>
+      _rpc('ace_attempt_detail', {'p_attempt': attemptId});
+
+  Future<Map<String, dynamic>> markAttempt({
+    required String attemptId,
+    required num marks,
+    List<Map<String, dynamic>> criteria = const [],
+    String? comment,
+  }) => _rpc('ace_mark_attempt', {
+    'p_attempt': attemptId,
+    'p_marks': marks,
+    'p_criteria': criteria,
+    'p_comment': comment,
+  });
+
+  Future<Map<String, dynamic>> classProgress(String channelId) =>
+      _rpc('ace_class_progress', {'p_channel': channelId});
+
+  Future<Map<String, dynamic>> studentDetail(String userId) =>
+      _rpc('ace_student_detail', {'p_student': userId});
+
+  Future<List<Map<String, dynamic>>> schoolPeople() =>
+      _list('ace_school_people');
+
+  Future<void> setMemberRole(String userId, String role) => _db.rpc(
+    'ace_set_member_role',
+    params: {'p_user': userId, 'p_role': role},
+  );
+
+  Future<void> removeMember(String userId) =>
+      _db.rpc('ace_remove_member', params: {'p_user': userId});
+
+  Future<String> newJoinCode() async =>
+      (await _db.rpc('ace_new_join_code')) as String;
+
   /// Plain words for server error codes.
   static String message(Object error) {
     final text = '$error';
+    if (text.contains('NOT_STAFF')) return 'This area is for teachers.';
+    if (text.contains('NOT_ADMIN')) {
+      return 'Only a school admin can do that.';
+    }
+    if (text.contains('INVALID_MARKS')) {
+      return 'Marks must be between 0 and the question total.';
+    }
+    if (text.contains('CANNOT_CHANGE_SELF')) {
+      return 'You cannot change your own role or remove yourself.';
+    }
     if (text.contains('INVALID_CODE')) {
       return 'That school code was not recognised. Check it with your teacher.';
     }

@@ -32,6 +32,18 @@ class _HomeScreenState extends State<HomeScreen> {
       onRetry: _reload,
       message: AceApi.message,
       builder: (me) {
+        // Teachers and school admins have their own workspace.
+        final staff = (me['schools'] as List? ?? const []).any(
+          (s) => const {'teacher', 'admin'}.contains((s as Map)['role']),
+        );
+        if (staff) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) context.go('/staff');
+          });
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator(color: Ace.amber)),
+          );
+        }
         final name = (me['display_name'] as String? ?? '').split(' ').first;
         final schools = (me['schools'] as List? ?? const []);
         final stats = Map<String, dynamic>.from(

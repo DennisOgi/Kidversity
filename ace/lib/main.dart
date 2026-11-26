@@ -14,6 +14,11 @@ import 'screens/landing_screen.dart';
 import 'screens/lesson_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/splash_screen.dart';
+import 'staff/marking_screen.dart';
+import 'staff/overview_screen.dart';
+import 'staff/people_screen.dart';
+import 'staff/progress_screen.dart';
+import 'staff/staff_ui.dart';
 import 'theme.dart';
 
 Future<void> main() async {
@@ -33,9 +38,10 @@ Future<void> main() async {
 /// Rebuilds routing when the user signs in or out.
 class _AuthListenable extends ChangeNotifier {
   _AuthListenable() {
-    _sub = Supabase.instance.client.auth.onAuthStateChange.listen(
-      (_) => notifyListeners(),
-    );
+    _sub = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+      StaffSession.clear();
+      notifyListeners();
+    });
   }
 
   late final StreamSubscription<AuthState> _sub;
@@ -63,6 +69,38 @@ final _router = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
     GoRoute(path: '/welcome', builder: (_, _) => const LandingScreen()),
+    GoRoute(path: '/staff', builder: (_, _) => const StaffOverviewScreen()),
+    GoRoute(
+      path: '/staff/marking',
+      builder: (_, s) => MarkingScreen(
+        key: ValueKey(s.uri.query),
+        state: s.uri.queryParameters['state'] ?? 'needs_review',
+      ),
+    ),
+    GoRoute(
+      path: '/staff/marking/:id',
+      builder: (_, s) => MarkingScreen(
+        key: ValueKey(s.pathParameters['id']),
+        state: 'all',
+        selected: s.pathParameters['id'],
+      ),
+    ),
+    GoRoute(
+      path: '/staff/progress',
+      builder: (_, s) => ProgressScreen(
+        key: ValueKey(s.uri.query),
+        channel: s.uri.queryParameters['channel'],
+      ),
+    ),
+    GoRoute(
+      path: '/staff/students/:id',
+      builder: (_, s) => StudentDetailScreen(
+        key: ValueKey(s.pathParameters['id']),
+        userId: s.pathParameters['id']!,
+      ),
+    ),
+    GoRoute(path: '/staff/people', builder: (_, _) => const PeopleScreen()),
+    GoRoute(path: '/staff/content', builder: (_, _) => const ContentScreen()),
     GoRoute(
       path: '/sign-in',
       builder: (_, s) => SignInScreen(

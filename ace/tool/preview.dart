@@ -9,6 +9,10 @@ import 'package:ace_app/screens/landing_screen.dart';
 import 'package:ace_app/screens/lesson_screen.dart';
 import 'package:ace_app/screens/sign_in_screen.dart';
 import 'package:ace_app/screens/splash_screen.dart';
+import 'package:ace_app/staff/marking_screen.dart';
+import 'package:ace_app/staff/overview_screen.dart';
+import 'package:ace_app/staff/people_screen.dart';
+import 'package:ace_app/staff/progress_screen.dart';
 import 'package:ace_app/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -171,6 +175,305 @@ class _FakeApi extends AceApi {
       ],
     },
   };
+
+  static final _now = DateTime.now();
+  static String _ago(int minutes) =>
+      _now.subtract(Duration(minutes: minutes)).toIso8601String();
+
+  @override
+  Future<Map<String, dynamic>> staffOverview() async => {
+    'role': 'admin',
+    'display_name': 'Funmi Adeyemi',
+    'school': {'name': 'ACE Demo Academy', 'join_code': 'DEMO2026'},
+    'counts': {
+      'students': 24,
+      'teachers': 3,
+      'to_mark': 6,
+      'attempts_7d': 182,
+      'active_7d': 19,
+      'marked_7d': 41,
+    },
+    'activity': [
+      for (var i = 13; i >= 0; i--)
+        {
+          'day': _now
+              .subtract(Duration(days: i))
+              .toIso8601String()
+              .substring(0, 10),
+          'attempts': const [
+            6,
+            9,
+            4,
+            12,
+            18,
+            3,
+            2,
+            14,
+            21,
+            17,
+            25,
+            8,
+            5,
+            22,
+          ][13 - i],
+        },
+    ],
+    'channels': [
+      {
+        'id': 'as-mathematics',
+        'stage': 'AS',
+        'subject': 'Mathematics',
+        'questions': 8,
+        'learners': 18,
+        'attempts': 96,
+        'correct_rate': 71,
+      },
+      {
+        'id': 'as-physics',
+        'stage': 'AS',
+        'subject': 'Physics',
+        'questions': 8,
+        'learners': 14,
+        'attempts': 64,
+        'correct_rate': 64,
+      },
+      {
+        'id': 'a2-mathematics',
+        'stage': 'A2',
+        'subject': 'Mathematics',
+        'questions': 8,
+        'learners': 10,
+        'attempts': 31,
+        'correct_rate': 58,
+      },
+      {
+        'id': 'a2-physics',
+        'stage': 'A2',
+        'subject': 'Physics',
+        'questions': 8,
+        'learners': 6,
+        'attempts': 19,
+        'correct_rate': 80,
+      },
+    ],
+    'attention': [
+      {
+        'user_id': 'u2',
+        'name': 'Tunde Bello',
+        'attempts': 6,
+        'rate': 33,
+        'last_active': _ago(2900),
+      },
+      {
+        'user_id': 'u5',
+        'name': 'Chidi Nwosu',
+        'attempts': 9,
+        'rate': 44,
+        'last_active': _ago(400),
+      },
+      {
+        'user_id': 'u3',
+        'name': 'Zainab Yusuf',
+        'attempts': 0,
+        'rate': null,
+        'last_active': null,
+      },
+    ],
+    'recent': [
+      {
+        'attempt_id': 'a1',
+        'name': 'Amara Okafor',
+        'question': r'For $y=2x^3-3x^2$, find the tangent gradient at $x=2$.',
+        'lesson': 'Differentiation and tangents',
+        'status': 'try_again',
+        'state': 'needs_review',
+        'at': _ago(12),
+      },
+      {
+        'attempt_id': 'a2',
+        'name': 'David Mensah',
+        'question':
+            'A spherical planet produces a field strength of 12 N/kg at radius r. Find the field strength at 2r.',
+        'lesson': 'Gravitational fields',
+        'status': 'final_answer_match',
+        'state': 'final_answer_checked',
+        'at': _ago(55),
+      },
+      {
+        'attempt_id': 'a3',
+        'name': 'Tunde Bello',
+        'question':
+            'Find the equivalent resistance of 6 ohm and 3 ohm in parallel.',
+        'lesson': 'Series and parallel resistance',
+        'status': 'try_again',
+        'state': 'final_answer_checked',
+        'at': _ago(180),
+      },
+    ],
+  };
+
+  @override
+  Future<List<Map<String, dynamic>>> reviewQueue({
+    String state = 'needs_review',
+    String? channel,
+  }) async => [
+    {
+      'attempt_id': 'a1',
+      'user_id': 'u1',
+      'name': 'Amara Okafor',
+      'question': r'For $y=2x^3-3x^2$, find the tangent gradient at $x=2$.',
+      'max_marks': 2,
+      'stage': 'AS',
+      'subject': 'Mathematics',
+      'lesson': 'Differentiation and tangents',
+      'attempt_no': 1,
+      'status': 'try_again',
+      'state': 'needs_review',
+      'at': _ago(12),
+    },
+    {
+      'attempt_id': 'a4',
+      'user_id': 'u1',
+      'name': 'Amara Okafor',
+      'question': r'Solve $x^2-9x+20=0$.',
+      'max_marks': 2,
+      'stage': 'AS',
+      'subject': 'Mathematics',
+      'lesson': 'Quadratics: roots and turning points',
+      'attempt_no': 1,
+      'status': 'not_auto_checked',
+      'state': 'needs_review',
+      'at': _ago(130),
+    },
+    {
+      'attempt_id': 'a5',
+      'user_id': 'u5',
+      'name': 'Chidi Nwosu',
+      'question':
+          'A car starts at 4 m/s and accelerates uniformly at 3 m/s^2 for 5 s. Find its final velocity.',
+      'max_marks': 2,
+      'stage': 'AS',
+      'subject': 'Physics',
+      'lesson': 'Uniform acceleration',
+      'attempt_no': 2,
+      'status': 'final_answer_match',
+      'state': 'needs_review',
+      'at': _ago(300),
+    },
+  ];
+
+  @override
+  Future<Map<String, dynamic>> attemptDetail(String attemptId) async => {
+    'attempt_id': attemptId,
+    'user_id': 'u1',
+    'name': 'Amara Okafor',
+    'attempt_no': 1,
+    'at': _ago(12),
+    'response': {
+      'final_answer': 18,
+      'working_text': '\\frac{dy}{dx} = 6x^2 - 3x\n6(2)^2 - 3(2) = 18',
+    },
+    'status': 'try_again',
+    'state': 'needs_review',
+    'awarded': null,
+    'question': {
+      'prompt': r'For $y=2x^3-3x^2$, find the tangent gradient at $x=2$.',
+      'kind': 'numeric',
+      'max_marks': 2,
+      'lesson': 'Differentiation and tangents',
+      'stage': 'AS',
+      'subject': 'Mathematics',
+    },
+    'key': {
+      'answer': '12.',
+      'worked_solution': [
+        r'$\frac{dy}{dx}=6x^2-6x$.',
+        r'At $x=2$ the gradient is $24-12=12$.',
+      ],
+      'rubric': [
+        {
+          'criterion': r'Differentiates correctly: $\frac{dy}{dx}=6x^2-6x$.',
+          'marks': 1,
+        },
+        {'criterion': r'Substitutes $x=2$ to get 12.', 'marks': 1},
+      ],
+    },
+    'reviews': [],
+  };
+
+  @override
+  Future<Map<String, dynamic>> classProgress(String channelId) async => {
+    'lessons': [
+      {
+        'id': 'l1',
+        'title': 'Quadratics: roots and turning points',
+        'questions': 4,
+      },
+      {'id': 'l2', 'title': 'Differentiation and tangents', 'questions': 4},
+    ],
+    'students': [
+      for (final r in const [
+        ['Amara Okafor', 4, 3, 1, 0, 12],
+        ['Chidi Nwosu', 3, 1, 2, 1, 400],
+        ['David Mensah', 4, 4, 4, 4, 55],
+        ['Ifeoma Obi', 2, 2, 0, 0, 1500],
+        ['Tunde Bello', 1, 0, 0, 0, 2900],
+        ['Zainab Yusuf', 0, 0, 0, 0, -1],
+      ])
+        {
+          'user_id': r[0],
+          'name': r[0],
+          'last_active': (r[5] as int) < 0 ? null : _ago(r[5] as int),
+          'cells': {
+            'l1': {'tried': r[1], 'correct': r[2]},
+            'l2': {'tried': r[3], 'correct': r[4]},
+          },
+        },
+    ],
+  };
+
+  @override
+  Future<List<Map<String, dynamic>>> schoolPeople() async => [
+    {
+      'user_id': 'p0',
+      'name': 'Dr. Ngozi Eze',
+      'role': 'admin',
+      'joined': _ago(90000),
+      'is_me': true,
+      'attempts': 0,
+    },
+    {
+      'user_id': 'p1',
+      'name': 'Funmi Adeyemi',
+      'role': 'teacher',
+      'joined': _ago(80000),
+      'attempts': 0,
+    },
+    {
+      'user_id': 'u1',
+      'name': 'Amara Okafor',
+      'role': 'student',
+      'joined': _ago(7000),
+      'attempts': 8,
+      'last_active': _ago(12),
+    },
+    {
+      'user_id': 'u4',
+      'name': 'David Mensah',
+      'role': 'student',
+      'joined': _ago(7000),
+      'attempts': 12,
+      'last_active': _ago(55),
+    },
+    {
+      'user_id': 'u2',
+      'name': 'Tunde Bello',
+      'role': 'student',
+      'joined': _ago(7000),
+      'attempts': 6,
+      'last_active': _ago(2900),
+    },
+  ];
 }
 
 Future<void> main() async {
@@ -186,6 +489,13 @@ Future<void> main() async {
     routes: [
       GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
       GoRoute(path: '/welcome', builder: (_, _) => const LandingScreen()),
+      GoRoute(path: '/staff', builder: (_, _) => const StaffOverviewScreen()),
+      GoRoute(path: '/staff/marking', builder: (_, _) => const MarkingScreen()),
+      GoRoute(
+        path: '/staff/progress',
+        builder: (_, _) => const ProgressScreen(),
+      ),
+      GoRoute(path: '/staff/people', builder: (_, _) => const PeopleScreen()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
       GoRoute(
         path: '/splash',
