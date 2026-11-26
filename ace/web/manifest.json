@@ -1,11 +1,11 @@
 {
-    "name": "ace_app",
-    "short_name": "ace_app",
+    "name": "ACE · Advance. Conquer. Excel.",
+    "short_name": "ACE",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0B1F3A",
+    "theme_color": "#0B1F3A",
+    "description": "Cambridge AS and A2 Mathematics and Physics with worked feedback.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
