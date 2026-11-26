@@ -6,6 +6,14 @@
   "installCommand": "echo \"Flutter installed in buildCommand\"",
   "rewrites": [
     {
+      "source": "/ace",
+      "destination": "/ace/index.html"
+    },
+    {
+      "source": "/ace/((?!.*\\.).*)",
+      "destination": "/ace/index.html"
+    },
+    {
       "source": "/((?!.*\\.).*)",
       "destination": "/index.html"
     }

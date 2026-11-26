@@ -48,3 +48,21 @@ flutter build web --release \
   --dart-define=SENTRY_DSN="${SENTRY_DSN:-}"
 
 echo "==> Build complete: build/web"
+
+# ACE (Advance. Conquer. Excel.) lives at /ace as its own Flutter app with
+# its own Supabase project. Built after Kidversity because that build
+# replaces build/web. Set ACE_SUPABASE_URL / ACE_SUPABASE_KEY in Vercel to
+# override the staging defaults in ace/lib/config.dart.
+echo "==> Building ACE into build/web/ace..."
+(
+  cd ace
+  flutter pub get
+  flutter build web --release \
+    --base-href /ace/ \
+    --pwa-strategy=none \
+    -o ../build/web/ace \
+    ${ACE_SUPABASE_URL:+--dart-define=ACE_SUPABASE_URL="${ACE_SUPABASE_URL}"} \
+    ${ACE_SUPABASE_KEY:+--dart-define=ACE_SUPABASE_KEY="${ACE_SUPABASE_KEY}"} \
+    --dart-define=ACE_ENV="${ACE_ENV:-staging}"
+)
+echo "==> ACE build complete: build/web/ace"

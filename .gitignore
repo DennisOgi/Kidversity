@@ -67,3 +67,9 @@ app.*.map.json
 # Seed scratch files and rosters (contain personal data)
 tmp_seed_parts*/
 *roster*.json
+
+# ACE content packages from LeadGame: contain server-only answer keys and
+# school-supplied syllabus PDFs. Import them with ace/tools/import_content.py;
+# never commit them.
+/ACE_A_Level_Integration_Starter/
+/ACE_*Starter*/

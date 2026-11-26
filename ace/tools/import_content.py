@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""Build an idempotent SQL import of an ACE content package.
+
+    python ace/tools/import_content.py ACE_A_Level_Integration_Starter --out build/ace_import.sql
+
+The package is validated first with its own tools/validate_import.py. The
+output is one SQL statement that upserts sources, syllabus profiles, topics,
+routes, channels, resources, lessons, questions and server-only answer keys,
+and records an immutable snapshot per lesson/question version.
+
+Rules enforced in the generated SQL:
+* Stable IDs are preserved; re-running updates rows instead of duplicating.
+* A record whose content changed without a content_version bump is refused
+  (the snapshot hash for that id+version must not change).
+* Answer keys go only to private.question_keys. Learners never read them.
+* Review status is imported as-is (all starter content is draft).
+
+Optional: --pilot-school "Oxbridge (pilot)" creates that school in staging
+mode with all four channels and prints its join code at the end of the SQL
+(as a NOTICE). Re-running keeps the existing school and code.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+PRIVATE_FIELDS = ("answer_markdown", "worked_solution", "rubric", "numeric_answer", "grading", "correct_option")
+
+
+def load(pkg: Path, name: str):
+    return json.loads((pkg / "data" / name).read_text(encoding="utf-8"))
+
+
+def digest(record: dict) -> str:
+    return hashlib.sha256(json.dumps(record, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def validate(pkg: Path) -> None:
+    tool = pkg / "tools" / "validate_import.py"
+    if not tool.exists():
+        sys.exit(f"Missing validator: {tool}")
+    # -I: isolated mode, so nothing in the package folder is imported implicitly.
+    result = subprocess.run([sys.executable, "-I", str(tool)], cwd=pkg, capture_output=True, text=True)
+    if result.returncode != 0 or '"validation": "passed"' not in result.stdout:
+        sys.exit("Package validation failed:\n" + result.stdout + result.stderr)
+    print("validator:", result.stdout.strip().splitlines()[-1], file=sys.stderr)
+
+
+def build(pkg: Path, pilot_school: str | None) -> tuple[str, dict]:
+    manifest = load(pkg, "manifest.json")
+    sources = load(pkg, "sources.json")
+    curriculum = load(pkg, "curriculum.json")
+    channels = load(pkg, "channels.json")
+    resources = load(pkg, "resource_catalogue.json")
+    lessons = load(pkg, "lessons.json")
+    questions = load(pkg, "questions_private.json")
+    questions = questions if isinstance(questions, list) else questions["questions"]
+
+    lesson_order: dict[str, int] = {}
+    question_order: dict[str, int] = {}
+    per_channel: dict[str, int] = {}
+    for lesson in lessons:
+        n = per_channel.get(lesson["channel_id"], 0)
+        lesson_order[lesson["id"]] = n
+        per_channel[lesson["channel_id"]] = n + 1
+        for i, qid in enumerate(lesson.get("question_ids", [])):
+            question_order[qid] = i
+
+    out_lessons = []
+    for lesson in lessons:
+        out_lessons.append({**lesson, "sort_order": lesson_order[lesson["id"]], "snapshot_hash": digest(lesson)})
+
+    out_questions = []
+    for q in questions:
+        numeric = q.get("numeric_answer")
+        public = {k: v for k, v in q.items() if k not in PRIVATE_FIELDS}
+        out_questions.append({
+            **public,
+            "sort_order": question_order.get(q["id"], 0),
+            "answer_unit": numeric.get("unit") if numeric else None,
+            # Starter items are single-part; the brief requires part mapping.
+            "parts": q.get("parts") or [{"label": "a", "prompt_markdown": None, "marks": q["max_marks"]}],
+            "key": {k: q.get(k) for k in PRIVATE_FIELDS},
+            "snapshot_hash": digest(q),
+        })
+
+    channel_rows = [{**c, "sort_order": i} for i, c in enumerate(channels)]
+    topic_rows = [{**t, "sort_order": i} for i, t in enumerate(curriculum["topics"])]
+
+    payload = {
+        "package": manifest.get("package", "unknown"),
+        "version": manifest.get("version", "unknown"),
+        "sources": sources,
+        "profiles": curriculum["profiles"],
+        "topics": topic_rows,
+        "routes": curriculum["routes"],
+        "channels": channel_rows,
+        "resources": resources,
+        "lessons": out_lessons,
+        "questions": out_questions,
+        "pilot_school": pilot_school,
+    }
+    body = json.dumps(payload, ensure_ascii=False)
+    if "$pkg$" in body:
+        sys.exit("Package text contains the SQL quote marker $pkg$; refusing.")
+    counts = {k: len(v) for k, v in payload.items() if isinstance(v, list)}
+    return SQL.replace("__PAYLOAD__", body), counts
+
+
+# The import logic lives in the database as private.ace_import_package
+# (migration 20261126100200_ace_import_function.sql); this file only carries data.
+SQL = (
+    "-- Generated by ace/tools/import_content.py. Idempotent; safe to re-run.\n"
+    "SELECT private.ace_import_package($pkg$__PAYLOAD__$pkg$::jsonb);\n"
+)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("package", type=Path, help="Extracted content package folder")
+    ap.add_argument("--out", type=Path, required=True, help="Where to write the SQL")
+    ap.add_argument("--pilot-school", help="Create/keep a staging-mode school with every channel")
+    ap.add_argument("--chunk-dir", type=Path, help="Also write the import as smaller pieces here")
+    args = ap.parse_args()
+
+    pkg = args.package.resolve()
+    validate(pkg)
+    sql, counts = build(pkg, args.pilot_school)
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(sql, encoding="utf-8")
+    print(f"wrote {args.out} ({len(sql)} bytes): {counts}", file=sys.stderr)
+    if args.chunk_dir:
+        write_chunks(sql, args.chunk_dir)
+
+
+def write_chunks(sql: str, out_dir: Path) -> None:
+    """Split one import into smaller idempotent pieces (for tools with a
+    request-size limit): reference data, topics, then one per lesson."""
+    head, rest = sql.split("$pkg$", 1)
+    body, tail = rest.split("$pkg$", 1)
+    payload = json.loads(body)
+    empty = {k: [] for k, v in payload.items() if isinstance(v, list)}
+    base = {k: v for k, v in payload.items() if not isinstance(v, list)}
+    pieces = [("00_reference", {**empty, **base, **{k: payload[k] for k in
+              ("sources", "profiles", "routes", "channels", "resources")}}),
+              ("01_topics", {**empty, **base, "pilot_school": None, "topics": payload["topics"]})]
+    for i, lesson in enumerate(payload["lessons"], start=2):
+        qs = [q for q in payload["questions"] if q.get("lesson_id") == lesson["id"]]
+        pieces.append((f"{i:02d}_{lesson['id']}", {**empty, **base, "pilot_school": None,
+                                                    "lessons": [lesson], "questions": qs}))
+    loose = [q for q in payload["questions"] if q.get("lesson_id") not in {l["id"] for l in payload["lessons"]}]
+    if loose:
+        pieces.append((f"{len(pieces):02d}_loose_questions", {**empty, **base, "pilot_school": None, "questions": loose}))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for name, part in pieces:
+        text = head + "$pkg$" + json.dumps(part, ensure_ascii=False) + "$pkg$" + tail
+        (out_dir / f"{name}.sql").write_text(text, encoding="utf-8")
+        print(f"  {name}.sql {len(text)} bytes", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
