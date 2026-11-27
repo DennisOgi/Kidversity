@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../data/app_state.dart';
 import '../../models/results_models.dart';
+import '../comm/compose_dialog.dart';
+import 'support_section.dart';
 import '../../services/results_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/role_style.dart';
@@ -54,6 +57,7 @@ class PupilProfileScreen extends ConsumerWidget {
           _Header(profile: p, colors: heroColors, self: self),
           _Summary(profile: p),
           _Subjects(profile: p, self: self),
+          SupportSection(profile: p),
         ],
       ),
     );
@@ -95,6 +99,18 @@ class _Header extends ConsumerWidget {
             onPressed: () =>
                 showAddSubjectDialog(context, ref, profile.studentId),
           ),
+          // Teachers can write privately to this pupil's family.
+          if (ref.watch(teacherClassInfoProvider).value case final cls?)
+            HeroGhostButton(
+              label: 'Message guardian',
+              onPressed: () => showComposeDialog(
+                context,
+                ref,
+                classId: cls.id,
+                pupils: [(id: profile.studentId, name: profile.displayName)],
+                pupilId: profile.studentId,
+              ),
+            ),
         ],
       ],
     );

@@ -139,6 +139,10 @@ class _ClassResultsBody extends ConsumerWidget {
                 '$className · Targets and official scores for every pupil. Open a profile to set targets and add scores.',
             actions: [
               SunButton(
+                label: 'Upload scores',
+                onPressed: () => context.go('/teacher/results/upload'),
+              ),
+              HeroGhostButton(
                 label: 'Add a subject',
                 onPressed: () => _addSubject(context, ref),
               ),
@@ -338,12 +342,29 @@ class _ReviewChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final anyData = pupil.scores.values.any((c) => c.latest != null);
-    if (!anyData) {
-      return const StatusChip(label: 'No scores yet', tint: AppTint.slate);
-    }
-    return pupil.needsSupport
+    final status = !anyData
+        ? const StatusChip(label: 'No scores yet', tint: AppTint.slate)
+        : pupil.needsSupport
         ? const StatusChip(label: 'Needs support', tint: StatusChip.alert)
         : const StatusChip(label: 'On track', tint: AppTint.mint);
+    if (pupil.openSupport == 0) return status;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        status,
+        const SizedBox(width: 6),
+        Tooltip(
+          message:
+              '${pupil.openSupport} open support action${pupil.openSupport == 1 ? '' : 's'}',
+          child: StatusChip(
+            label:
+                '${pupil.openSupport} plan${pupil.openSupport == 1 ? '' : 's'}',
+            tint: AppTint.sky,
+            icon: Icons.volunteer_activism_rounded,
+          ),
+        ),
+      ],
+    );
   }
 }
 

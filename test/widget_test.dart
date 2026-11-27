@@ -61,10 +61,7 @@ void main() {
     expect(find.text('Welcome to Kidversity'), findsOneWidget);
     expect(find.text('KIDVERSITY'), findsWidgets);
     expect(find.text("I'm a Student"), findsOneWidget);
-    expect(
-      find.text('Mandarin, labs, maths, and Rope Pull'),
-      findsOneWidget,
-    );
+    expect(find.text('Mandarin, labs, maths, and Rope Pull'), findsOneWidget);
     expect(find.text("I'm a Teacher"), findsOneWidget);
     expect(
       find.text('Set work, follow the class, and run a live quiz'),

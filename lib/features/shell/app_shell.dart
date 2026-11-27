@@ -117,7 +117,9 @@ class AppShell extends ConsumerWidget {
       bottomNavigationBar: items.length < 2
           ? null
           : _BottomNavBar(
-              narrow: width < 380,
+              // Each tab needs ~64px for the wide pill; drop to the compact one sooner
+              // when there are many tabs.
+              narrow: width < 380 || (width - 20) / items.length < 64,
               style: style,
               selected: selected,
               items: items,
@@ -643,7 +645,7 @@ class _NavButton extends StatelessWidget {
                   duration: AppMotion.of(context, AppMotion.hint),
                   curve: AppMotion.curve(context),
                   padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 12 : 18,
+                    horizontal: compact ? 10 : 18,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(

@@ -21,7 +21,11 @@ import '../features/splash/splash_screen.dart';
 import '../features/student/payments_screen.dart';
 import '../features/admin/admin_overview_screen.dart';
 import '../features/admin/admin_payments_screen.dart';
+import '../features/comm/message_detail_screen.dart';
+import '../features/comm/parent_messages_screen.dart';
+import '../features/comm/teacher_messages_screen.dart';
 import '../features/parent/parent_home_screen.dart';
+import '../features/results/score_upload_screen.dart';
 import '../features/admin/admin_performance_screen.dart';
 import '../features/admin/admin_schools_screen.dart';
 import '../features/admin/admin_users_screen.dart';
@@ -133,6 +137,14 @@ const _teacherNav = [
     'Timed quizzes',
     AppTint.coral,
   ),
+  NavItem(
+    Icons.forum_outlined,
+    Icons.forum_rounded,
+    'Messages',
+    '/teacher/messages',
+    'Communication Book for families',
+    AppTint.mint,
+  ),
 ];
 
 const _parentNav = [
@@ -143,6 +155,14 @@ const _parentNav = [
     '/parent/family',
     'Your children and what is due',
     AppTint.coral,
+  ),
+  NavItem(
+    Icons.forum_outlined,
+    Icons.forum_rounded,
+    'Messages',
+    '/parent/messages',
+    'Announcements and updates from school',
+    AppTint.sky,
   ),
   if (Features.payments)
     NavItem(
@@ -541,6 +561,41 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => _teacherShell(
           AppRoutes.teacherResults,
           const ClassResultsScreen(profileRoute: AppRoutes.teacherPupil),
+        ),
+      ),
+      GoRoute(
+        path: '/teacher/results/upload',
+        builder: (_, _) =>
+            _teacherShell(AppRoutes.teacherResults, const ScoreUploadScreen()),
+      ),
+      GoRoute(
+        path: '/teacher/messages',
+        builder: (_, _) =>
+            _teacherShell('/teacher/messages', const TeacherMessagesScreen()),
+      ),
+      GoRoute(
+        path: '/teacher/messages/:id',
+        builder: (_, state) => _teacherShell(
+          '/teacher/messages',
+          MessageDetailScreen(
+            messageId: state.pathParameters['id']!,
+            heroColors: HeroColors.teacher,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/parent/messages',
+        builder: (_, _) =>
+            _parentShell('/parent/messages', const ParentMessagesScreen()),
+      ),
+      GoRoute(
+        path: '/parent/messages/:id',
+        builder: (_, state) => _parentShell(
+          '/parent/messages',
+          MessageDetailScreen(
+            messageId: state.pathParameters['id']!,
+            heroColors: HeroColors.parent,
+          ),
         ),
       ),
       GoRoute(

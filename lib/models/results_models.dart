@@ -183,11 +183,15 @@ class ClassPupilResults {
   final String avatarEmoji;
   final Map<String, ScoreCell> scores;
 
+  /// Open support actions for this pupil.
+  final int openSupport;
+
   const ClassPupilResults({
     required this.studentId,
     required this.displayName,
     required this.avatarEmoji,
     required this.scores,
+    this.openSupport = 0,
   });
 
   bool get needsSupport =>
@@ -217,6 +221,7 @@ class ClassResults {
           studentId: (p as Map)['student_id'] as String,
           displayName: (p['display_name'] as String?) ?? 'Learner',
           avatarEmoji: (p['avatar_emoji'] as String?) ?? '🦊',
+          openSupport: (p['open_support'] as num?)?.toInt() ?? 0,
           scores: {
             for (final e in Map<String, dynamic>.from(
               p['scores'] as Map? ?? const {},
@@ -231,4 +236,93 @@ class ClassResults {
   );
 
   int get needSupport => pupils.where((p) => p.needsSupport).length;
+}
+
+/// A planned piece of support for a pupil: who does what, by when.
+class SupportAction {
+  final String id;
+  final String action;
+  final String? subjectId;
+  final String? subject;
+  final String? owner;
+  final DateTime? dueOn;
+  final String status; // open, done, cancelled
+  final String? outcome;
+  final bool shared;
+  final String? by;
+  final DateTime? createdAt;
+
+  const SupportAction({
+    required this.id,
+    required this.action,
+    required this.status,
+    this.subjectId,
+    this.subject,
+    this.owner,
+    this.dueOn,
+    this.outcome,
+    this.shared = true,
+    this.by,
+    this.createdAt,
+  });
+
+  factory SupportAction.fromJson(Map<String, dynamic> j) => SupportAction(
+    id: j['id'] as String,
+    action: (j['action'] as String?) ?? '',
+    status: (j['status'] as String?) ?? 'open',
+    subjectId: j['subject_id'] as String?,
+    subject: j['subject'] as String?,
+    owner: j['owner'] as String?,
+    dueOn: DateTime.tryParse('${j['due_on'] ?? ''}'),
+    outcome: j['outcome'] as String?,
+    shared: j['shared'] != false,
+    by: j['by'] as String?,
+    createdAt: DateTime.tryParse('${j['created_at'] ?? ''}'),
+  );
+
+  bool get isOpen => status == 'open';
+
+  bool get isOverdue {
+    final d = dueOn;
+    if (!isOpen || d == null) return false;
+    final today = DateTime.now();
+    return d.isBefore(DateTime(today.year, today.month, today.day));
+  }
+}
+
+/// One uploaded sheet of scores.
+class ScoreBatch {
+  final String id;
+  final ResultKind kind;
+  final String title;
+  final DateTime? assessedOn;
+  final int rows;
+  final String? fileName;
+  final String? by;
+  final DateTime? createdAt;
+  final DateTime? undoneAt;
+
+  const ScoreBatch({
+    required this.id,
+    required this.kind,
+    required this.title,
+    required this.rows,
+    this.assessedOn,
+    this.fileName,
+    this.by,
+    this.createdAt,
+    this.undoneAt,
+  });
+
+  factory ScoreBatch.fromJson(Map<String, dynamic> j) => ScoreBatch(
+    id: j['id'] as String,
+    kind: ResultKind.parse(j['kind']),
+    title: (j['title'] as String?) ?? '',
+    rows: (j['rows'] as num?)?.toInt() ?? 0,
+    assessedOn: DateTime.tryParse('${j['assessed_on'] ?? ''}'),
+    fileName: j['file_name'] as String?,
+    by: j['by'] as String?,
+    createdAt: DateTime.tryParse('${j['created_at'] ?? ''}'),
+    undoneAt: DateTime.tryParse('${j['undone_at'] ?? ''}'),
+  );
 }

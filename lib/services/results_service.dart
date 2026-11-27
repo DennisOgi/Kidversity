@@ -64,9 +64,100 @@ class ResultsService {
   Future<void> deleteResult(String resultId) =>
       _db.rpc('delete_pupil_result', params: {'p_result': resultId});
 
+  // Support actions ---------------------------------------------------------
+
+  Future<List<SupportAction>> supportActions(String studentId) async {
+    final raw = await _db.rpc(
+      'support_actions',
+      params: {'p_student': studentId},
+    );
+    return [
+      for (final r in (raw as List? ?? const []))
+        SupportAction.fromJson(Map<String, dynamic>.from(r as Map)),
+    ];
+  }
+
+  Future<void> saveSupportAction({
+    required String studentId,
+    required String action,
+    String? id,
+    String? subjectId,
+    String? owner,
+    DateTime? dueOn,
+    bool shared = true,
+  }) => _db.rpc(
+    'save_support_action',
+    params: {
+      'p_student': studentId,
+      'p_action': action,
+      'p_id': id,
+      'p_subject': subjectId,
+      'p_owner': owner,
+      'p_due': dueOn?.toIso8601String().substring(0, 10),
+      'p_shared': shared,
+    },
+  );
+
+  Future<void> setSupportStatus(String id, String status, {String? outcome}) =>
+      _db.rpc(
+        'set_support_status',
+        params: {'p_id': id, 'p_status': status, 'p_outcome': outcome},
+      );
+
+  // Bulk upload ---------------------------------------------------------------
+
+  /// Saves an uploaded sheet in one go. Rows: student_id, subject_id, score.
+  Future<({String batchId, int saved})> importClassScores({
+    required String classId,
+    required ResultKind kind,
+    required List<Map<String, Object>> rows,
+    String title = '',
+    DateTime? assessedOn,
+    String? fileName,
+  }) async {
+    final raw = await _db.rpc(
+      'import_class_scores',
+      params: {
+        'p_class_id': classId,
+        'p_kind': kind.name,
+        'p_rows': rows,
+        'p_title': title,
+        'p_assessed_on': assessedOn?.toIso8601String().substring(0, 10),
+        'p_file_name': fileName,
+      },
+    );
+    final m = Map<String, dynamic>.from(raw as Map);
+    return (
+      batchId: m['batch_id'] as String,
+      saved: (m['saved'] as num).toInt(),
+    );
+  }
+
+  Future<List<ScoreBatch>> scoreBatches(String classId) async {
+    final raw = await _db.rpc('score_batches', params: {'p_class_id': classId});
+    return [
+      for (final r in (raw as List? ?? const []))
+        ScoreBatch.fromJson(Map<String, dynamic>.from(r as Map)),
+    ];
+  }
+
+  Future<int> undoScoreBatch(String batchId) async =>
+      ((await _db.rpc('undo_score_batch', params: {'p_batch': batchId})) as num)
+          .toInt();
+
   /// Plain words for server error codes.
   static String message(Object error) {
     final text = '$error';
+    if (text.contains('INVALID_ROWS')) {
+      return 'Some rows are not valid. Fix the highlighted rows and try again.';
+    }
+    if (text.contains('NO_ROWS')) return 'There are no scores to save.';
+    if (text.contains('TOO_MANY_ROWS')) {
+      return 'That file is too large. Upload up to 5,000 scores at a time.';
+    }
+    if (text.contains('INVALID_ACTION')) {
+      return 'Describe the support action in a few words.';
+    }
     if (text.contains('NOT_AUTHORIZED')) {
       return 'Only this pupil\'s teacher or school admin can change results.';
     }
@@ -88,6 +179,18 @@ final pupilProfileProvider = FutureProvider.autoDispose
     .family<PupilProfile, String>((ref, studentId) {
       ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
       return ResultsService.instance.profile(studentId);
+    });
+
+final supportActionsProvider = FutureProvider.autoDispose
+    .family<List<SupportAction>, String>((ref, studentId) {
+      ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
+      return ResultsService.instance.supportActions(studentId);
+    });
+
+final scoreBatchesProvider = FutureProvider.autoDispose
+    .family<List<ScoreBatch>, String>((ref, classId) {
+      ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
+      return ResultsService.instance.scoreBatches(classId);
     });
 
 final classResultsProvider = FutureProvider.autoDispose

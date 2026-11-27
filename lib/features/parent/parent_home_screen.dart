@@ -18,6 +18,8 @@ import '../../theme/role_style.dart';
 import '../../widgets/common.dart';
 import '../../widgets/error_boundary.dart';
 import '../../widgets/kv_ui.dart';
+import '../../services/comm_service.dart';
+import '../comm/parent_messages_screen.dart';
 
 /// A parent's home: each child's week, where they are, and the family code.
 class ParentHomeScreen extends ConsumerStatefulWidget {
@@ -34,6 +36,7 @@ class _ParentHomeScreenState extends ConsumerState<ParentHomeScreen> {
   Future<void> _refresh() async {
     ref.invalidate(familyOverviewProvider);
     ref.invalidate(familyCodeProvider);
+    ref.invalidate(commInboxProvider);
     ref.invalidate(paymentCatalogProvider);
     try {
       await ref.read(familyOverviewProvider.future);
@@ -145,6 +148,7 @@ class _ParentHomeScreenState extends ConsumerState<ParentHomeScreen> {
           children: [
             _FamilyHero(greeting: greeting, learners: learners),
             if (_busy) const LinearProgressIndicator(minHeight: 3),
+            if (learners.isNotEmpty) const ParentInboxCard(),
             if (learners.isEmpty) ...[
               _FamilyCodeCard(
                 fallbackCode: family.linkCode,
